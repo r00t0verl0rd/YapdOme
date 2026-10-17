@@ -142,10 +142,10 @@ class DownloadProgress:
             if not force and now - self.last_write < .25:
                 return
             self.last_write = now
-            while len(self.samples) > 1 and self.samples[1][0] < now - 5:
+            while len(self.samples) > 1 and self.samples[1][0] < now - 10:
                 self.samples.pop(0)
             speed = 0
-            if self.state['step'] == 'models' and self.samples and now - self.activity < 5:
+            if self.state['step'] == 'models' and self.samples and now - self.activity < 15:
                 at, amount = self.samples[0]
                 speed = max(0, (self.received - amount) / max(.1, now - at))
             percent = (30 + 60 * (self.done + self.received) / self.total
@@ -166,8 +166,10 @@ def hub_progress(report):
     # hf_hub_download has no public per-byte callback. Scope its tqdm adapter to this
     # dedicated downloader process; keep both HTTP and Xet transport and resume support.
     import importlib
+    from huggingface_hub import constants
     module = importlib.import_module('huggingface_hub.utils.tqdm')
     original = module.tqdm
+    original_chunk = constants.DOWNLOAD_CHUNK_SIZE
 
     class ReportingTqdm(original):
         def __init__(self, *args, **kwargs):
@@ -187,10 +189,13 @@ def hub_progress(report):
             return super().reset(total)
 
     module.tqdm = ReportingTqdm
+    # The default 10 MiB buffer can hide continued HTTP traffic for many seconds.
+    constants.DOWNLOAD_CHUNK_SIZE = 512 * 1024
     try:
         yield
     finally:
         module.tqdm = original
+        constants.DOWNLOAD_CHUNK_SIZE = original_chunk
 
 
 def download(root, progress_path=None):
@@ -213,28 +218,40 @@ def _download(root, progress):
     total = sum(entries[name].size for name in selected)
     for index, name in enumerate(selected):
         entry = entries[name]
-        if progress:
-            progress.begin(name, entry.size, total, len(selected), index)
-        with hub_progress(progress.transfer) if progress else nullcontext():
-            path = Path(hf_hub_download(MODEL_REPO, name, revision=revision, local_dir=root / 'models'))
-        if path.stat().st_size != entry.size:
-            raise RuntimeError('Неполный файл модели: ' + name)
-        if progress:
-            progress.transfer(entry.size)
-            progress.verify(0)
-        digest = hashlib.sha256(path.read_bytes()).hexdigest() if path.stat().st_size < 1_000_000 else None
-        # Large LFS files provide an authoritative SHA-256 in repository metadata.
-        lfs = entry.lfs
-        if lfs:
-            sha = hashlib.sha256()
-            with path.open('rb') as stream:
-                for chunk in iter(lambda: stream.read(1024 * 1024), b''):
-                    sha.update(chunk)
-                    if progress:
-                        progress.verify(stream.tell())
-            digest = sha.hexdigest()
-            if digest != lfs.sha256:
-                raise RuntimeError('Контрольная сумма модели не совпадает: ' + name)
+        # An interrupted Xet reconstruction can leave a sparse temporary file.
+        # HTTPS resume may preserve its holes, so retry once from scratch only
+        # when the authoritative size/hash check proves the result is invalid.
+        for attempt in range(2):
+            if progress:
+                progress.begin(name, entry.size, total, len(selected), index)
+            options = {'force_download': True} if attempt else {}
+            with hub_progress(progress.transfer) if progress else nullcontext():
+                path = Path(hf_hub_download(MODEL_REPO, name, revision=revision,
+                                           local_dir=root / 'models', **options))
+            if path.stat().st_size != entry.size:
+                if attempt == 0:
+                    print('Incomplete file; downloading again: ' + name, flush=True)
+                    continue
+                raise RuntimeError('Неполный файл модели: ' + name)
+            if progress:
+                progress.transfer(entry.size)
+                progress.verify(0)
+            digest = hashlib.sha256(path.read_bytes()).hexdigest() if path.stat().st_size < 1_000_000 else None
+            lfs = entry.lfs
+            if lfs:
+                sha = hashlib.sha256()
+                with path.open('rb') as stream:
+                    for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+                        sha.update(chunk)
+                        if progress:
+                            progress.verify(stream.tell())
+                digest = sha.hexdigest()
+                if digest != lfs.sha256:
+                    if attempt == 0:
+                        print('Checksum mismatch; downloading again: ' + name, flush=True)
+                        continue
+                    raise RuntimeError('Контрольная сумма модели не совпадает: ' + name)
+            break
         manifest['files'][name] = {'size': entry.size, 'sha256': digest}
         if progress:
             progress.complete()
@@ -368,6 +385,10 @@ def check_runtime(root):
 
 
 def download_command(root, progress_path=None):
+    # Apply before importing huggingface_hub: its transport constants are read once.
+    # Keep an explicit operator override; TLS, gated access and checksums stay intact.
+    os.environ.setdefault('HF_HUB_DISABLE_XET', '1')
+    os.environ.setdefault('HF_HUB_DOWNLOAD_TIMEOUT', '30')
     from huggingface_hub import get_token
     from huggingface_hub.utils import GatedRepoError
     try:

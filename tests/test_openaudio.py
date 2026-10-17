@@ -4,6 +4,7 @@ import hashlib
 import io
 import json
 import math
+import os
 import struct
 import tempfile
 import threading
@@ -35,6 +36,46 @@ def wav(seconds=3):
 
 
 class OpenAudioTests(unittest.TestCase):
+    def test_downloader_defaults_to_https_and_preserves_explicit_transport_settings(self):
+        hub = types.ModuleType('huggingface_hub')
+        hub.get_token = lambda: None
+        utils = types.ModuleType('huggingface_hub.utils')
+        utils.GatedRepoError = type('GatedRepoError', (Exception,), {})
+        with patch.dict(os.environ, {}, clear=True), \
+                patch.dict(sys.modules, {'huggingface_hub': hub, 'huggingface_hub.utils': utils}), \
+                patch('backend.audio.openaudio.download'):
+            self.assertEqual(download_command(Path('/unused')), 0)
+            self.assertEqual(os.environ['HF_HUB_DISABLE_XET'], '1')
+            self.assertEqual(os.environ['HF_HUB_DOWNLOAD_TIMEOUT'], '30')
+            os.environ.update(HF_HUB_DISABLE_XET='0', HF_HUB_DOWNLOAD_TIMEOUT='60')
+            self.assertEqual(download_command(Path('/unused')), 0)
+            self.assertEqual(os.environ['HF_HUB_DISABLE_XET'], '0')
+            self.assertEqual(os.environ['HF_HUB_DOWNLOAD_TIMEOUT'], '60')
+
+    def test_checksum_failure_recovers_with_one_clean_download(self):
+        content = b'fixture model'
+        digest = hashlib.sha256(content).hexdigest()
+        info = SimpleNamespace(sha='a'*40, siblings=[
+            SimpleNamespace(rfilename=name, size=len(content), lfs=SimpleNamespace(sha256=digest))
+            for name in MODEL_FILES])
+        forced = []
+        def fetch(repo, name, revision, local_dir, force_download=False):
+            local_dir.mkdir(parents=True, exist_ok=True)
+            target = local_dir / name
+            if force_download:
+                forced.append(name)
+            target.write_bytes(b'X'*len(content) if name == MODEL_FILES[0] and not force_download else content)
+            return str(target)
+        hub = types.ModuleType('huggingface_hub')
+        hub.HfApi = lambda: SimpleNamespace(model_info=lambda *a, **k: info)
+        hub.hf_hub_download = fetch
+        with tempfile.TemporaryDirectory() as folder, patch.dict(sys.modules, {'huggingface_hub': hub}):
+            root = Path(folder)
+            download(root)
+            self.assertEqual(forced, [MODEL_FILES[0]])
+            manifest = json.loads((root / 'models/installed.json').read_text())
+            self.assertTrue(all(value['sha256'] == digest for value in manifest['files'].values()))
+
     def test_progress_reports_bytes_speed_verification_and_idle_without_fake_motion(self):
         clock = [100.0]
         with tempfile.TemporaryDirectory() as folder, patch('backend.audio.openaudio.time.monotonic', side_effect=lambda: clock[0]):
@@ -118,7 +159,7 @@ class OpenAudioTests(unittest.TestCase):
         info = SimpleNamespace(sha='a'*40, siblings=entries)
         api = SimpleNamespace(model_info=lambda *args, **kwargs: info)
         calls = []
-        def fetch(repo, name, revision, local_dir):
+        def fetch(repo, name, revision, local_dir, **kwargs):
             calls.append((repo, revision))
             local_dir.mkdir(parents=True, exist_ok=True)
             target = local_dir / name

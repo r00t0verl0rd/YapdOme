@@ -1844,11 +1844,11 @@ function renderAddonStatus(addon,data){
   if(job.total_bytes)parts.push((job.step==='verify'?'Проверено: ':'Файл: ')+humanBytes(job.step==='verify'?job.verified_bytes:job.downloaded_bytes)+' / '+humanBytes(job.total_bytes));
   if(job.overall_size)parts.push('Всего скачано: '+humanBytes(job.overall_bytes)+' / '+humanBytes(job.overall_size));
   if(job.step==='models'&&job.total_bytes){
-   parts.push(job.speed_bytes>0?'Скорость: '+humanBytes(job.speed_bytes)+'/с':'Скорость: ожидаем данные');
+   parts.push(job.speed_bytes>0?'Скорость: '+humanBytes(job.speed_bytes)+'/с':'Скорость: нет свежего замера');
    if(job.eta_seconds>0)parts.push('До конца файла: ~'+installDuration(job.eta_seconds));
   }
   if(typeof job.elapsed_seconds==='number')parts.push('Прошло: '+installDuration(job.elapsed_seconds));
-  if(job.step==='models'&&job.idle_seconds>=15)parts.push('Нет новых данных '+installDuration(job.idle_seconds)+' · ожидаем сеть или ответ сервера');
+  if(job.step==='models'&&job.idle_seconds>=15)parts.push('Нет обновлений загрузчика '+installDuration(job.idle_seconds));
   detail=parts.join(' · ');
  }
  $(id+'ProgressFile').textContent=detail;
