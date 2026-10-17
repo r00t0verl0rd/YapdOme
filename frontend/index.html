@@ -315,6 +315,21 @@
             <div class="voice-installer-head"><strong>OpenAudio S1-mini</strong><span class="voice-local">LOCAL / CUDA · CPU</span></div>
             <p class="tts-install-hint">Автоматическая загрузка модели 0.5B и отдельного окружения. Рекомендуется NVIDIA с 12 ГБ VRAM; на CPU синтез медленный. Веса: CC BY-NC-SA 4.0.</p>
             <p id="openaudioStatus" class="tts-status">Проверяем статус…</p>
+            <details id="openaudioAccessHelp" class="tts-access-help">
+              <summary>Как разрешить скачивание S1-mini — пошагово</summary>
+              <ol>
+                <li>Открой <a href="https://huggingface.co/fishaudio/openaudio-s1-mini" target="_blank" rel="noopener noreferrer">страницу S1-mini на Hugging Face</a>. Нажми Log In или Sign Up и войди в свой аккаунт.</li>
+                <li>На странице модели прочитай условия и нажми кнопку согласия или запроса доступа. Если заявка ожидает одобрения, дождись разрешения. Перенаправление на fishaudio/s1-mini — нормально.</li>
+                <li>Открой <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener noreferrer">Access Tokens</a> в том же аккаунте. Нажми Create new token, выбери Read, задай имя YapdOme и создай токен. Если выбран Fine-grained, разреши чтение этой модели и доступных аккаунту gated-моделей. Скопируй токен.</li>
+                <li>На Mac нажми ⌘ + пробел, введи «Терминал» и нажми Enter. Скопируй команду ниже целиком, вставь в Терминал и нажми Enter. Путь уже соответствует папке модели.</li>
+              </ol>
+              <pre><code id="openaudioLoginCommand">Команда появится после определения папки модели.</code></pre>
+              <ol start="5">
+                <li>Когда Терминал попросит токен, вставь его и нажми Enter. Символы могут не отображаться — это нормально. На вопрос Add token as git credential? ответь n и нажми Enter.</li>
+                <li>Дождись сообщения об успешном входе. Вернись сюда и нажми «Установить / подключить» ещё раз.</li>
+              </ol>
+              <p>Токен вводится только в Терминале. Не отправляй его в чат и не вставляй в поле папки модели. Если написано «No such file or directory», сначала запусти установку, чтобы приложение создало окружение Python.</p>
+            </details>
             <label class="field-caption" for="openaudioDirectory">ПАПКА МОДЕЛИ</label>
             <div class="tts-folder-row">
               <input id="openaudioDirectory" type="text" autocomplete="off" spellcheck="false" aria-label="Папка OpenAudio S1-mini">

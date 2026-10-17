@@ -1780,6 +1780,14 @@ function syncVoicePanel(){
  $('voiceHint').textContent=engineHints[selected]||'';
  activateVoiceEngine(effective);
 }
+function updateOpenAudioAccessHelp(directory,failure){
+ const command=$('openaudioLoginCommand'),help=$('openaudioAccessHelp');
+ if(directory){
+  const executable=directory.replace(/\/$/,'')+'/venv/bin/hf';
+  command.textContent="'"+executable.replace(/'/g,"'\\''")+"' auth login";
+ }
+ if(/Hugging Face ограничивает доступ|Cannot access gated repo|Access to model .* is restricted/i.test(failure))help.open=true;
+}
 function renderAddonStatus(addon,data){
  const id=addon.id,job=data.installation||{},state=addon.state;
  const previous=state.ready;
@@ -1800,6 +1808,7 @@ function renderAddonStatus(addon,data){
    data.installed?'Модель установлена · нажми «ПЕРЕЗАПУСТИТЬ ДВИЖОК»':'Не установлена';
  const dir=$(id+'Directory');
  if(!dir.dataset.userEdited&&data.directory)dir.value=data.directory;
+ if(addon.key==='openaudio-s1-mini')updateOpenAudioAccessHelp(data.directory||dir.value,failure);
  $(id+'Install').disabled=!!job.running;
  $(id+'Install').textContent=data.status==='error'||(data.installed===false&&job.percent===100)?
   '↻ ВОССТАНОВИТЬ УСТАНОВКУ':'↓ УСТАНОВИТЬ / ПОДКЛЮЧИТЬ';
@@ -1826,7 +1835,8 @@ function renderAddonStatus(addon,data){
  if(job.files_total>1)detail+=' · файл '+Math.min(job.files_total,(job.files_done||0)+1)+'/'+job.files_total;
  $(id+'ProgressFile').textContent=detail;
  $(id+'Error').hidden=!failure;
- $(id+'Error').textContent=failure;
+ $(id+'Error').textContent=addon.key==='openaudio-s1-mini'&&/Hugging Face ограничивает доступ|Cannot access gated repo|Access to model .* is restricted/i.test(failure)?
+  'Для скачивания S1-mini нужен доступ Hugging Face. Выполни шаги в раскрытой инструкции выше и повтори установку.':failure;
 
  if(previous!==state.ready&&$('ttsBackend').value===addon.key){
    forceRenderCards();

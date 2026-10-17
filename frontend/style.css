@@ -52,6 +52,12 @@ footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;border
 #ttsProgress::-moz-progress-bar{background:linear-gradient(90deg,#218cee,#bf50ed,#4af2d0)}
 .tts-progress-detail{color:#7c99be;font:10px/1.5 ui-monospace,SFMono-Regular,monospace;overflow-wrap:anywhere}
 .tts-install-error{color:#ff9cae;font:11px/1.5 ui-monospace,SFMono-Regular,monospace;overflow-wrap:anywhere;margin:9px 0 0}
+.tts-access-help{margin:12px 0;font-size:12px;line-height:1.6;overflow-wrap:anywhere}
+.tts-access-help summary{cursor:pointer;font-weight:600}
+.tts-access-help ol{padding-left:22px}
+.tts-access-help li{margin:8px 0}
+.tts-access-help a{color:inherit;text-decoration:underline}
+.tts-access-help pre{padding:10px;white-space:pre-wrap;overflow-wrap:anywhere;background:#101827;border-radius:6px}
 .tts-install [hidden]{display:none!important}
 @media(max-width:650px){.tts-folder-row{flex-wrap:wrap}.tts-folder-row input{flex-basis:100%}}
 
