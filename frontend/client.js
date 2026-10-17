@@ -708,7 +708,7 @@ async function refreshStatus(){
   if(data.auth_pending)$('authnote').textContent='Ожидаем подтверждение в окне ChatGPT…';
  }catch(err){
   status('LOCAL BRIDGE OFFLINE',err.message);
-  $('authnote').textContent='Запусти START-MAC.command и открой локальный адрес.';
+  $('authnote').textContent='Запусти START.command и открой локальный адрес.';
  }
 }
 async function fetchModels(){

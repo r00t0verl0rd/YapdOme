@@ -37,7 +37,7 @@ class PortConfigTests(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0)
 
     def test_mac_launcher_reads_server_port_not_hardcoded_default(self):
-        source = (ROOT / "START-MAC.command").read_text(encoding="utf-8")
+        source = (ROOT / "START.command").read_text(encoding="utf-8")
         self.assertIn("from backend.server import PORT; print(PORT)", source)
         self.assertNotIn('TRIAD_PORT:-8765', source)
         self.assertIn('http://127.0.0.1:${PORT}/api/version', source)
