@@ -388,6 +388,28 @@ class Addon:
         with self._lock:
             self.progress.update(items)
 
+    def _read_progress(self, path):
+        if path is None or not path.is_file():
+            return
+        try:
+            progress = json.loads(path.read_text())
+            if "percent" in progress:
+                percent = progress["percent"]
+                percent = min(100, int(percent)) if percent is not None else None
+            else:
+                done, total = progress.get("done", 0), progress.get("total", 0)
+                percent = 94 + int(4 * done / total) if total else 94
+            self._update(percent=percent, message=progress.get("message", "Подготовка"),
+                         filename=progress.get("filename", ""), total_bytes=progress.get("size", 0),
+                         downloaded_bytes=progress.get("downloaded_bytes", 0), step=progress.get("step", ""),
+                         speed_bytes=progress.get("speed_bytes", 0), eta_seconds=progress.get("eta_seconds", 0),
+                         files_done=progress.get("files_done", 0), files_total=progress.get("files_total", 0),
+                         verified_bytes=progress.get("verified_bytes", 0),
+                         overall_bytes=progress.get("overall_bytes", 0), overall_size=progress.get("overall_size", 0),
+                         elapsed_seconds=progress.get("elapsed_seconds", 0), idle_seconds=progress.get("idle_seconds", 0))
+        except (OSError, ValueError, TypeError, ZeroDivisionError):
+            pass
+
     def _run(self, args, timeout=600, progress_file=None, cwd=None):
         self._check()
         with (self.root / "install.log").open("ab") as log:
@@ -399,30 +421,12 @@ class Addon:
                 start = time.monotonic()
                 while child.poll() is None:
                     self._check()
-                    if progress_file is not None and progress_file.is_file():
-                        try:
-                            progress = json.loads(progress_file.read_text())
-                            if "percent" in progress:
-                                percent = int(progress["percent"])
-                            else:
-                                done, total = progress.get("done", 0), progress.get("total", 0)
-                                percent = 94 + int(4 * done / total) if total else 94
-                            self._update(
-                                percent=min(100, percent),
-                                message=progress.get("message", "Подготовка"),
-                                filename=progress.get("filename", ""),
-                                total_bytes=progress.get("size", 0),
-                                downloaded_bytes=progress.get("downloaded_bytes", 0),
-                                step=progress.get("step", ""),
-                                speed_bytes=progress.get("speed_bytes", 0),
-                                eta_seconds=progress.get("eta_seconds", 0),
-                            )
-                        except (OSError, ValueError, TypeError, ZeroDivisionError):
-                            pass
+                    self._read_progress(progress_file)
                     if time.monotonic() - start > timeout:
                         child.terminate()
                         raise TimeoutError("Таймаут установки; подробности в install.log")
                     time.sleep(.2)
+                self._read_progress(progress_file)
                 if child.returncode:
                     # Surface the immediate dependency failure instead of another
                     # opaque "install.log" instruction or a 120s retry loop.
@@ -843,7 +847,7 @@ class OpenAudioAddon(Addon):
                 torch_args += ["--index-url", "https://download.pytorch.org/whl/cpu"]
             self._run(torch_args, 2400)
             self._run([str(py), "-m", "pip", "install", "--disable-pip-version-check",
-                       "numpy==1.26.4", "transformers==4.51.3", "huggingface_hub>=0.30,<1",
+                       "numpy==1.26.4", "transformers==4.51.3", "huggingface_hub==0.36.2",
                        "hydra-core==1.3.2", "pydantic==2.9.2", "einx[torch]==0.2.2",
                        "librosa==0.10.2.post1", "lightning==2.5.1", "pyrootutils==1.0.4",
                        "loralib==0.1.2", "natsort==8.4.0", "tiktoken==0.9.0",
@@ -852,12 +856,15 @@ class OpenAudioAddon(Addon):
             self._check()
             self._run([str(py), "-m", "backend.audio.openaudio", "--check-runtime", str(self.root)],
                       timeout=120, cwd=PROJECT_ROOT)
-            self._update(percent=30, message="Скачивание и проверка OpenAudio S1-mini (Hugging Face)", step="models")
-            self._run([str(py), "-m", "backend.audio.openaudio", "--download", str(self.root)],
-                      timeout=7200, cwd=PROJECT_ROOT)
+            self._update(percent=None, message="Подключение к Hugging Face; получение списка файлов", step="models")
+            progress_file = self.root / ".openaudio-download-progress.json"
+            progress_file.unlink(missing_ok=True)
+            self._run([str(py), "-m", "backend.audio.openaudio", "--download", str(self.root), str(progress_file)],
+                      timeout=7200, cwd=PROJECT_ROOT, progress_file=progress_file)
             if not self.installed:
                 raise RuntimeError("S1-mini загружена не полностью; проверь install.log")
-            self._update(percent=95, message="Загрузка S1-mini и пробный синтез; CPU может работать медленно", step="load")
+            self._update(percent=95, message="Загрузка S1-mini и пробный синтез; CPU может работать медленно", step="load",
+                         filename="", total_bytes=0, speed_bytes=0, eta_seconds=0, idle_seconds=0)
             self._last_failure = ""
             self._last_exit = None
             if not self.await_ready(timeout=self.startup_timeout):

@@ -497,6 +497,10 @@ function humanBytes(bytes){
  return n>=1024*1024*1024?(n/(1024*1024*1024)).toFixed(2)+' ГБ':
         n>=1024*1024?(n/(1024*1024)).toFixed(1)+' МБ':(n/1024).toFixed(0)+' КБ';
 }
+function installDuration(seconds){
+ const n=Math.max(0,Math.round(Number(seconds)||0));
+ return n>=60?Math.floor(n/60)+' мин '+(n%60)+' с':n+' с';
+}
 function status(head,desc='',cls=''){$('connection').textContent=head;$('detail').textContent=desc;$('indicator').className='led '+cls;}
 function runStatus(text){$('runstate').textContent=text;}
 function updateDonationBadge(){
@@ -1822,7 +1826,7 @@ function renderAddonStatus(addon,data){
  if(loading)bar.removeAttribute('value');
  else if(typeof job.percent==='number')bar.value=Math.max(0,Math.min(100,job.percent));
  else bar.removeAttribute('value');
- const stepMap={python:'Python',deps:'зависимости',models:'модели',repair:'RUAccent',load:'загрузка в память',done:'готово'};
+ const stepMap={python:'Python',deps:'зависимости',models:'модели',verify:'проверка файлов',repair:'RUAccent',load:'загрузка в память',done:'готово'};
  const stepName=job.step?stepMap[job.step]||job.step:'';
  $(id+'ProgressPercent').textContent=loading?'…':typeof job.percent==='number'?job.percent+'%':'…';
  $(id+'ProgressLabel').textContent=loading?'Инициализация модели — проверяем готовность…':(stepName?stepName+': ':'')+(job.message||'Подготовка');
@@ -1833,6 +1837,20 @@ function renderAddonStatus(addon,data){
   if(job.eta_seconds>0)detail+=' · ~'+Math.max(1,Math.round(job.eta_seconds))+' с';
  }
  if(job.files_total>1)detail+=' · файл '+Math.min(job.files_total,(job.files_done||0)+1)+'/'+job.files_total;
+ if(addon.key==='openaudio-s1-mini'&&job.running){
+  const parts=[];
+  if(job.filename)parts.push(job.filename);
+  if(job.files_total)parts.push('файл '+Math.min(job.files_total,(job.files_done||0)+1)+' из '+job.files_total);
+  if(job.total_bytes)parts.push((job.step==='verify'?'Проверено: ':'Файл: ')+humanBytes(job.step==='verify'?job.verified_bytes:job.downloaded_bytes)+' / '+humanBytes(job.total_bytes));
+  if(job.overall_size)parts.push('Всего скачано: '+humanBytes(job.overall_bytes)+' / '+humanBytes(job.overall_size));
+  if(job.step==='models'&&job.total_bytes){
+   parts.push(job.speed_bytes>0?'Скорость: '+humanBytes(job.speed_bytes)+'/с':'Скорость: ожидаем данные');
+   if(job.eta_seconds>0)parts.push('До конца файла: ~'+installDuration(job.eta_seconds));
+  }
+  if(typeof job.elapsed_seconds==='number')parts.push('Прошло: '+installDuration(job.elapsed_seconds));
+  if(job.step==='models'&&job.idle_seconds>=15)parts.push('Нет новых данных '+installDuration(job.idle_seconds)+' · ожидаем сеть или ответ сервера');
+  detail=parts.join(' · ');
+ }
  $(id+'ProgressFile').textContent=detail;
  $(id+'Error').hidden=!failure;
  $(id+'Error').textContent=addon.key==='openaudio-s1-mini'&&/Hugging Face ограничивает доступ|Cannot access gated repo|Access to model .* is restricted/i.test(failure)?

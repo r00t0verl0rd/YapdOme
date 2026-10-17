@@ -5,7 +5,9 @@ import json
 import os
 import sys
 import threading
+import time
 import wave
+from contextlib import contextmanager, nullcontext
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -64,7 +66,139 @@ def reference_status(root):
     return [voice for voice in VOICES[1:] if (root / 'references' / (voice + '.json')).is_file()]
 
 
-def download(root):
+class DownloadProgress:
+    """Atomic progress snapshots, including heartbeats while the network is idle."""
+
+    def __init__(self, path):
+        self.path = path
+        self.lock = threading.RLock()
+        self.stop = threading.Event()
+        self.started = self.activity = time.monotonic()
+        self.last_write = 0
+        self.samples = []
+        self.transfer_started = False
+        self.total = self.done = self.checked = self.count = 0
+        self.current_size = self.received = self.verified = 0
+        self.state = dict(percent=None, step='models', message='Подключение к Hugging Face; получение списка файлов',
+                          filename='', files_done=0, files_total=0)
+
+    def __enter__(self):
+        self.write(force=True)
+        self.thread = threading.Thread(target=self._heartbeat, daemon=True)
+        self.thread.start()
+        return self
+
+    def __exit__(self, *args):
+        self.stop.set()
+        self.thread.join(timeout=2)
+
+    def _heartbeat(self):
+        while not self.stop.wait(1):
+            self.write(force=True)
+
+    def begin(self, name, size, total, count, index):
+        with self.lock:
+            self.total, self.count, self.current_size = total, count, size
+            self.received = self.verified = 0
+            self.samples = [(time.monotonic(), 0)]
+            self.transfer_started = False
+            self.activity = time.monotonic()
+            self.state.update(filename=name, message='Скачивание файла', step='models',
+                              files_done=index, files_total=count)
+            self.write(force=True)
+
+    def transfer(self, received):
+        with self.lock:
+            received = min(self.current_size, max(0, int(received)))
+            if not self.transfer_started:
+                self.samples = [(time.monotonic(), received)]
+                self.transfer_started = True
+            if received != self.received:
+                self.activity = time.monotonic()
+                self.received = received
+                self.samples.append((self.activity, received))
+            self.write()
+
+    def verify(self, checked):
+        with self.lock:
+            if checked != self.verified or self.state['step'] != 'verify':
+                self.activity = time.monotonic()
+            self.verified = checked
+            self.state.update(step='verify', message='Проверка SHA-256',)
+            self.write()
+
+    def complete(self):
+        with self.lock:
+            self.done += self.current_size
+            self.checked += self.current_size
+            self.received = self.verified = self.current_size = 0
+            self.state['files_done'] += 1
+            self.activity = time.monotonic()
+            self.write(force=True)
+
+    def write(self, force=False):
+        with self.lock:
+            now = time.monotonic()
+            if not force and now - self.last_write < .25:
+                return
+            self.last_write = now
+            while len(self.samples) > 1 and self.samples[1][0] < now - 5:
+                self.samples.pop(0)
+            speed = 0
+            if self.state['step'] == 'models' and self.samples and now - self.activity < 5:
+                at, amount = self.samples[0]
+                speed = max(0, (self.received - amount) / max(.1, now - at))
+            percent = (30 + 60 * (self.done + self.received) / self.total
+                       + 4 * (self.checked + self.verified) / self.total) if self.total else None
+            payload = dict(self.state, percent=min(94, int(percent)) if percent is not None else None,
+                           size=self.current_size, downloaded_bytes=self.received,
+                           verified_bytes=self.verified, overall_bytes=self.done + self.received,
+                           overall_size=self.total, speed_bytes=int(speed),
+                           eta_seconds=int((self.current_size-self.received)/speed) if speed else 0,
+                           elapsed_seconds=int(now-self.started), idle_seconds=int(now-self.activity))
+            temporary = self.path.with_suffix('.tmp')
+            temporary.write_text(json.dumps(payload))
+            temporary.replace(self.path)
+
+
+@contextmanager
+def hub_progress(report):
+    # hf_hub_download has no public per-byte callback. Scope its tqdm adapter to this
+    # dedicated downloader process; keep both HTTP and Xet transport and resume support.
+    import importlib
+    module = importlib.import_module('huggingface_hub.utils.tqdm')
+    original = module.tqdm
+
+    class ReportingTqdm(original):
+        def __init__(self, *args, **kwargs):
+            self.received = kwargs.get('initial', 0)
+            kwargs['disable'] = True
+            super().__init__(*args, **kwargs)
+            report(self.received)
+
+        def update(self, n=1):
+            self.received += n
+            report(self.received)
+            return super().update(n)
+
+        def reset(self, total=None):
+            self.received = 0
+            report(0)
+            return super().reset(total)
+
+    module.tqdm = ReportingTqdm
+    try:
+        yield
+    finally:
+        module.tqdm = original
+
+
+def download(root, progress_path=None):
+    with DownloadProgress(progress_path) if progress_path else nullcontext() as progress:
+        _download(root, progress)
+
+
+def _download(root, progress):
     """Pin the model snapshot and verify every selected asset before marking it installed."""
     from huggingface_hub import HfApi, hf_hub_download
     import hashlib
@@ -76,11 +210,18 @@ def download(root):
     marker = root / 'models' / 'installed.json'
     marker.unlink(missing_ok=True)
     selected = (*MODEL_FILES, *(['special_tokens.json'] if 'special_tokens.json' in entries else []))
-    for name in selected:
+    total = sum(entries[name].size for name in selected)
+    for index, name in enumerate(selected):
         entry = entries[name]
-        path = Path(hf_hub_download(MODEL_REPO, name, revision=revision, local_dir=root / 'models'))
+        if progress:
+            progress.begin(name, entry.size, total, len(selected), index)
+        with hub_progress(progress.transfer) if progress else nullcontext():
+            path = Path(hf_hub_download(MODEL_REPO, name, revision=revision, local_dir=root / 'models'))
         if path.stat().st_size != entry.size:
             raise RuntimeError('Неполный файл модели: ' + name)
+        if progress:
+            progress.transfer(entry.size)
+            progress.verify(0)
         digest = hashlib.sha256(path.read_bytes()).hexdigest() if path.stat().st_size < 1_000_000 else None
         # Large LFS files provide an authoritative SHA-256 in repository metadata.
         lfs = entry.lfs
@@ -89,10 +230,14 @@ def download(root):
             with path.open('rb') as stream:
                 for chunk in iter(lambda: stream.read(1024 * 1024), b''):
                     sha.update(chunk)
+                    if progress:
+                        progress.verify(stream.tell())
             digest = sha.hexdigest()
             if digest != lfs.sha256:
                 raise RuntimeError('Контрольная сумма модели не совпадает: ' + name)
         manifest['files'][name] = {'size': entry.size, 'sha256': digest}
+        if progress:
+            progress.complete()
         print('Downloaded and verified: ' + name, flush=True)
     temporary = marker.with_suffix('.tmp')
     temporary.write_text(json.dumps(manifest))
@@ -222,11 +367,11 @@ def check_runtime(root):
     print('Fish Speech inference dependencies OK; CUDA:', torch.cuda.is_available(), flush=True)
 
 
-def download_command(root):
+def download_command(root, progress_path=None):
     from huggingface_hub import get_token
     from huggingface_hub.utils import GatedRepoError
     try:
-        download(root)
+        download(root, progress_path) if progress_path else download(root)
         return 0
     except GatedRepoError:
         # Keep these lines short: the installer surfaces the final three log lines.
@@ -241,7 +386,7 @@ def download_command(root):
 
 if __name__ == '__main__':
     if sys.argv[1] == '--download':
-        raise SystemExit(download_command(Path(sys.argv[2])))
+        raise SystemExit(download_command(Path(sys.argv[2]), Path(sys.argv[3]) if len(sys.argv) > 3 else None))
     elif sys.argv[1] == '--worker':
         worker(Path(sys.argv[2]), int(sys.argv[3]))
     elif sys.argv[1] == '--check-runtime':

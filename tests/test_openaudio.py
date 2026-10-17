@@ -20,7 +20,7 @@ from unittest.mock import patch
 
 from backend.audio.addons import OpenAudioAddon
 from backend.audio.openaudio import (FISH_REVISION, MODEL_FILES, reference_status,
-                                    save_reference, validate_request, download, download_command)
+                                    save_reference, validate_request, download, download_command, DownloadProgress)
 
 
 def wav(seconds=3):
@@ -35,6 +35,58 @@ def wav(seconds=3):
 
 
 class OpenAudioTests(unittest.TestCase):
+    def test_progress_reports_bytes_speed_verification_and_idle_without_fake_motion(self):
+        clock = [100.0]
+        with tempfile.TemporaryDirectory() as folder, patch('backend.audio.openaudio.time.monotonic', side_effect=lambda: clock[0]):
+            path = Path(folder) / 'progress.json'
+            progress = DownloadProgress(path)
+            progress.write(force=True)
+            self.assertIsNone(json.loads(path.read_text())['percent'])
+            progress.begin('model.pth', 1000, 2000, 2, 0)
+            progress.transfer(0)
+            clock[0] += 2
+            progress.transfer(400)
+            state = json.loads(path.read_text())
+            self.assertEqual((state['percent'], state['downloaded_bytes'], state['speed_bytes']), (42, 400, 200))
+            self.assertEqual(state['eta_seconds'], 3)
+            clock[0] += 20
+            progress.write(force=True)
+            state = json.loads(path.read_text())
+            self.assertEqual(state['percent'], 42, 'idle time must not advance the progress bar')
+            self.assertEqual((state['idle_seconds'], state['speed_bytes']), (20, 0))
+            progress.transfer(1000)
+            progress.verify(500)
+            progress.write(force=True)
+            state = json.loads(path.read_text())
+            self.assertEqual((state['step'], state['verified_bytes']), ('verify', 500))
+            self.assertEqual(state['percent'], 61)
+            progress.complete()
+            progress.begin('codec.pth', 1000, 2000, 2, 1)
+            progress.transfer(600)  # Resumed bytes are not newly transferred bytes.
+            clock[0] += 2
+            progress.transfer(800)
+            self.assertEqual(json.loads(path.read_text())['speed_bytes'], 100)
+            progress.transfer(1000)
+            progress.verify(1000)
+            progress.complete()
+            state = json.loads(path.read_text())
+            self.assertEqual((state['percent'], state['files_done'], state['overall_bytes']), (94, 2, 2000))
+
+    def test_installer_reads_indeterminate_and_final_child_progress(self):
+        addon = OpenAudioAddon()
+        with tempfile.TemporaryDirectory() as folder:
+            addon.root = Path(folder)
+            path = addon.root / 'progress.json'
+            path.write_text(json.dumps({'percent': None, 'message': 'Connecting'}))
+            addon._read_progress(path)
+            self.assertIsNone(addon.progress['percent'])
+            payload = dict(percent=88, filename='model.pth', files_done=2, files_total=4,
+                           speed_bytes=256, size=1000, downloaded_bytes=800, idle_seconds=0)
+            command = 'import pathlib; pathlib.Path(' + repr(str(path)) + ').write_text(' + repr(json.dumps(payload)) + ')'
+            addon._run([sys.executable, '-c', command], progress_file=path)
+            for name in ('percent', 'filename', 'files_done', 'files_total', 'speed_bytes', 'downloaded_bytes'):
+                self.assertEqual(addon.progress[name], payload[name])
+
     def test_gated_download_explains_account_access_and_local_login(self):
         from contextlib import redirect_stderr
         class GatedRepoError(Exception):
