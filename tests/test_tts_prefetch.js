@@ -1,0 +1,93 @@
+'use strict';
+// Offline regression for one-look-ahead synthesis; no model, server, or browser needed.
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const vm=require('node:vm'),fs=require('node:fs'),path=require('node:path');
+const source=fs.readFileSync(path.join(__dirname,'../web/app.js'),'utf8');
+const section=source.slice(source.indexOf('const speech = {'),source.indexOf('function humanBytes'));
+const tick=async()=>{for(let i=0;i<8;i++)await new Promise(setImmediate);};
+function harness({deferSecond=true}={}){
+ const sources=[],calls=[],deferred=[];
+ const buffer=()=>{
+  const channel=new Float32Array(2400).fill(.1);
+  return {duration:.1,length:2400,sampleRate:24000,numberOfChannels:1,
+   getChannelData:()=>channel,copyToChannel(){}};
+ };
+ const audio={state:'running',currentTime:0,destination:{},resume:async()=>{},
+  decodeAudioData:async()=>buffer(),
+  createBuffer:()=>buffer(),
+  createGain:()=>({gain:{value:1},connect(){},disconnect(){}}),
+  createBufferSource(){
+   const item={playbackRate:{value:1},connect(){},disconnect(){},stop(){item.stopped=true},
+    start(){sources.push(item)}};
+   return item;
+  }};
+ const dom={voiceEnabled:{checked:true},rate:{value:'1'},ttsBackend:{value:'piper'},feed:{scrollTop:0,scrollHeight:10}};
+ const context={Date,Promise,AbortController,Uint8Array,Float32Array,DataView,console,
+  state:{lastAudibleAt:0},defs:[{name:'Норман',piperVoice:'dmitri'}],
+  voices:[],haveSpeech:false,
+  piperSpeakers:[['dmitri']],sileroSpeakers:[['aidar']],
+  piperSelected:()=>true,sileroSelected:()=>false,kokoroSelected:()=>false,kokoroRuSelected:()=>false,
+  isRussian:()=>true,languageFor:()=> 'Russian',ttsText:s=>s,
+  window:{AudioContext:function(){return audio}},
+  $:id=>dom[id]||(dom[id]={}),
+  setTimeout:setTimeout,clearTimeout:clearTimeout,
+  fetch:(url,opts)=>{
+   calls.push({url,signal:opts.signal,payload:JSON.parse(opts.body)});
+   if(deferSecond&&calls.length===2)return new Promise(resolve=>deferred.push(resolve));
+   return Promise.resolve(new Response(new Uint8Array([1,2,3,4])));
+  },system:s=>{throw Error('Unexpected TTS error: '+s)}};
+ vm.createContext(context);
+ vm.runInContext(section+'\nthis.speech=speech;',context);
+ return {speech:context.speech,sources,calls,deferred,buffer};
+}
+test('next sentence is synthesized during current audio and played once in FIFO order',async()=>{
+ const h=harness(),done=[];
+ h.speech.push(0,'Первая реплика.',null,t=>done.push(t));
+ await tick();
+ assert.equal(h.sources.length,1,'first utterance audible before next arrives');
+ h.speech.push(0,'Вторая реплика.',null,t=>done.push(t));
+ await tick();
+ assert.equal(h.calls.length,2,'the next WAV must begin while previous audio is playing');
+ assert.equal(h.sources.length,1,'prepared audio must never start over the current voice');
+ h.deferred.shift()(new Response(new Uint8Array([1,2,3,4])));
+ await tick();
+ assert.ok(h.speech.prefetch?.buffer,'one WAV prepared in advance');
+ h.sources[0].onended();
+ await tick();
+ assert.equal(h.sources.length,2);
+ assert.equal(h.calls.length,2,'the ready WAV must not be synthesized twice');
+ assert.deepEqual(done,['Первая реплика.']);
+ h.sources[1].onended();
+ await h.speech.idle();
+ assert.deepEqual(done,['Первая реплика.','Вторая реплика.']);
+ assert.equal(h.speech.prefetch,null);
+});
+test('STOP aborts queued prefetch and never resumes stale audio',async()=>{
+ const h=harness();
+ h.speech.push(0,'До перебивания.');await tick();
+ h.speech.push(0,'Это нужно отменить.');await tick();
+ assert.equal(h.calls.length,2);
+ const signal=h.calls[1].signal;
+ h.speech.stop();
+ assert.equal(signal.aborted,true);
+ assert.equal(h.speech.prefetch,null);
+ assert.equal(h.speech.queue.length,0);
+ h.deferred.shift()(new Response(new Uint8Array([1,2,3,4])));
+ await tick();
+ assert.equal(h.sources.length,1,'stale preparation must not start a second voice');
+ assert.equal(h.sources[0].stopped,true);
+});
+
+test('long local turn is assembled from bounded backend calls into one continuous playback node',async()=>{
+ const h=harness({deferSecond:false});
+ const full='Цельная реплика с несколькими предложениями. '.repeat(25);
+ h.speech.push(0,full);
+ for(let i=0;i<12;i++)await tick();
+ assert.ok(h.calls.length>1,'the inference backend still receives bounded inputs');
+ assert.ok(h.calls.every(call=>call.payload.text.length<=450));
+ assert.equal(h.sources.length,1,'browser playback must use only one WAV source for entire reply');
+ h.sources[0].onended();
+ await h.speech.idle();
+ assert.equal(h.sources.length,1);
+});

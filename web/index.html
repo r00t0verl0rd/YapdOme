@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#070815">
+  <title>YapdOme // TRIAD LIVE v0.2.0</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/hud-reference.css">
+  <link rel="stylesheet" href="/pixel-puppet.css">
+</head>
+<body>
+<div class="spectrum-rail" aria-hidden="true"></div>
+<div class="ambient-orbit" aria-hidden="true"></div>
+<div class="app-shell">
+  <header class="masthead">
+    <div class="brand">
+      <div class="triad-mark" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="brand-copy">
+        <div class="eyebrow">LIVE MULTI-AGENT INTELLIGENCE <span class="slash">/</span> NATIVE C</div>
+        <h1>YapdOme<span class="neon-point">.</span> <small>TRIAD / LIVE</small></h1>
+        <p>Три разума. Один разговор. Непрерывный эфир.</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <span id="hudLive" class="live-sign"><span class="live-led">●</span> OFF AIR</span>
+      <div class="live-metrics" aria-label="Состояние сессии">
+        <span>SYS <b>v0.2.0</b></span>
+        <span>SESSION <b id="hudUptime">00:00:00</b></span>
+        <span>TURN <b id="hudTurns">0000</b></span>
+      </div>
+      <span class="version-tag">ENGINE / 0.2.0</span>
+      <button id="voiceStudioButton" class="voice-header-button" type="button" aria-controls="voiceSettings" aria-expanded="false">♪ VOICE STUDIO / НАСТРОЙКИ ГОЛОСА</button>
+      <details id="connectPanel" class="connect-popover">
+        <summary title="Подключение и настройки ChatGPT"><span id="indicator" class="led"></span><span id="connection">ПОДКЛЮЧЕНИЕ…</span><span class="down-arrow" aria-hidden="true">⌄</span></summary>
+        <div class="connect-content">
+          <div class="popover-title">LLM / CONNECTION</div>
+          <p id="detail" class="connect-detail">Проверка локального моста…</p>
+          <label class="field-caption" for="provider">ПРОВАЙДЕР</label>
+          <select id="provider">
+            <option value="chatgpt">ChatGPT</option>
+            <option value="deepseek">DeepSeek</option>
+          </select>
+          <div id="chatgptAuth">
+            <div class="connect-actions simple-auth">
+              <button id="signin" class="primary">Войти через ChatGPT</button>
+              <button id="switchaccount" class="quiet-action" hidden>Другой аккаунт</button>
+              <button id="logout" class="quiet-action" hidden>Выйти</button>
+            </div>
+            <p id="authnote" class="authnote">Откроется официальный вход ChatGPT в браузере.</p>
+          </div>
+          <div id="deepseekAuth" hidden>
+            <label class="field-caption" for="deepseekKey">API-КЛЮЧ DEEPSEEK</label>
+            <input id="deepseekKey" type="password" autocomplete="off" spellcheck="false" placeholder="sk-…">
+            <div class="connect-actions">
+              <button id="deepseekConnect" class="primary">Подключить</button>
+              <button id="deepseekDisconnect" class="quiet-action" hidden>Отключить</button>
+            </div>
+            <p id="deepseekNote" class="authnote">Ключ хранится локально. Получи его на platform.deepseek.com.</p>
+          </div>
+          <details class="model-settings">
+            <summary>Модель</summary>
+            <label class="field-caption" for="model">МОДЕЛЬ</label>
+            <div class="model-line"><select id="model" disabled><option value="">Сначала подключись</option></select><button id="reloadmodels" title="Обновить модели">↻</button></div>
+          </details>
+        </div>
+      </details>
+    </div>
+  </header>
+
+  <main class="cyber-command-center">
+    <div class="control-column">
+    <section class="panel stage-panel" aria-label="Управление дискуссией">
+      <div class="panel-overline"><span class="signal-dot"></span> LIVE CONTROL <span class="panel-index">01 // CORE</span></div>
+      <label class="section-title" for="topic">СЦЕНА / ТЕМА РАЗГОВОРА</label>
+      <textarea id="topic" rows="2" maxlength="700" aria-label="Тема разговора" placeholder="О чём сегодня разговаривают агенты?">Почему друзья спорят из-за пустяков и как потом мирятся?</textarea>
+      <div class="show-mode-row">
+        <label class="section-title" for="showMode">РЕЖИМ ЭФИРА</label>
+        <select id="showMode" aria-label="Режим общения персонажей">
+          <option value="live" selected>Живой разговор</option>
+          <option value="science">Научный режим · TRIAD SCIENCE</option>
+        </select>
+        <p class="field-tip" id="scienceInfo" hidden aria-live="polite">TRIAD SCIENCE · теоретик / критик / экспериментатор · пять шагов научного метода · выводы требуют проверки</p>
+      </div>
+      <details class="scene-advanced" id="sceneAdvanced">
+        <summary><span>⚙ ДОПОЛНИТЕЛЬНО</span><span class="fold-arrow">⌄</span></summary>
+        <div class="scene-advanced-body">
+      <label class="section-title mission-label" for="sharedGoal">ОБЩАЯ ЗАДАЧА ПЕРСОНАЖЕЙ</label>
+      <textarea id="sharedGoal" maxlength="900" rows="2" placeholder="Например: заинтересовать зрителей и не повторять одни и те же шутки."></textarea>
+      <p class="field-tip mission-tip">Тема важнее общей задачи. Для интересного эфира не обязательно приходить к общему выводу.</p>
+      <label class="check-line"><input id="directorEnabled" type="checkbox" checked> ИИ-режиссёр диалога <span class="hint">адаптивный план · чаще при повторах</span></label>
+      <p class="field-tip" id="directorStatus">Режиссёр работает за кадром; при задержке продолжает C-ядро.</p>
+      <label class="check-line"><input id="auto" type="checkbox" checked> Естественные перебивания <span class="hint">один слушатель · ждёт завершения TTS · можно отключить</span></label>
+        </div>
+      </details>
+      <div class="stage-bottom">
+        <div class="transport">
+          <button id="start" class="primary btn-start">▶ &nbsp; ЗАПУСТИТЬ ЭФИР</button>
+          <button id="pause" class="btn-pause">Ⅱ &nbsp; ПАУЗА</button>
+          <button id="stop" class="btn-stop">■ &nbsp; СТОП</button>
+        </div>
+        <div class="run-pill"><span class="pulse-dot"></span><span id="runstate">ГОТОВ К ЭФИРУ</span><span class="infinity" title="Бесконечный эфир">∞</span></div>
+        <div id="audioLane" class="audio-pill" role="status" aria-live="off">◌ АУДИО СВОБОДНО</div>
+      </div>
+    </section>
+    <section class="panel inputpanel" aria-label="Реплика ведущего">
+      <div class="panel-overline"><span class="signal-dot warm"></span> ВЕДУЩИЙ / СООБЩЕНИЕ <span class="panel-index">02</span></div>
+      <label class="section-title" for="interject">ВСТУПИТЬ В РАЗГОВОР <span class="shortcut-hint">Enter ↵ отправить</span></label>
+      <div class="input-row"><input id="interject" type="text" maxlength="600" placeholder="Скажи что-нибудь трём агентам…"><button id="sendInterject" class="primary">↗ СКАЗАТЬ АГЕНТАМ</button><button id="mic" title="Нажми для начала и окончания речи">🎙 ГОВОРИТЬ</button></div>
+      <p class="field-tip">Реплика ведущего направляет дискуссию. Полная пауза включается только кнопкой «ПАУЗА».</p>
+    </section>
+    <section class="panel inputpanel donations" aria-label="Донат зрителя">
+      <div class="panel-overline"><span class="signal-dot pink"></span> ЗРИТЕЛИ / ОЧЕРЕДЬ ДОНАТОВ <span class="panel-index">03</span></div>
+      <label class="section-title" for="donationText">ДОНАТ ЗРИТЕЛЯ <span class="soft">· ЛОКАЛЬНЫЙ ТЕСТ</span><span class="shortcut-hint">Enter ↵ в очередь</span></label>
+      <div class="input-row donation-fields">
+        <label class="donation-amount"><span>СУММА · €</span><input id="donationAmount" type="number" min="0" max="1000000" step="0.01" value="5" inputmode="decimal" aria-label="Сумма доната в евро"></label>
+        <label class="donation-name"><span>ИМЯ</span><input id="donor" type="text" maxlength="32" value="Зритель" aria-label="Имя отправителя доната" placeholder="Имя" class="donorname"></label>
+        <label class="donation-text"><span>СООБЩЕНИЕ</span><input id="donationText" type="text" maxlength="600" placeholder="Сообщение зрителя…" aria-label="Текст доната"></label>
+        <button id="sendDonation" class="primary">⚡ В ЭФИР</button>
+      </div>
+      <p class="field-tip">Сначала завершаем текущую реплику · затем отвечаем зрителю. Сумма определяет максимум внимания, повторы не допускаются. Платёж тестовый.</p>
+    </section>
+    </div>
+
+
+
+    <div class="broadcast-column">
+    <section class="panel live-visual" aria-label="Живая сцена с тремя агентами">
+      <div class="live-visual-head pixel-module-head">
+        <h2><span>///</span> ЖИВОЙ ДИАЛОГ — АГЕНТЫ В ЭФИРЕ</h2>
+        <div class="pixel-toolbar" aria-label="Модуль анимации персонажей">
+          <label><input id="pixelPuppetEnabled" type="checkbox" checked> Pixel Puppet</label>
+          <label>Кадры <select id="pixelPuppetFps" aria-label="Частота анимации пиксельных персонажей">
+            <option value="12" selected>12 FPS · экономно</option>
+            <option value="20">20 FPS</option><option value="30">30 FPS</option>
+          </select></label>
+        </div>
+      </div>
+      <div id="liveAvatars" class="live-tiles">
+        <article class="live-tile" data-agent-index="0" aria-label="Агент 1">
+          <div class="live-tile-top"><span>● AGENT 01</span><span class="tile-mode">ГОТОВ</span></div>
+          <div class="hud-portrait" aria-hidden="true"></div>
+          <div class="wave-lane" aria-hidden="true"></div>
+          <div class="live-tile-foot"><strong class="tile-name">Норман</strong><span>▂▄▆█</span></div>
+        </article>
+        <article class="live-tile" data-agent-index="1" aria-label="Агент 2">
+          <div class="live-tile-top"><span>● AGENT 02</span><span class="tile-mode">ГОТОВ</span></div>
+          <div class="hud-portrait" aria-hidden="true"></div>
+          <div class="wave-lane" aria-hidden="true"></div>
+          <div class="live-tile-foot"><strong class="tile-name">Глитч</strong><span>▂▄▆█</span></div>
+        </article>
+        <article class="live-tile" data-agent-index="2" aria-label="Агент 3">
+          <div class="live-tile-top"><span>● AGENT 03</span><span class="tile-mode">ГОТОВ</span></div>
+          <div class="hud-portrait" aria-hidden="true"></div>
+          <div class="wave-lane" aria-hidden="true"></div>
+          <div class="live-tile-foot"><strong class="tile-name">Джесси</strong><span>▂▄▆█</span></div>
+        </article>
+      <div class="dialogue-table" aria-hidden="true">
+        <svg viewBox="0 0 900 100" preserveAspectRatio="none" focusable="false">
+          <defs>
+            <lin</defs>earGradient id="table-surface" x2="0" y2="1">
+              <stop stop-color="#32665b"/>
+              <stop offset="1" stop-color="#102c29"/>
+            </linearGradient>
+            <linearGradient id="table-edge">
+              <stop stop-color="#39f6a7"/>
+              <stop offset=".5" stop-color="#29e8ff"/>
+              <stop offset="1" stop-color="#ffc936"/>
+            </linearGradient>
+          </defs>
+          <path class="table-shadow" d="M30 64Q450 28 870 64L870 84Q450 112 30 84Z"/>
+          <path class="table-fascia" d="M18 55Q450 97 882 55V73Q450 115 18 73Z"/>
+          <path class="table-top" d="M136 11Q450 -3 764 11Q810 13 854 35L882 51Q900 63 865 69Q450 105 35 69Q0 63 18 51L46 35Q90 13 136 11Z"/>
+          <path class="table-inlay" d="M114 22Q450 0 786 22M46 61Q450 96 854 61"/>
+          <g class="table-seat table-seat-0">
+            <path d="M124 31Q150 25 176 31L187 40Q150 46 113 40Z"/>
+            <path class="table-mic" d="M150 32V17L160 10"/>
+            <circle cx="160" cy="10" r="3"/>
+          </g>
+          <g class="table-seat table-seat-1">
+            <path d="M410 24H490L496 33H404Z"/>
+            <path class="table-mic" d="M450 24V10L459 4"/>
+            <circle cx="459" cy="4" r="3"/>
+          </g>
+          <g class="table-seat table-seat-2">
+            <path d="M724 31Q750 25 776 31L787 40Q750 46 713 40Z"/>
+            <path class="table-mic" d="M750 32V17L740 10"/>
+            <circle cx="740" cy="10" r="3"/>
+          </g>
+          <path class="table-console" d="M419 57H481L489 63H411Z"/>
+        </svg>
+      </div>
+      </div>
+    </section>
+    <section class="panel stream" aria-label="Живой диалог">
+      <div class="streamhead">
+        <div><div class="eyebrow">SIGNAL / LIVE TRANSCRIPT</div><h2>ЖИВОЙ ДИАЛОГ <span class="live-glyph">///</span></h2></div>
+        <div class="stream-actions"><span id="queueStatus" class="queue-status" role="status" aria-live="polite">◌ ОЧЕРЕДЬ ПУСТА</span><button id="export" title="Экспортировать TXT">⇩ TXT</button></div>
+      </div>
+      <div id="feed" class="feed" aria-live="off"></div>
+    </section>
+    </div>
+
+    <section class="agents-block" aria-label="Персонажи">
+      <div class="block-head"><div><span class="eyebrow">PERSONAS / LIVE CONFIGURATION</span><h2>АГЕНТЫ <span class="soft">/ 03</span></h2></div><p>Настройки применятся к следующим репликам.</p></div>
+      <div id="cards" class="cards"></div>
+    </section>
+
+
+
+
+
+
+  </main>
+  <details class="panel voice-panel" id="voiceSettings" aria-label="Голосовой движок и настройки">
+      <summary class="voice-collapse-toggle"><span>♪ VOICE STUDIO / НАСТРОЙКИ ГОЛОСА</span><span class="fold-arrow">▾</span></summary>
+      <div class="voice-panel-body">
+      <div class="panel-overline"><span class="signal-dot"></span> AUDIO / LOCAL VOICE STUDIO <span class="panel-index">TTS</span></div>
+      <h2>СИНТЕЗ РЕЧИ <span class="soft">/ VOICE ENGINE</span></h2>
+      <p class="voice-intro">Выбери движок, установи его в нужную папку, затем настрой голос отдельно для каждого персонажа.</p>
+      <div class="voice-layout">
+        <div class="voice-selector">
+          <label class="field-caption" for="ttsBackend">АКТИВНЫЙ ДВИЖОК</label>
+          <select id="ttsBackend" aria-label="Выбрать движок синтеза речи">
+            <option value="piper">Piper TTS · русский / быстрый ONNX</option>
+            <option value="silero">Silero TTS V5 · русский / 5 голосов</option>
+            <option value="kokoro">Kokoro 82M · английский / русский</option>
+            <option value="qwen3-tts">Qwen3-TTS MLX · Mac (M1–M4)</option>
+            <option value="browser">Голоса системы · macOS / браузер</option>
+          </select>
+          <p id="voiceHint" class="voice-hint">Выбери движок для установки и озвучивания.</p>
+          <button id="testAudioOutput" type="button" title="Проверить аудиовыход браузера">♪ ТЕСТ ЗВУКА (КОРОТКИЙ СИГНАЛ)</button>
+          <label class="check-line"><input id="voiceEnabled" type="checkbox" checked> Озвучивать ответы персонажей</label>
+          <label class="field-caption" for="rate">ОБЩАЯ СКОРОСТЬ <output id="rateValue">1.00×</output></label>
+          <input id="rate" type="range" min="0.75" max="1.5" step="0.05" value="1">
+          <p class="tts-install-hint">Скорость общая для всех персонажей. Голос выбирается отдельно для каждого персонажа.</p>
+        </div>
+        <div class="voice-engine-config">
+          <div id="kokoroModelWrap" hidden>
+            <label class="field-caption" for="kokoroModel">МОДЕЛЬ KOKORO</label>
+            <select id="kokoroModel">
+              <option value="ru">Kokoro RU 82M · русский (Света, Маша, Дима)</option>
+              <option value="en">Kokoro 82M INT8 · английский</option>
+            </select>
+          </div>
+          <div class="voice-installer" id="kokoroRuInstaller" data-engine="kokoro-ru" hidden>
+            <div class="voice-installer-head"><strong>Kokoro RU 82M</strong><span class="voice-local">LOCAL / CPU</span></div>
+            <p class="tts-install-hint">Русские голоса: Света, Маша, Дима · модель OpenRAIL. Файлы хранятся в выбранной папке.</p>
+            <p id="kokoroRuStatus" class="tts-status">Проверяем статус…</p>
+            <label class="field-caption" for="kokoroRuDirectory">ПАПКА МОДЕЛИ</label>
+            <div class="tts-folder-row">
+              <input id="kokoroRuDirectory" type="text" autocomplete="off" spellcheck="false" aria-label="Папка Kokoro RU 82M">
+              <button id="kokoroRuBrowse" type="button">Обзор…</button>
+            </div>
+            <div class="tts-install-actions">
+              <button class="primary" id="kokoroRuInstall" type="button">↓ УСТАНОВИТЬ / ПОДКЛЮЧИТЬ</button>
+              <button id="kokoroRuCancel" type="button" hidden>ОТМЕНИТЬ</button>
+              <button id="kokoroRuRestart" type="button" hidden>↻ ПЕРЕЗАПУСТИТЬ ДВИЖОК</button>
+            </div>
+            <div class="tts-progress-wrap" id="kokoroRuProgressWrap" hidden>
+              <div class="tts-progress-top"><span id="kokoroRuProgressLabel">Подготовка…</span><output id="kokoroRuProgressPercent">…</output></div>
+              <progress id="kokoroRuProgress" max="100"></progress>
+              <p class="tts-progress-detail" id="kokoroRuProgressFile"></p>
+            </div>
+            <p id="kokoroRuError" class="tts-install-error" role="alert" hidden></p>
+          </div>
+
+          <div class="voice-installer" id="kokoroInstaller" data-engine="kokoro" hidden>
+            <div class="voice-installer-head"><strong>Kokoro 82M INT8</strong><span class="voice-local">LOCAL / CPU</span></div>
+            <p class="tts-install-hint">Компактная ONNX-модель · английская речь. Файлы хранятся в выбранной папке.</p>
+            <p id="kokoroStatus" class="tts-status">Проверяем статус…</p>
+            <label class="field-caption" for="kokoroDirectory">ПАПКА МОДЕЛИ</label>
+            <div class="tts-folder-row">
+              <input id="kokoroDirectory" type="text" autocomplete="off" spellcheck="false" aria-label="Папка Kokoro 82M INT8">
+              <button id="kokoroBrowse" type="button">Обзор…</button>
+            </div>
+            <div class="tts-install-actions">
+              <button class="primary" id="kokoroInstall" type="button">↓ УСТАНОВИТЬ / ПОДКЛЮЧИТЬ</button>
+              <button id="kokoroCancel" type="button" hidden>ОТМЕНИТЬ</button>
+              <button id="kokoroRestart" type="button" hidden>↻ ПЕРЕЗАПУСТИТЬ ДВИЖОК</button>
+            </div>
+            <div class="tts-progress-wrap" id="kokoroProgressWrap" hidden>
+              <div class="tts-progress-top"><span id="kokoroProgressLabel">Подготовка…</span><output id="kokoroProgressPercent">…</output></div>
+              <progress id="kokoroProgress" max="100"></progress>
+              <p class="tts-progress-detail" id="kokoroProgressFile"></p>
+            </div>
+            <p id="kokoroError" class="tts-install-error" role="alert" hidden></p>
+          </div>
+
+          <div class="voice-installer" id="piperInstaller" data-engine="piper" hidden>
+            <div class="voice-installer-head"><strong>Piper TTS</strong><span class="voice-local">LOCAL / CPU</span></div>
+            <p class="tts-install-hint">Быстрый ONNX-синтез · русские голоса. Файлы хранятся в выбранной папке.</p>
+            <p id="piperStatus" class="tts-status">Проверяем статус…</p>
+            <label class="field-caption" for="piperDirectory">ПАПКА МОДЕЛИ</label>
+            <div class="tts-folder-row">
+              <input id="piperDirectory" type="text" autocomplete="off" spellcheck="false" aria-label="Папка Piper TTS">
+              <button id="piperBrowse" type="button">Обзор…</button>
+            </div>
+            <div class="tts-install-actions">
+              <button class="primary" id="piperInstall" type="button">↓ УСТАНОВИТЬ / ПОДКЛЮЧИТЬ</button>
+              <button id="piperCancel" type="button" hidden>ОТМЕНИТЬ</button>
+              <button id="piperRestart" type="button" hidden>↻ ПЕРЕЗАПУСТИТЬ ДВИЖОК</button>
+            </div>
+            <div class="tts-progress-wrap" id="piperProgressWrap" hidden>
+              <div class="tts-progress-top"><span id="piperProgressLabel">Подготовка…</span><output id="piperProgressPercent">…</output></div>
+              <progress id="piperProgress" max="100"></progress>
+              <p class="tts-progress-detail" id="piperProgressFile"></p>
+            </div>
+            <p id="piperError" class="tts-install-error" role="alert" hidden></p>
+          </div>
+
+          <div class="voice-installer" id="sileroInstaller" data-engine="silero" hidden>
+            <div class="voice-installer-head"><strong>Silero TTS V5</strong><span class="voice-local">LOCAL / CPU</span></div>
+            <p class="tts-install-hint">Нейросетевой синтез · пять русских голосов. Файлы хранятся в выбранной папке.</p>
+            <p id="sileroStatus" class="tts-status">Проверяем статус…</p>
+            <label class="field-caption" for="sileroDirectory">ПАПКА МОДЕЛИ</label>
+            <div class="tts-folder-row">
+              <input id="sileroDirectory" type="text" autocomplete="off" spellcheck="false" aria-label="Папка Silero TTS V5">
+              <button id="sileroBrowse" type="button">Обзор…</button>
+            </div>
+            <div class="tts-install-actions">
+              <button class="primary" id="sileroInstall" type="button">↓ УСТАНОВИТЬ / ПОДКЛЮЧИТЬ</button>
+              <button id="sileroCancel" type="button" hidden>ОТМЕНИТЬ</button>
+              <button id="sileroRestart" type="button" hidden>↻ ПЕРЕЗАПУСТИТЬ ДВИЖОК</button>
+            </div>
+            <div class="tts-progress-wrap" id="sileroProgressWrap" hidden>
+              <div class="tts-progress-top"><span id="sileroProgressLabel">Подготовка…</span><output id="sileroProgressPercent">…</output></div>
+              <progress id="sileroProgress" max="100"></progress>
+              <p class="tts-progress-detail" id="sileroProgressFile"></p>
+            </div>
+            <p id="sileroError" class="tts-install-error" role="alert" hidden></p>
+          </div>
+
+          <div class="voice-installer" id="qwen3Installer" data-engine="qwen3-tts" hidden>
+            <div class="voice-installer-head"><strong>Qwen3-TTS MLX</strong><span class="voice-local">LOCAL / MLX · APPLE SILICON</span></div>
+            <p class="tts-install-hint">Клонирование и дизайн голоса, пресеты с эмоциями. Pro (1.7B) / Lite (0.6B). Дизайн голоса доступен только в Pro. Модели кладутся в папку models/.</p>
+            <p id="qwen3Status" class="tts-status">Проверяем статус…</p>
+            <label class="field-caption" for="qwen3Size">РАЗМЕР МОДЕЛИ</label>
+            <select id="qwen3Size">
+              <option value="lite">Lite 0.6B · быстрее</option>
+              <option value="pro">Pro 1.7B · качественнее</option>
+            </select>
+            <label class="field-caption" for="qwen3Directory">ПАПКА МОДЕЛИ</label>
+            <div class="tts-folder-row">
+              <input id="qwen3Directory" type="text" autocomplete="off" spellcheck="false" aria-label="Папка Qwen3-TTS MLX">
+              <button id="qwen3Browse" type="button">Обзор…</button>
+            </div>
+            <div class="tts-install-actions">
+              <button class="primary" id="qwen3Install" type="button">↓ УСТАНОВИТЬ / ПОДКЛЮЧИТЬ</button>
+              <button id="qwen3Cancel" type="button" hidden>ОТМЕНИТЬ</button>
+              <button id="qwen3Restart" type="button" hidden>↻ ПЕРЕЗАПУСТИТЬ ДВИЖОК</button>
+            </div>
+            <div class="tts-progress-wrap" id="qwen3ProgressWrap" hidden>
+              <div class="tts-progress-top"><span id="qwen3ProgressLabel">Подготовка…</span><output id="qwen3ProgressPercent">…</output></div>
+              <progress id="qwen3Progress" max="100"></progress>
+              <p class="tts-progress-detail" id="qwen3ProgressFile"></p>
+            </div>
+            <p id="qwen3Error" class="tts-install-error" role="alert" hidden></p>
+
+            <div class="qwen3-voices">
+              <div class="qwen3-voices-head">
+                <span>КАСТОМНЫЕ ГОЛОСА · VOICE CLONING / DESIGN / CUSTOM</span>
+                <button id="qwen3AddVoice" type="button">+ ДОБАВИТЬ ГОЛОС</button>
+              </div>
+              <div id="qwen3VoiceList" class="qwen3-voice-list"></div>
+              <div id="qwen3VoiceForm" class="qwen3-voice-form" hidden>
+                <label class="field-caption" for="qwen3VoiceName">ИМЯ ГОЛОСА</label>
+                <input id="qwen3VoiceName" type="text" maxlength="64" placeholder="Deep Narrator">
+                <label class="field-caption" for="qwen3VoiceType">ТИП</label>
+                <select id="qwen3VoiceType">
+                  <option value="design">Дизайн · описание голоса</option>
+                  <option value="clone">Клонирование · из аудио</option>
+                  <option value="preset">Пресет · встроенный голос + эмоция</option>
+                </select>
+                <div id="qwen3DesignFields">
+                  <label class="field-caption" for="qwen3DesignInstruct">ОПИСАНИЕ ГОЛОСА</label>
+                  <textarea id="qwen3DesignInstruct" rows="2" maxlength="300" placeholder="calm British narrator, deep and warm"></textarea>
+                </div>
+                <div id="qwen3CloneFields" hidden>
+                  <label class="field-caption" for="qwen3CloneAudio">РЕФЕРЕНСНЫЙ АУДИОФАЙЛ (5–10 с)</label>
+                  <input id="qwen3CloneAudio" type="file" accept="audio/*,.wav,.mp3,.m4a">
+                  <label class="field-caption" for="qwen3CloneText">ТРАНСКРИПТ (что сказано в аудио)</label>
+                  <textarea id="qwen3CloneText" rows="2" maxlength="600" placeholder="Точный текст из аудио"></textarea>
+                </div>
+                <div id="qwen3PresetFields" hidden>
+                  <label class="field-caption" for="qwen3PresetSpeaker">ВСТРОЕННЫЙ ГОЛОС</label>
+                  <select id="qwen3PresetSpeaker"></select>
+                  <label class="field-caption" for="qwen3PresetInstruct">ЭМОЦИЯ / СТИЛЬ</label>
+                  <input id="qwen3PresetInstruct" type="text" maxlength="200" placeholder="Excited and happy, speaking fast">
+                  <label class="field-caption" for="qwen3PresetSpeed">СКОРОСТЬ</label>
+                  <input id="qwen3PresetSpeed" type="range" min="0.5" max="2" step="0.05" value="1">
+                </div>
+                <div class="qwen3-voice-actions">
+                  <button class="primary" id="qwen3VoiceSave" type="button">СОХРАНИТЬ ГОЛОС</button>
+                  <button id="qwen3VoiceCancel" type="button">ОТМЕНА</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="browserInstaller" class="voice-installer" hidden>
+            <div class="voice-installer-head"><strong>СИСТЕМНЫЙ ГОЛОС</strong><span class="voice-local">BROWSER / macOS</span></div>
+            <p class="tts-status">● НЕ ТРЕБУЕТ УСТАНОВКИ</p>
+            <p class="tts-install-hint">Путь к модели не требуется. Используются доступные системные голоса macOS и браузера.</p>
+          </div>
+        </div>
+      </div>
+      </div>
+    </details>
+  <footer><span>TRIAD / NATIVE C11 + PYTHON BRIDGE + CHATGPT</span><span>LOCALHOST 127.0.0.1 <span class="bullet">●</span> ALWAYS ON AIR</span></footer>
+</div>
+<script defer src="/app.js"></script>
+<script defer src="/hud-reference.js"></script>
+<script defer src="/pixel-puppet-engine.js"></script>
+<script defer src="/pixel-puppet.js"></script>
+</body>
+</html>
