@@ -25,6 +25,24 @@
 Ошибки установки и запуска доступны в `install.log` и `worker.log` в папке модели.
 Скорость речи меняется локально с сохранением высоты голоса.
 
+### Если Hugging Face сообщает «Cannot access gated repo»
+
+Веса могут требовать принятия условий и разрешения доступа на Hugging Face.
+Открой [страницу модели](https://huggingface.co/fishaudio/openaudio-s1-mini),
+войди в аккаунт, прими условия или отправь запрос доступа. Если запрос требует
+одобрения, дождись его. Затем авторизуй тот же аккаунт на компьютере, где работает
+YapdOme. Команда для стандартной папки установки на macOS:
+
+```bash
+"$HOME/Library/Application Support/YapdOme/openaudio-s1-mini/venv/bin/hf" auth login
+```
+
+Если выбрана другая папка, запусти `<папка модели>/venv/bin/hf auth login`.
+Введи токен Hugging Face с правом чтения и доступа к этой gated-модели в терминале.
+Не отправляй токен в чат. Токен сохраняется стандартным клиентом Hugging Face;
+установщик использует эту авторизацию автоматически. После входа повтори установку.
+API-ключ Fish Audio для этого не нужен.
+
 Веса S1-mini распространяются по **CC BY-NC-SA 4.0**;
 см. [официальную модель](https://huggingface.co/fishaudio/openaudio-s1-mini)
 и [закреплённую версию Fish Speech](https://github.com/fishaudio/fish-speech/tree/781bf1cd7afef831fc58928a6444a2161449dae5).

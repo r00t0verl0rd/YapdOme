@@ -20,7 +20,7 @@ from unittest.mock import patch
 
 from backend.audio.addons import OpenAudioAddon
 from backend.audio.openaudio import (FISH_REVISION, MODEL_FILES, reference_status,
-                                    save_reference, validate_request, download)
+                                    save_reference, validate_request, download, download_command)
 
 
 def wav(seconds=3):
@@ -35,6 +35,21 @@ def wav(seconds=3):
 
 
 class OpenAudioTests(unittest.TestCase):
+    def test_gated_download_explains_account_access_and_local_login(self):
+        from contextlib import redirect_stderr
+        class GatedRepoError(Exception):
+            pass
+        stub = types.ModuleType('huggingface_hub.utils')
+        stub.GatedRepoError = GatedRepoError
+        output = io.StringIO()
+        with patch.dict(sys.modules, {'huggingface_hub.utils': stub}), redirect_stderr(output), \
+                patch('backend.audio.openaudio.download', side_effect=GatedRepoError('private upstream detail')):
+            result = download_command(Path('/unused'))
+        self.assertEqual(result, 1)
+        self.assertIn('hf auth login', output.getvalue())
+        self.assertIn('https://huggingface.co/fishaudio/openaudio-s1-mini', output.getvalue())
+        self.assertNotIn('private upstream detail', output.getvalue())
+
     def test_download_pins_snapshot_and_rejects_checksum_mismatch(self):
         content = b'fixture model'
         digest = hashlib.sha256(content).hexdigest()

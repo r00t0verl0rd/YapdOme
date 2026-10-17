@@ -222,9 +222,22 @@ def check_runtime(root):
     print('Fish Speech inference dependencies OK; CUDA:', torch.cuda.is_available(), flush=True)
 
 
+def download_command(root):
+    from huggingface_hub.utils import GatedRepoError
+    try:
+        download(root)
+        return 0
+    except GatedRepoError:
+        # Keep these lines short: the installer surfaces the final three log lines.
+        print('Hugging Face ограничивает доступ к S1-mini.', file=sys.stderr)
+        print('Прими условия: https://huggingface.co/fishaudio/openaudio-s1-mini', file=sys.stderr)
+        print('Выполни hf auth login в окружении модели (см. README), затем повтори установку.', file=sys.stderr)
+        return 1
+
+
 if __name__ == '__main__':
     if sys.argv[1] == '--download':
-        download(Path(sys.argv[2]))
+        raise SystemExit(download_command(Path(sys.argv[2])))
     elif sys.argv[1] == '--worker':
         worker(Path(sys.argv[2]), int(sys.argv[3]))
     elif sys.argv[1] == '--check-runtime':
