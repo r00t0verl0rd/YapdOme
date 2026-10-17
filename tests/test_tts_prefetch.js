@@ -3,7 +3,7 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const vm=require('node:vm'),fs=require('node:fs'),path=require('node:path');
-const source=fs.readFileSync(path.join(__dirname,'../web/app.js'),'utf8');
+const source=fs.readFileSync(path.join(__dirname,'../frontend/client.js'),'utf8');
 const section=source.slice(source.indexOf('const speech = {'),source.indexOf('function humanBytes'));
 const tick=async()=>{for(let i=0;i<8;i++)await new Promise(setImmediate);};
 function harness({deferSecond=true}={}){

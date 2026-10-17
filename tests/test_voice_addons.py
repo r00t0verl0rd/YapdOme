@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from html.parser import HTMLParser
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from yapdome.audio.addons import safe_directory, ADDONS, VOICE_NAMES, PIPER_ORIGIN, SILERO_ORIGIN
+from backend.audio.addons import safe_directory, ADDONS, VOICE_NAMES, PIPER_ORIGIN, SILERO_ORIGIN
 
 BASE=Path(__file__).resolve().parents[1]
 
@@ -35,7 +35,7 @@ class AddonTests(unittest.TestCase):
         self.assertIn("voices-v1.0.bin",ADDONS["kokoro"].expected_files())
 
     def test_russian_model_requires_complete_phonetic_assets(self):
-        from yapdome.audio.addons import Addon, RU_ESPEAK_FILES, complete_asset
+        from backend.audio.addons import Addon, RU_ESPEAK_FILES, complete_asset
         expected=set(RU_ESPEAK_FILES)
         self.assertIn("espeak-data/ru_dict",expected)
         self.assertIn("espeak-data/phontab",expected)
@@ -60,7 +60,7 @@ class AddonTests(unittest.TestCase):
                 target.write_bytes(b"phonemes"*300)
             # Kokoro also depends on RUAccent models inside its private venv.
             self.assertFalse(addon.installed)
-            from yapdome.audio.ruaccent_repair import ESSENTIAL
+            from backend.audio.ruaccent_repair import ESSENTIAL
             cache=root/"venv/lib/python3.12/site-packages/ruaccent"
             for name in ESSENTIAL:
                 target=cache/name
@@ -74,7 +74,7 @@ class AddonTests(unittest.TestCase):
             self.assertFalse(addon.installed)
 
     def test_ruaccent_detects_partial_downloaded_directory(self):
-        from yapdome.audio.ruaccent_repair import check_essential, ESSENTIAL
+        from backend.audio.ruaccent_repair import check_essential, ESSENTIAL
         with tempfile.TemporaryDirectory(dir=Path.home()) as folder:
             root=Path(folder)
             target=root/"nn/nn_omograph/turbo3.1"
@@ -88,7 +88,7 @@ class AddonTests(unittest.TestCase):
             self.assertEqual(check_essential(root),[])
 
     def test_small_language_definition_is_valid_but_pointer_is_not(self):
-        from yapdome.audio.addons import complete_asset
+        from backend.audio.addons import complete_asset
         with tempfile.TemporaryDirectory(dir=Path.home()) as folder:
             root=Path(folder)
             language=root/"espeak-data/lang/zle/ru"
@@ -114,7 +114,7 @@ class AddonTests(unittest.TestCase):
 
     def test_output_wav_must_contain_audible_samples(self):
         import io, wave, struct
-        from yapdome.audio.addons import valid_wav
+        from backend.audio.addons import valid_wav
         self.assertFalse(valid_wav(b''))
         def make_wav(values):
             output=io.BytesIO()
@@ -128,22 +128,22 @@ class AddonTests(unittest.TestCase):
         self.assertTrue(valid_wav(make_wav([200 if i%4==0 else 0 for i in range(4000)])))
 
     def test_kokoro_and_silero_installation_dependencies(self):
-        from yapdome.audio.addons import ADDONS
+        from backend.audio.addons import ADDONS
         self.assertIn('espeak-data/ru_dict', ADDONS['kokoro-ru'].expected_files())
-        code=(BASE/'yapdome/audio/addons.py').read_text()
+        code=(BASE/'backend/audio/addons.py').read_text()
         self.assertIn('RU_ESPEAK_FILES', code)
         self.assertIn('kokoro-config.json', code)
         self.assertNotIn('from huggingface_hub import snapshot_download', code)
         self.assertIn('scipy', code)
     def test_voice_studio_has_unique_controls(self):
-        h=IDs();h.feed((BASE/"web/index.html").read_text())
+        h=IDs();h.feed((BASE/"frontend/index.html").read_text())
         self.assertEqual(len(h.ids),len(set(h.ids)), "duplicate HTML ids")
         for key in ("ttsBackend","voiceSettings","piperDirectory","sileroDirectory",
                     "kokoroRuDirectory","kokoroDirectory","piperProgress",
                     "sileroProgress","kokoroRuProgress","voiceHint",
                     "voiceEnabled","auto","rate"):
             self.assertIn(key,h.ids)
-        js=(BASE/"web/app.js").read_text()
+        js=(BASE/"frontend/client.js").read_text()
         self.assertIn("syncVoicePanel()",js)
         self.assertIn("'/api/voice/'+addon.key",js)
         self.assertIn("piperSpeakers",js)
@@ -152,7 +152,7 @@ class AddonTests(unittest.TestCase):
 
     def test_qwen3_custom_voices_share_one_folder_and_crud(self):
         import io, wave, struct, base64
-        from yapdome.audio.qwen3 import Qwen3Voices, QWEN3_VOICES_DIR
+        from backend.audio.qwen3 import Qwen3Voices, QWEN3_VOICES_DIR
         def wav_b64():
             out=io.BytesIO()
             with wave.open(out, 'wb') as w:
@@ -185,7 +185,7 @@ class SupervisionTests(unittest.TestCase):
 
     def test_crashed_worker_exposes_traceback_and_stays_stopped(self):
         from unittest.mock import Mock, PropertyMock, patch
-        from yapdome.audio.addons import Addon
+        from backend.audio.addons import Addon
         with tempfile.TemporaryDirectory(dir=Path.home()) as tmp, patch.object(
             Addon, "installed", new_callable=PropertyMock, return_value=True
         ):
@@ -197,7 +197,7 @@ class SupervisionTests(unittest.TestCase):
             crashed=Mock(pid=1001)
             crashed.poll.return_value=1
             addon._process=crashed
-            with patch("yapdome.audio.addons.subprocess.Popen") as spawn:
+            with patch("backend.audio.addons.subprocess.Popen") as spawn:
                 result=addon.status()
                 self.assertEqual(result["status"],"error")
                 self.assertFalse(result["ready"])
@@ -213,7 +213,7 @@ class SupervisionTests(unittest.TestCase):
 
     def test_readiness_probe_transitions_to_ready(self):
         from unittest.mock import Mock, PropertyMock, patch
-        from yapdome.audio.addons import Addon
+        from backend.audio.addons import Addon
         with tempfile.TemporaryDirectory(dir=Path.home()) as tmp, patch.object(
             Addon, "installed", new_callable=PropertyMock, return_value=True
         ):
@@ -221,16 +221,16 @@ class SupervisionTests(unittest.TestCase):
             addon.root=Path(tmp)
             good=Mock(pid=1003)
             good.poll.return_value=None
-            with patch("yapdome.audio.addons.subprocess.Popen",return_value=good),patch.object(
+            with patch("backend.audio.addons.subprocess.Popen",return_value=good),patch.object(
                 addon, "_health", side_effect=[False,True,True]
-            ),patch("yapdome.audio.addons.time.sleep"):
+            ),patch("backend.audio.addons.time.sleep"):
                 self.assertTrue(addon.await_ready(timeout=2))
                 self.assertEqual(addon.status()["status"],"ready")
 
     def test_timeout_is_failure_not_infinite_starting(self):
         import time
         from unittest.mock import Mock, PropertyMock, patch
-        from yapdome.audio.addons import Addon
+        from backend.audio.addons import Addon
         with tempfile.TemporaryDirectory(dir=Path.home()) as tmp, patch.object(
             Addon, "installed", new_callable=PropertyMock, return_value=True
         ):

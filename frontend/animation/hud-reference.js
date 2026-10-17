@@ -1,7 +1,7 @@
 'use strict';
 /* YapdOme reference HUD — presentation only.
    The C core, authorization, turn routing, donation queue and TTS remain
-   exclusively owned by the existing app.js. */
+   exclusively owned by the existing client.js. */
 (function(){
   const $ = id => document.getElementById(id);
   const portraits = [

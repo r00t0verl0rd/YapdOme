@@ -23,7 +23,7 @@ def now_ms():
 
 
 class StateMachine:
-    """Конечный автомат эфира. Публичная обёртка — yapdome.engine.api.Engine."""
+    """Конечный автомат эфира. Публичная обёртка — backend.engine.api.Engine."""
 
     def __init__(self):
         self.status = E.IDLE

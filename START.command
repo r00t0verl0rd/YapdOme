@@ -16,9 +16,9 @@ if ! command -v python3 >/dev/null 2>&1; then
   echo 'Не найден Python 3. Установи Python 3 и проверь команду python3.'
   read -r -p 'Нажми Enter для закрытия…' _; exit 1
 fi
-# Порт настроен только в yapdome/server/config.py; импорт не запускает сервер.
-if ! PORT="$(python3 -c 'from yapdome.server import PORT; print(PORT)')"; then
-  echo 'Не удалось прочитать порт из yapdome/server/config.py.'
+# Порт настроен только в backend/server/config.py; импорт не запускает сервер.
+if ! PORT="$(python3 -c 'from backend.server import PORT; print(PORT)')"; then
+  echo 'Не удалось прочитать порт из backend/server/config.py.'
   read -r -p 'Нажми Enter для закрытия…' _; exit 1
 fi
 # Ждём готовности сервера перед открытием браузера.
@@ -36,7 +36,7 @@ echo "http://127.0.0.1:${PORT}"
 echo "Журнал ошибок: $LOG"
 echo 'Для остановки: Ctrl+C'
 set -o pipefail
-python3 -u -m yapdome.server 2>&1 | tee -a "$LOG"
+python3 -u -m backend.server 2>&1 | tee -a "$LOG"
 code=$?
 echo "Сервер завершился с кодом $code. Журнал: $LOG"
 read -r -p 'Нажми Enter для закрытия…' _

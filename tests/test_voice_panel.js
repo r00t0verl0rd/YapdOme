@@ -2,9 +2,9 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
-const code=fs.readFileSync(path.join(__dirname,'../web/app.js'),'utf8');
-const html=fs.readFileSync(path.join(__dirname,'../web/index.html'),'utf8');
-const styles=fs.readFileSync(path.join(__dirname,'../web/style.css'),'utf8');
+const code=fs.readFileSync(path.join(__dirname,'../frontend/client.js'),'utf8');
+const html=fs.readFileSync(path.join(__dirname,'../frontend/index.html'),'utf8');
+const styles=fs.readFileSync(path.join(__dirname,'../frontend/style.css'),'utf8');
 const section=(start,end)=>{
  const first=code.indexOf(start),last=code.indexOf(end,first+start.length);
  assert.ok(first>=0&&last>first,'Missing JS section: '+start);

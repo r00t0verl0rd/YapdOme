@@ -8,10 +8,10 @@
 
 Слои:
 
-- :mod:`yapdome.engine.enums` — числовые коды и строковые ярлыки;
-- :mod:`yapdome.engine.routing` — текстовый роутинг (TO-токены, имена, цитаты);
-- :mod:`yapdome.engine.state` — машина состояний и журнал аудита;
-- :mod:`yapdome.engine.api` — валидирующий фасад :class:`Engine`.
+- :mod:`backend.engine.enums` — числовые коды и строковые ярлыки;
+- :mod:`backend.engine.routing` — текстовый роутинг (TO-токены, имена, цитаты);
+- :mod:`backend.engine.state` — машина состояний и журнал аудита;
+- :mod:`backend.engine.api` — валидирующий фасад :class:`Engine`.
 """
 
 from .enums import MODES, KINDS, ACTIONS, ROUTE_REASONS

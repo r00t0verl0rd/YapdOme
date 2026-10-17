@@ -1,4 +1,4 @@
-"""Порт настраивается только в yapdome/server/config.py."""
+"""Порт настраивается только в backend/server/config.py."""
 import os
 from pathlib import Path
 import subprocess
@@ -14,16 +14,16 @@ class PortConfigTests(unittest.TestCase):
         env.pop("TRIAD_PORT", None)
         env.update(environment)
         return subprocess.run(
-            [sys.executable, "-c", "import yapdome.server; print(yapdome.server.PORT)"],
+            [sys.executable, "-c", "import backend.server; print(backend.server.PORT)"],
             cwd=ROOT, env=env, text=True, capture_output=True, timeout=15
         )
 
     def test_default_port_is_single_editable_server_setting(self):
-        import yapdome.server
+        import backend.server
         result = self.port_from_fresh_server({})
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(int(result.stdout.strip()), yapdome.server.DEFAULT_PORT)
-        self.assertTrue(1 <= yapdome.server.DEFAULT_PORT <= 65535)
+        self.assertEqual(int(result.stdout.strip()), backend.server.DEFAULT_PORT)
+        self.assertTrue(1 <= backend.server.DEFAULT_PORT <= 65535)
 
     def test_environment_override_still_works(self):
         result = self.port_from_fresh_server({"TRIAD_PORT": "13181"})
@@ -38,7 +38,7 @@ class PortConfigTests(unittest.TestCase):
 
     def test_mac_launcher_reads_server_port_not_hardcoded_default(self):
         source = (ROOT / "START-MAC.command").read_text(encoding="utf-8")
-        self.assertIn("from yapdome.server import PORT; print(PORT)", source)
+        self.assertIn("from backend.server import PORT; print(PORT)", source)
         self.assertNotIn('TRIAD_PORT:-8765', source)
         self.assertIn('http://127.0.0.1:${PORT}/api/version', source)
         self.assertIn('http://127.0.0.1:${PORT}/', source)

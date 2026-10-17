@@ -4,10 +4,10 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import yapdome.server.app as triad
-from yapdome.server.llm import BridgeError
-from yapdome.controls.host import live_memory_context
-from yapdome.controls.donations import donation_scene_instructions
+import backend.server.http_server as triad
+from backend.server.llm import BridgeError
+from backend.controls.host import live_memory_context
+from backend.controls.donations import donation_scene_instructions
 
 
 class NaturalDialogueTests(unittest.TestCase):

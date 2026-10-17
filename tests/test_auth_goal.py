@@ -8,8 +8,8 @@ from pathlib import Path
 from unittest.mock import patch
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import yapdome.server.auth as triad
-from yapdome.controls.host import shared_goal
+import backend.server.auth as triad
+from backend.controls.host import shared_goal
 
 class OAuthTests(unittest.TestCase):
     def setUp(self):

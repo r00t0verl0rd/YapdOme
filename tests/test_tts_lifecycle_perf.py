@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch
 import wave
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from yapdome.audio.addons import Addon, valid_wav
+from backend.audio.addons import Addon, valid_wav
 
 
 class LifecycleTests(unittest.TestCase):

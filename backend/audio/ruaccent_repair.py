@@ -121,5 +121,5 @@ def repair(progress_path):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        raise SystemExit("Usage: python -m yapdome.audio.ruaccent_repair <progress-json-path>")
+        raise SystemExit("Usage: python -m backend.audio.ruaccent_repair <progress-json-path>")
     repair(Path(sys.argv[1]).resolve())

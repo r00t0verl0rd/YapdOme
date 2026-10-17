@@ -4,8 +4,8 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
-const engine = require('../web/animation/pixel-puppet-engine.js');
-const adapter = fs.readFileSync(path.join(__dirname, '../web/animation/pixel-puppet.js'), 'utf8');
+const engine = require('../frontend/animation/pixel-puppet-engine.js');
+const adapter = fs.readFileSync(path.join(__dirname, '../frontend/animation/pixel-puppet.js'), 'utf8');
 
 test('real engine: 48×48 literal LEDs 0..3, three distinct robots and expressions', () => {
   assert.equal(engine.W, 48); assert.equal(engine.H, 48);

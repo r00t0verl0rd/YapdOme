@@ -4,7 +4,7 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
-const source=fs.readFileSync(path.join(__dirname,'../web/app.js'),'utf8');
+const source=fs.readFileSync(path.join(__dirname,'../frontend/client.js'),'utf8');
 const between=(a,b)=>{
  const i=source.indexOf(a),j=source.indexOf(b,i+a.length);
  assert.ok(i>=0&&j>i,a);

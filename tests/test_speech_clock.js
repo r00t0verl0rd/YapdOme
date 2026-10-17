@@ -2,7 +2,7 @@
 // Deterministic browser-speech regression: a model may finish immediately,
 // but no text / next native turn may be committed before audible completion.
 const fs=require('fs'),vm=require('vm'),assert=require('assert/strict'),path=require('path');
-const source=fs.readFileSync(path.join(__dirname,'../web/app.js'),'utf8');
+const source=fs.readFileSync(path.join(__dirname,'../frontend/client.js'),'utf8');
 const between=(begin,end)=>{const a=source.indexOf(begin);assert(a>=0,begin);const b=source.indexOf(end,a);assert(b>a,end);return source.slice(a,b)};
 const nodes={voiceEnabled:{checked:true},rate:{value:'1'},feed:{scrollHeight:50,scrollTop:0}};
 const utterances=[];

@@ -20,7 +20,7 @@ import platform
 
 from .qwen3 import QWEN3_BUILTIN, QWEN3_MODEL_FOLDERS, QWEN3_VOICES_DIR
 
-# Корень проекта нужен для запуска воркеров как модулей (python -m yapdome.audio.*).
+# Корень проекта нужен для запуска воркеров как модулей (python -m backend.audio.*).
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 # Общая папка данных приложения; рядом живут остальные голосовые движки.
 APP = (Path.home() / 'Library' / 'Application Support' / 'YapdOme'
@@ -100,7 +100,7 @@ def safe_directory(value, kind):
         allowed = False
     if not allowed or len(root.parts) < 4:
         raise ValueError("Каталог должен находиться в домашней папке или на /Volumes")
-    if root.is_file() or (root / ".git").exists() or (root / "yapdome").is_dir():
+    if root.is_file() or (root / ".git").exists() or (root / "backend").is_dir():
         raise ValueError("Нельзя устанавливать модель в каталог исходного кода")
     if root.exists() and any(root.iterdir()):
         # Switching back to an existing model installation is allowed.
@@ -480,10 +480,10 @@ class Addon:
 
     def _worker_module(self):
         if self.kind == "kokoro-ru":
-            return "yapdome.audio.kokoro_ru"
+            return "backend.audio.kokoro_ru"
         if self.kind == "kokoro":
-            return "yapdome.audio.kokoro"
-        return "yapdome.audio.addons"
+            return "backend.audio.kokoro"
+        return "backend.audio.addons"
 
     def _worker_command(self):
         python = str(self.root / "venv/bin/python")
@@ -680,10 +680,10 @@ class Qwen3Addon(Addon):
         return tuple(f for group in QWEN3_MODEL_FOLDERS.values() for f in group.values())
 
     def _worker_module(self):
-        return "yapdome.audio.qwen3"
+        return "backend.audio.qwen3"
 
     def _worker_command(self):
-        return [str(self.root / "venv/bin/python"), "-m", "yapdome.audio.qwen3",
+        return [str(self.root / "venv/bin/python"), "-m", "backend.audio.qwen3",
                 "--worker", str(self.root), str(self.port), str(QWEN3_VOICES_DIR)]
 
     def _install(self):
@@ -706,7 +706,7 @@ class Qwen3Addon(Addon):
             progress_file = self.root / ".qwen3-download-progress.json"
             if progress_file.exists():
                 progress_file.unlink()
-            self._run([str(py), "-m", "yapdome.audio.qwen3", "--download", size,
+            self._run([str(py), "-m", "backend.audio.qwen3", "--download", size,
                        str(self.root / "models"), str(progress_file)],
                       timeout=7200, progress_file=progress_file, cwd=PROJECT_ROOT)
             self._check()

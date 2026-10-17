@@ -14,9 +14,9 @@ from pathlib import Path
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import yapdome.server.app as triad
-from yapdome.controls.host import cast_profiles
-from yapdome.server.llm import BridgeError
+import backend.server.http_server as triad
+from backend.controls.host import cast_profiles
+from backend.server.llm import BridgeError
 
 
 def fake_events(text):

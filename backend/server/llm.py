@@ -1,7 +1,7 @@
 """Транспортный слой LLM: HTTP-JSON, SSE, JWT, ошибки моста.
 
 Чистые функции без состояния эфира; запросы к провайдерам собираются в
-:mod:`yapdome.server.app`, где доступен глобальный STATE.
+:mod:`backend.server.http_server`, где доступен глобальный STATE.
 """
 
 import base64

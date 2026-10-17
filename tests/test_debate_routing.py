@@ -3,7 +3,7 @@ import sys
 import unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from yapdome.engine import Engine
+from backend.engine import Engine
 
 NAMES = ["Архитектор", "Скептик", "Экспериментатор"]
 NEUTRAL = "Продолжаю мысль без обращения к кому-либо."
@@ -138,7 +138,7 @@ class DebateRouting(unittest.TestCase):
         self.assertEqual(done['next_agent'], 1)
 
     def test_engine_version_matches_release(self):
-        from yapdome import __version__
+        from backend import __version__
         number = r'(?:0|[1-9][0-9]*)'
         import re
         self.assertRegex(__version__, rf'\A{number}\.{number}\.{number}\Z')

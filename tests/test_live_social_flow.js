@@ -2,7 +2,7 @@
 'use strict';
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
-const src=fs.readFileSync(path.join(__dirname,'..','web','app.js'),'utf8');
+const src=fs.readFileSync(path.join(__dirname,'..','frontend', 'client.js'),'utf8');
 const a=src.indexOf('function resetSocialFocus(){'),b=src.indexOf('async function claimNext(){',a);
 assert(a>=0&&b>a);
 const fields={showMode:{value:'live'}};

@@ -9,7 +9,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from yapdome import __version__
+from backend import __version__
 from ..engine import Engine
 from ..controls.director import (open_topic, validate_plan, decode_plan,
                                  director_context, DIRECTOR_INSTRUCTIONS)
@@ -27,8 +27,8 @@ KOKORO = ADDONS['kokoro']
 KOKORO_RU = ADDONS['kokoro-ru']
 QWEN3_VOICES = Qwen3Voices(QWEN3_VOICES_DIR)
 
-# Статические ресурсы фронтенда; анимация живёт в web/animation.
-WEB_DIR = Path(__file__).resolve().parents[2] / "web"
+# Статические ресурсы фронтенда; анимация живёт в frontend/animation.
+FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
 
 
 def discussion_frame(topic, mission, mode="live"):
@@ -597,14 +597,14 @@ class Handler(BaseHTTPRequestHandler):
         path = urllib.parse.urlparse(self.path)
         if path.path == "/auth/callback":
             return self.auth_callback(path.query)
-        if path.path in ("/", "/index.html", "/app.js", "/style.css", "/hud-reference.css", "/hud-reference.js",
+        if path.path in ("/", "/index.html", "/client.js", "/style.css", "/hud-reference.css", "/hud-reference.js",
                          "/pixel-puppet-engine.js", "/pixel-puppet.js", "/pixel-puppet.css"):
             name = "index.html" if path.path == "/" else path.path[1:]
-            # Анимация лежит в подпапке web/animation.
+            # Анимация лежит в подпапке frontend/animation.
             if name.startswith(("hud-reference", "pixel-puppet")):
                 name = "animation/" + name
             kind = "text/html; charset=utf-8" if name.endswith(".html") else ("text/javascript; charset=utf-8" if name.endswith(".js") else "text/css; charset=utf-8")
-            blob = (WEB_DIR / name).read_bytes()
+            blob = (FRONTEND_DIR / name).read_bytes()
             self.send_response(200)
             self.headers_common(kind, len(blob))
             self.end_headers()

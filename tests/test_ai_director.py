@@ -4,8 +4,8 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from yapdome.controls.director import open_topic, validate_plan, decode_plan, director_context
-from yapdome.engine import Engine
+from backend.controls.director import open_topic, validate_plan, decode_plan, director_context
+from backend.engine import Engine
 
 NAMES=["Лимур", "Кизаро", "Овелито"]
 

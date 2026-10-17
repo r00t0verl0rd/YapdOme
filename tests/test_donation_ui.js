@@ -1,6 +1,6 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
-const code=fs.readFileSync(path.join(__dirname,'..','web','app.js'),'utf8');
+const code=fs.readFileSync(path.join(__dirname,'..','frontend', 'client.js'),'utf8');
 function grab(name){
  const begin=code.indexOf('function '+name+'(');
  if(begin<0)throw Error('Missing '+name);

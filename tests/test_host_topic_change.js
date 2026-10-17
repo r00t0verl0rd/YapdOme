@@ -2,7 +2,7 @@
 'use strict';
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
-const code=fs.readFileSync(path.join(__dirname,'..','web','app.js'),'utf8');
+const code=fs.readFileSync(path.join(__dirname,'..','frontend', 'client.js'),'utf8');
 const a=code.indexOf('function hostTopicChange('),b=code.indexOf('async function humanMessage(){',a);
 assert(a>=0&&b>a);
 const ctx=vm.createContext({});

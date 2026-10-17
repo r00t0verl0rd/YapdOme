@@ -5,8 +5,8 @@ import sys
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from yapdome.controls.director import decode_plan, director_context, validate_plan
-from yapdome.server.app import repetition_risk
+from backend.controls.director import decode_plan, director_context, validate_plan
+from backend.server.http_server import repetition_risk
 
 NAMES = ['Лимур', 'Кизаро', 'Овелито']
 PLAN = dict(speaker=1, beat='Сравнить новый пример с предыдущим выводом.',

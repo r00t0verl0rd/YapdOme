@@ -9,7 +9,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import yapdome.server.app as triad
+import backend.server.http_server as triad
 
 def fake_events(text):
     packets = [
@@ -131,17 +131,17 @@ class ProtocolTests(unittest.TestCase):
         code, body = self.request('GET', '/')
         self.assertEqual(code, 200)
         self.assertIn(b'<!doctype html', body.lower())
-        self.assertIn(b'src="/app.js"', body)
+        self.assertIn(b'src="/client.js"', body)
         self.assertIn(b'href="/style.css"', body)
         self.assertIn(b'href="/pixel-puppet.css"', body)
         self.assertLess(body.index(b'src="/hud-reference.js"'), body.index(b'src="/pixel-puppet-engine.js"'))
         self.assertLess(body.index(b'src="/pixel-puppet-engine.js"'), body.index(b'src="/pixel-puppet.js"'))
         root = Path(__file__).resolve().parents[1]
-        web = root / "web"
-        assets = {'app.js': web / 'app.js', 'style.css': web / 'style.css',
-                  'pixel-puppet-engine.js': web / 'animation/pixel-puppet-engine.js',
-                  'pixel-puppet.js': web / 'animation/pixel-puppet.js',
-                  'pixel-puppet.css': web / 'animation/pixel-puppet.css'}
+        frontend = root / "frontend"
+        assets = {'client.js': frontend / 'client.js', 'style.css': frontend / 'style.css',
+                  'pixel-puppet-engine.js': frontend / 'animation/pixel-puppet-engine.js',
+                  'pixel-puppet.js': frontend / 'animation/pixel-puppet.js',
+                  'pixel-puppet.css': frontend / 'animation/pixel-puppet.css'}
         for filename, source in assets.items():
             with self.subTest(asset=filename):
                 code, content = self.request('GET', '/' + filename)

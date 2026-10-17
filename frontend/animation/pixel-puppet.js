@@ -1,4 +1,4 @@
-/* TRIAD Pixel Puppet: presentation only; app.js owns all speech and turn state. */
+/* TRIAD Pixel Puppet: presentation only; client.js owns all speech and turn state. */
 (() => {
   'use strict';
   const engine = window.YapPixelEngine;

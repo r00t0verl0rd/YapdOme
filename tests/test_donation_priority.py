@@ -4,11 +4,11 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from yapdome.server.app import Handler
-from yapdome.controls.host import agent_identity
-from yapdome.controls.donations import donation_context, donation_scene_instructions
-from yapdome.server.llm import BridgeError
-from yapdome.engine import Engine
+from backend.server.http_server import Handler
+from backend.controls.host import agent_identity
+from backend.controls.donations import donation_context, donation_scene_instructions
+from backend.server.llm import BridgeError
+from backend.engine import Engine
 from unittest.mock import patch
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -56,7 +56,7 @@ class DonationTests(unittest.TestCase):
           "donation_context":{"name":"Даша","text":"А какую песню любите?",
                               "amount":50,"remaining":5,"first":True}
         }
-        with patch("yapdome.server.app.register_call",side_effect=RequestBoundary):
+        with patch("backend.server.http_server.register_call",side_effect=RequestBoundary):
             with self.assertRaises(RequestBoundary):
                 Handler.stream(object(),info)
 
@@ -93,7 +93,7 @@ class DonationTests(unittest.TestCase):
             engine.close()
 
     def test_no_separate_donation_moderator_call_in_client(self):
-        js=(ROOT/"web/app.js").read_text()
+        js=(ROOT/"frontend/client.js").read_text()
         self.assertNotIn("reviewDonation(d)",js)
         self.assertIn("priority_donation",js)
         self.assertIn("donationQueue",js)
@@ -123,11 +123,11 @@ class DonationTests(unittest.TestCase):
             donation_context({"donation_context":base})
 
     def test_compact_three_field_composer_exists(self):
-        html=(ROOT/"web/index.html").read_text()
+        html=(ROOT/"frontend/index.html").read_text()
         for ident in ("donationAmount","donor","donationText","sendDonation"):
             self.assertEqual(html.count('id="'+ident+'"'),1,ident)
         self.assertIn('id="voiceSettings"',html)
-        app=(ROOT/"web/app.js").read_text()
+        app=(ROOT/"frontend/client.js").read_text()
         self.assertNotIn("agent-advanced",app)
         self.assertNotIn("voice-tuning",app)
         self.assertIn("ХАРАКТЕР / ПОВЕДЕНИЕ",app)

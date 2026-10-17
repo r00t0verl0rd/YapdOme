@@ -3,7 +3,7 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
-const code=fs.readFileSync(path.join(__dirname,'..','web','app.js'),'utf8');
+const code=fs.readFileSync(path.join(__dirname,'..','frontend', 'client.js'),'utf8');
 function grab(name,async=false){
  const signature=(async?'async ':'')+'function '+name+'(';
  const begin=code.indexOf(signature);

@@ -2,7 +2,7 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
-const source=fs.readFileSync(path.join(__dirname,'../web/animation/hud-reference.js'),'utf8');
+const source=fs.readFileSync(path.join(__dirname,'../frontend/animation/hud-reference.js'),'utf8');
 function harness(){
  const tiles=Array.from({length:3},()=>{
   const classes=new Set(),name={textContent:''},badge={textContent:''};

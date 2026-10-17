@@ -10,8 +10,8 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from yapdome.engine import Engine
-from yapdome.engine import enums as E
+from backend.engine import Engine
+from backend.engine import enums as E
 
 ACTIONS = ["start", "claim", "complete", "user", "pause", "resume", "stop",
            "interrupt", "reset", "fail", "donation", "decision", "tick",
