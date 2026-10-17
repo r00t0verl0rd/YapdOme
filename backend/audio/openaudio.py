@@ -223,6 +223,7 @@ def check_runtime(root):
 
 
 def download_command(root):
+    from huggingface_hub import get_token
     from huggingface_hub.utils import GatedRepoError
     try:
         download(root)
@@ -231,7 +232,10 @@ def download_command(root):
         # Keep these lines short: the installer surfaces the final three log lines.
         print('Hugging Face ограничивает доступ к S1-mini.', file=sys.stderr)
         print('Прими условия: https://huggingface.co/fishaudio/openaudio-s1-mini', file=sys.stderr)
-        print('Выполни hf auth login в окружении модели (см. README), затем повтори установку.', file=sys.stderr)
+        if get_token():
+            print('Токен найден: проверь одобрение доступа и права fine-grained токена. Инструкция — в панели S1-mini.', file=sys.stderr)
+        else:
+            print('Выполни hf auth login в окружении модели (см. README), затем повтори установку.', file=sys.stderr)
         return 1
 
 

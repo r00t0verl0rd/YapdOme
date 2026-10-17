@@ -320,7 +320,7 @@
               <ol>
                 <li>Открой <a href="https://huggingface.co/fishaudio/openaudio-s1-mini" target="_blank" rel="noopener noreferrer">страницу S1-mini на Hugging Face</a>. Нажми Log In или Sign Up и войди в свой аккаунт.</li>
                 <li>На странице модели прочитай условия и нажми кнопку согласия или запроса доступа. Если заявка ожидает одобрения, дождись разрешения. Перенаправление на fishaudio/s1-mini — нормально.</li>
-                <li>Открой <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener noreferrer">Access Tokens</a> в том же аккаунте. Нажми Create new token, выбери Read, задай имя YapdOme и создай токен. Если выбран Fine-grained, разреши чтение этой модели и доступных аккаунту gated-моделей. Скопируй токен.</li>
+                <li>Открой <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener noreferrer">Access Tokens</a> в том же аккаунте. Нажми Create new token, выбери Read, задай имя YapdOme и создай токен. Для Fine-grained включи «Read access to contents of all public gated repos you can access» в разделе Repositories. Скопируй токен.</li>
                 <li>На Mac нажми ⌘ + пробел, введи «Терминал» и нажми Enter. Скопируй команду ниже целиком, вставь в Терминал и нажми Enter. Путь уже соответствует папке модели.</li>
               </ol>
               <pre><code id="openaudioLoginCommand">Команда появится после определения папки модели.</code></pre>
@@ -329,6 +329,7 @@
                 <li>Дождись сообщения об успешном входе. Вернись сюда и нажми «Установить / подключить» ещё раз.</li>
               </ol>
               <p>Токен вводится только в Терминале. Не отправляй его в чат и не вставляй в поле папки модели. Если написано «No such file or directory», сначала запусти установку, чтобы приложение создало окружение Python.</p>
+              <p>Если вход уже завершился сообщением Login successful, но скачивание запрещено: открой Access Tokens → YapdOme → Edit permissions, включи разрешение на public gated repos, указанное в шаге 3, и сохрани. Проверь, что аккаунту одобрен доступ к модели из шага 2. Затем повтори установку; для того же отредактированного токена повторный вход обычно не нужен.</p>
             </details>
             <label class="field-caption" for="openaudioDirectory">ПАПКА МОДЕЛИ</label>
             <div class="tts-folder-row">

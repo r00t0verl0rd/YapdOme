@@ -41,14 +41,22 @@ class OpenAudioTests(unittest.TestCase):
             pass
         stub = types.ModuleType('huggingface_hub.utils')
         stub.GatedRepoError = GatedRepoError
-        output = io.StringIO()
-        with patch.dict(sys.modules, {'huggingface_hub.utils': stub}), redirect_stderr(output), \
-                patch('backend.audio.openaudio.download', side_effect=GatedRepoError('private upstream detail')):
-            result = download_command(Path('/unused'))
-        self.assertEqual(result, 1)
-        self.assertIn('hf auth login', output.getvalue())
-        self.assertIn('https://huggingface.co/fishaudio/openaudio-s1-mini', output.getvalue())
-        self.assertNotIn('private upstream detail', output.getvalue())
+        hub = types.ModuleType('huggingface_hub')
+        for token in (None, 'test-token-do-not-print'):
+            hub.get_token = lambda: token
+            output = io.StringIO()
+            with self.subTest(authenticated=bool(token)), \
+                    patch.dict(sys.modules, {'huggingface_hub': hub, 'huggingface_hub.utils': stub}), \
+                    redirect_stderr(output), \
+                    patch('backend.audio.openaudio.download', side_effect=GatedRepoError('private upstream detail')):
+                result = download_command(Path('/unused'))
+            self.assertEqual(result, 1)
+            self.assertIn('fine-grained' if token else 'hf auth login', output.getvalue())
+            if token:
+                self.assertNotIn('hf auth login', output.getvalue())
+                self.assertNotIn(token, output.getvalue())
+            self.assertIn('https://huggingface.co/fishaudio/openaudio-s1-mini', output.getvalue())
+            self.assertNotIn('private upstream detail', output.getvalue())
 
     def test_download_pins_snapshot_and_rejects_checksum_mismatch(self):
         content = b'fixture model'
