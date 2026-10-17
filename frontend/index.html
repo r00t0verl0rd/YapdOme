@@ -226,6 +226,7 @@
             <option value="piper">Piper TTS · русский / быстрый ONNX</option>
             <option value="silero">Silero TTS V5 · русский / 5 голосов</option>
             <option value="kokoro">Kokoro 82M · английский / русский</option>
+            <option value="openaudio-s1-mini">OpenAudio S1-mini · локально / клонирование голоса</option>
             <option value="qwen3-tts">Qwen3-TTS MLX · Mac (M1–M4)</option>
             <option value="browser">Голоса системы · macOS / браузер</option>
           </select>
@@ -308,6 +309,41 @@
               <p class="tts-progress-detail" id="piperProgressFile"></p>
             </div>
             <p id="piperError" class="tts-install-error" role="alert" hidden></p>
+          </div>
+
+          <div class="voice-installer" id="openaudioInstaller" data-engine="openaudio-s1-mini" hidden>
+            <div class="voice-installer-head"><strong>OpenAudio S1-mini</strong><span class="voice-local">LOCAL / CUDA · CPU</span></div>
+            <p class="tts-install-hint">Автоматическая загрузка модели 0.5B и отдельного окружения. Рекомендуется NVIDIA с 12 ГБ VRAM; на CPU синтез медленный. Веса: CC BY-NC-SA 4.0.</p>
+            <p id="openaudioStatus" class="tts-status">Проверяем статус…</p>
+            <label class="field-caption" for="openaudioDirectory">ПАПКА МОДЕЛИ</label>
+            <div class="tts-folder-row">
+              <input id="openaudioDirectory" type="text" autocomplete="off" spellcheck="false" aria-label="Папка OpenAudio S1-mini">
+              <button id="openaudioBrowse" type="button">Обзор…</button>
+            </div>
+            <div class="tts-install-actions">
+              <button class="primary" id="openaudioInstall" type="button">↓ УСТАНОВИТЬ / ПОДКЛЮЧИТЬ</button>
+              <button id="openaudioCancel" type="button" hidden>ОТМЕНИТЬ</button>
+              <button id="openaudioRestart" type="button" hidden>↻ ПЕРЕЗАПУСТИТЬ ДВИЖОК</button>
+            </div>
+            <div class="tts-progress-wrap" id="openaudioProgressWrap" hidden>
+              <div class="tts-progress-top"><span id="openaudioProgressLabel">Подготовка…</span><output id="openaudioProgressPercent">…</output></div>
+              <progress id="openaudioProgress" max="100"></progress>
+              <p class="tts-progress-detail" id="openaudioProgressFile"></p>
+            </div>
+            <p id="openaudioReferences" class="tts-install-hint">Референсы не загружены · используется голос модели</p>
+            <label class="field-caption" for="openaudioReferenceVoice">РЕФЕРЕНСНЫЙ ГОЛОС</label>
+            <select id="openaudioReferenceVoice">
+              <option value="voice-1">Референс 1</option>
+              <option value="voice-2">Референс 2</option>
+              <option value="voice-3">Референс 3</option>
+            </select>
+            <label class="field-caption" for="openaudioReferenceAudio">PCM WAV 16 БИТ · 3–30 СЕКУНД · ДО 6 МБ</label>
+            <input id="openaudioReferenceAudio" type="file" accept="audio/wav,.wav">
+            <label class="field-caption" for="openaudioReferenceText">ТОЧНАЯ РАСШИФРОВКА АУДИО</label>
+            <textarea id="openaudioReferenceText" rows="2" maxlength="1000" placeholder="Что произнесено в референсном WAV"></textarea>
+            <button id="openaudioReferenceSave" type="button">СОХРАНИТЬ РЕФЕРЕНС</button>
+            <p class="tts-install-hint">Аудио остаётся на этом компьютере. После сохранения выбери референс в карточке персонажа.</p>
+            <p id="openaudioError" class="tts-install-error" role="alert" hidden></p>
           </div>
 
           <div class="voice-installer" id="sileroInstaller" data-engine="silero" hidden>

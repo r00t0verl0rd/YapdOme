@@ -14,7 +14,7 @@ const ctx={
   voices:[],haveSpeech:true,SpeechSynthesisUtterance:Utterance,
   window:{speechSynthesis:{speak(){},cancel(){}}},
   $:id=>nodes[id]||(nodes[id]={textContent:''}),
-  piperSelected:()=>false,sileroSelected:()=>false,kokoroSelected:()=>false,kokoroRuSelected:()=>false,qwen3Selected:()=>false,isRussian:()=>true,
+  piperSelected:()=>false,sileroSelected:()=>false,kokoroSelected:()=>false,kokoroRuSelected:()=>false,qwen3Selected:()=>false,openaudioSelected:()=>false,isRussian:()=>true,
   audioAvailable:()=>true,ttsText:s=>String(s||''),
   languageFor:()=> 'Russian',
   setTimeout:()=>1,clearTimeout:()=>{},

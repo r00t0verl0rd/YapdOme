@@ -91,3 +91,21 @@ test('long local turn is assembled from bounded backend calls into one continuou
  await h.speech.idle();
  assert.equal(h.sources.length,1);
 });
+
+test('OpenAudio uses its local WAV endpoint, selected reference and FIFO prefetch',async()=>{
+ const h=harness({deferSecond:false});
+ const config={backend:'openaudio-s1-mini',name:'Норман',openaudioVoice:'voice-2',speed:1.2};
+ h.speech.push(0,'Первая реплика.',null,null,config);await tick();
+ h.speech.push(0,'Вторая реплика.',null,null,config);await tick();
+ assert.equal(h.calls.length,2);
+ for(const call of h.calls){
+  assert.equal(call.url,'/api/voice/openaudio-s1-mini/speak');
+  assert.equal(call.payload.voice,'voice-2');
+  assert.equal(call.payload.speed,1.2);
+ }
+ assert.equal(h.sources.length,1,'prefetch must not overlap the current voice');
+ h.sources[0].onended();await tick();
+ assert.equal(h.sources.length,2);
+ h.speech.stop();
+ assert.equal(h.sources[1].stopped,true);
+});

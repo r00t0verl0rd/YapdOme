@@ -20,7 +20,7 @@ class IDs(HTMLParser):
 
 class AddonTests(unittest.TestCase):
     def test_backends_have_bounded_voices(self):
-        self.assertEqual(set(ADDONS),{"kokoro","kokoro-ru","piper","silero","qwen3-tts"})
+        self.assertEqual(set(ADDONS),{"kokoro","kokoro-ru","piper","silero","qwen3-tts","openaudio-s1-mini"})
         for key,voices in VOICE_NAMES.items():
             self.assertTrue(voices)
             self.assertEqual(len(set(voices)),len(voices))

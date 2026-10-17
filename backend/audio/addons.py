@@ -19,6 +19,7 @@ from pathlib import Path
 import platform
 
 from .qwen3 import QWEN3_BUILTIN, QWEN3_MODEL_FOLDERS, QWEN3_VOICES_DIR
+from .openaudio import FISH_REVISION, MODEL_FILES, VOICES as OPENAUDIO_VOICES
 
 # Корень проекта нужен для запуска воркеров как модулей (python -m backend.audio.*).
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -35,6 +36,7 @@ VOICE_NAMES = {
     "piper": ("dmitri", "irina", "ruslan", "denis"),
     "silero": ("aidar", "baya", "kseniya", "xenia", "eugene"),
     "qwen3-tts": QWEN3_BUILTIN,
+    "openaudio-s1-mini": OPENAUDIO_VOICES,
 }
 PIPER_ORIGIN = "https://huggingface.co/rhasspy/piper-voices/resolve/main/"
 SILERO_ORIGIN = "https://models.silero.ai/models/tts/ru/v5_ru.pt"
@@ -117,7 +119,8 @@ def safe_directory(value, kind):
 def pick_directory(kind):
     if sys.platform != "darwin":
         raise ValueError("Выбор папки через Finder доступен только на macOS")
-    labels = {"kokoro-ru": "Kokoro RU", "kokoro": "Kokoro 82M", "piper": "Piper", "silero": "Silero"}
+    labels = {"kokoro-ru": "Kokoro RU", "kokoro": "Kokoro 82M", "piper": "Piper", "silero": "Silero",
+              "openaudio-s1-mini": "OpenAudio S1-mini"}
     name = kind.replace("-", "_")
     script = 'POSIX path of (choose folder with prompt "Папка установки ' + labels[kind] + '")'
     done = subprocess.run(["/usr/bin/osascript", "-e", script],
@@ -157,6 +160,8 @@ class Cancelled(Exception):
 
 
 class Addon:
+    startup_timeout = 120
+
     def __init__(self, kind):
         self.kind = kind
         self.root = APP / kind
@@ -169,7 +174,7 @@ class Addon:
         self._health_at = 0.0
         self._health_result = False
         self._last_exit = None
-        self.port = {"kokoro-ru": 8768, "kokoro": 8767, "piper": 8769, "silero": 8770, "qwen3-tts": 8771}[kind]
+        self.port = {"kokoro-ru": 8768, "kokoro": 8767, "piper": 8769, "silero": 8770, "qwen3-tts": 8771, "openaudio-s1-mini": 8772}[kind]
         self.progress = {"running": False, "percent": None, "message": "", "error": "",
                          "filename": "", "downloaded_bytes": 0, "total_bytes": 0,
                          "step": "", "speed_bytes": 0, "eta_seconds": 0,
@@ -283,10 +288,10 @@ class Addon:
         else:
             status = "stopped"
         # Heavy PyTorch startup gets 120 seconds; no endless spinner.
-        if status == "starting" and started and time.monotonic() - started > 120:
+        if status == "starting" and started and time.monotonic() - started > self.startup_timeout:
             self.stop()
             self._last_failure = (
-                f"Модель {self.kind} не ответила за 120 секунд. "
+                f"Модель {self.kind} не ответила за {self.startup_timeout} секунд. "
                 + (self._log_tail() or "Проверь worker.log.")
             )[:750]
             status = "error"
@@ -770,7 +775,126 @@ class Qwen3Addon(Addon):
         return audio
 
 
-ADDONS = {kind: (Qwen3Addon() if kind == "qwen3-tts" else Addon(kind)) for kind in VOICE_NAMES}
+class OpenAudioAddon(Addon):
+    """Isolated, pinned Fish Speech runtime and verified S1-mini weights."""
+
+    startup_timeout = 600
+
+    def __init__(self):
+        super().__init__("openaudio-s1-mini")
+
+    def _python(self):
+        # NumPy 1.26 wheels used by this Fish Speech revision stop at Python 3.12.
+        for name in ("python3.12", "python3.11", "python3.10"):
+            if candidate := shutil.which(name):
+                return candidate
+        return sys.executable if (3, 10) <= sys.version_info[:2] <= (3, 12) else None
+
+    def install(self, directory=None, size=None):
+        with self._lock:
+            if not self.progress["running"]:
+                self.stop()
+            return super().install(directory, size)
+
+    def expected_files(self):
+        return tuple("models/" + name for name in MODEL_FILES)
+
+    @property
+    def installed(self):
+        if not (self.root / "venv/bin/python").is_file():
+            return False
+        try:
+            manifest = json.loads((self.root / "models/installed.json").read_text())
+            return (manifest["source_revision"] == FISH_REVISION
+                    and all((self.root / "models" / name).stat().st_size == manifest["files"][name]["size"]
+                            and manifest["files"][name]["size"] > 0 for name in MODEL_FILES)
+                    and (self.root / "fish-speech/fish_speech").is_dir())
+        except (OSError, ValueError, KeyError, TypeError):
+            return False
+
+    def _worker_command(self):
+        return [str(self.root / "venv/bin/python"), "-m", "backend.audio.openaudio",
+                "--worker", str(self.root), str(self.port)]
+
+    def status(self):
+        from .openaudio import reference_status
+        result = super().status()
+        result["references"] = reference_status(self.root)
+        return result
+
+    def _install(self):
+        try:
+            self.root.mkdir(parents=True, exist_ok=True)
+            (self.root / ".voice-engine").write_text(self.kind)
+            self._save_root()
+            py = self._venv()
+            source = self.root / "fish-speech"
+            self._update(percent=8, message="Подготовка Fish Speech", step="deps")
+            if not source.exists():
+                self._run(["git", "clone", "--filter=blob:none", "--no-checkout",
+                           "https://github.com/fishaudio/fish-speech.git", str(source)], 900)
+            self._run(["git", "-C", str(source), "fetch", "--depth=1", "origin", FISH_REVISION], 900)
+            self._run(["git", "-C", str(source), "checkout", "--detach", FISH_REVISION], 180)
+            # Only inference dependencies: no microphone, browser UI, or training dataset install.
+            self._update(percent=12, message="Установка PyTorch и зависимостей S1-mini", step="deps")
+            torch_args = [str(py), "-m", "pip", "install", "--disable-pip-version-check",
+                          "torch==2.8.0", "torchaudio==2.8.0"]
+            if platform.system() == "Linux" and not shutil.which("nvidia-smi"):
+                torch_args += ["--index-url", "https://download.pytorch.org/whl/cpu"]
+            self._run(torch_args, 2400)
+            self._run([str(py), "-m", "pip", "install", "--disable-pip-version-check",
+                       "numpy==1.26.4", "transformers==4.51.3", "huggingface_hub>=0.30,<1",
+                       "hydra-core==1.3.2", "pydantic==2.9.2", "einx[torch]==0.2.2",
+                       "librosa==0.10.2.post1", "lightning==2.5.1", "pyrootutils==1.0.4",
+                       "loralib==0.1.2", "natsort==8.4.0", "tiktoken==0.9.0",
+                       "loguru", "soundfile", "rich", "cachetools", "ormsgpack", "click",
+                       "descript-audio-codec", "descript-audiotools"], 2400)
+            self._check()
+            self._run([str(py), "-m", "backend.audio.openaudio", "--check-runtime", str(self.root)],
+                      timeout=120, cwd=PROJECT_ROOT)
+            self._update(percent=30, message="Скачивание и проверка OpenAudio S1-mini (Hugging Face)", step="models")
+            self._run([str(py), "-m", "backend.audio.openaudio", "--download", str(self.root)],
+                      timeout=7200, cwd=PROJECT_ROOT)
+            if not self.installed:
+                raise RuntimeError("S1-mini загружена не полностью; проверь install.log")
+            self._update(percent=95, message="Загрузка S1-mini и пробный синтез; CPU может работать медленно", step="load")
+            self._last_failure = ""
+            self._last_exit = None
+            if not self.await_ready(timeout=self.startup_timeout):
+                raise RuntimeError(self._last_failure or "S1-mini не ответила; проверь worker.log")
+            self._update(percent=100, message="OpenAudio S1-mini готова", step="done")
+        except Cancelled:
+            self.stop()
+            self._update(message="Установка отменена; можно продолжить позже", percent=None)
+        except (OSError, ValueError, RuntimeError, TimeoutError, subprocess.SubprocessError) as exc:
+            self._update(error=str(exc)[:350], message="Ошибка установки")
+        finally:
+            self._update(running=False)
+
+    def synthesize(self, data):
+        from .openaudio import validate_request
+        text, voice, speed = validate_request(data)
+        if voice != "default" and voice not in self.status()["references"]:
+            raise ValueError("Сначала загрузи WAV и расшифровку для выбранного голоса")
+        if not self.await_ready(timeout=self.startup_timeout):
+            raise RuntimeError(self._last_failure or "S1-mini не запустилась; проверь worker.log")
+        request = urllib.request.Request(f"http://127.0.0.1:{self.port}/speak",
+                    data=json.dumps({"text": text, "voice": voice, "speed": speed}).encode(),
+                    headers={"Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(request, timeout=600) as response:
+                audio = response.read(24_000_001)
+        except urllib.error.HTTPError as exc:
+            if 400 <= exc.code < 500:
+                raise ValueError("OpenAudio: некорректный запрос или референс голоса") from None
+            raise RuntimeError("OpenAudio: ошибка синтеза; проверь worker.log") from None
+        if len(audio) > 24_000_000 or not valid_wav(audio):
+            raise RuntimeError("OpenAudio вернула пустой или неслышимый WAV")
+        return audio
+
+
+ADDONS = {kind: (Qwen3Addon() if kind == "qwen3-tts" else
+                 OpenAudioAddon() if kind == "openaudio-s1-mini" else Addon(kind)) for kind in VOICE_NAMES}
 
 
 def worker_main(kind, root, port):

@@ -59,6 +59,7 @@ const kokoroState={ready:false,installation:{}};
 const kokoroRuState={ready:false,installation:{}};
 const piperState={ready:false,installation:{}},sileroState={ready:false,installation:{}};
 const qwen3State={ready:false,installation:{}};
+const openaudioState={ready:false,installation:{},references:[]};
 const piperSpeakers=[['dmitri','Дмитрий'],['irina','Ирина'],['ruslan','Руслан'],['denis','Денис']];
 const sileroSpeakers=[['aidar','Айдар'],['baya','Бая'],['kseniya','Ксения'],['xenia','Xenia'],['eugene','Евгений']];
 const kokoroRuSpeakers=[['sveta','Света'],['masha','Маша'],['dima','Дима']];
@@ -76,7 +77,8 @@ const kokoroRuSelected=()=>$('ttsBackend').value==='kokoro' && kokoroModel==='ru
 const piperSelected=()=>$('ttsBackend').value==='piper'&&piperState.ready;
 const sileroSelected=()=>$('ttsBackend').value==='silero'&&sileroState.ready;
 const qwen3Selected=()=>$('ttsBackend').value==='qwen3-tts'&&qwen3State.ready;
-const audioAvailable=()=>kokoroSelected()||kokoroRuSelected()||piperSelected()||sileroSelected()||qwen3Selected()||haveSpeech;
+const openaudioSelected=()=>$('ttsBackend').value==='openaudio-s1-mini'&&openaudioState.ready;
+const audioAvailable=()=>kokoroSelected()||kokoroRuSelected()||piperSelected()||sileroSelected()||qwen3Selected()||openaudioSelected()||haveSpeech;
 function languageFor(text){
  const ru=(text.match(/[а-яё]/gi)||[]).length;
  const en=(text.match(/[a-z]/gi)||[]).length;
@@ -111,6 +113,10 @@ const speech = {
        (config.kokoroVoice||'af_heart');
      return {url:'/api/voice/'+backend+'/speak',limit:450,
        payload:{text,voice,speed:config.speed||1}};
+   }
+   if(backend==='openaudio-s1-mini'){
+     return {url:'/api/voice/openaudio-s1-mini/speak',limit:450,
+       payload:{text,voice:config.openaudioVoice||'default',speed:config.speed||1}};
    }
    if(backend==='qwen3-tts'){
      return {url:'/api/voice/qwen3-tts/speak',limit:600,
@@ -184,14 +190,14 @@ const speech = {
    entry.startTimer=timer;this.startTimers.add(timer);
  },
  snapshot(agent){
-   const backend=piperSelected()?'piper':sileroSelected()?'silero':kokoroRuSelected()?'kokoro-ru':kokoroSelected()?'kokoro':qwen3Selected()?'qwen3-tts':'browser';
+   const backend=piperSelected()?'piper':sileroSelected()?'silero':kokoroRuSelected()?'kokoro-ru':kokoroSelected()?'kokoro':qwen3Selected()?'qwen3-tts':openaudioSelected()?'openaudio-s1-mini':'browser';
    const d=defs[agent];
    // Old saved volume/pitch/speed cannot silently mute the output.
    return Object.freeze({name:d.name,backend,
      speed:Number($('rate').value)||1,browserVoice:voices.find(v=>v.voiceURI===d.voiceURI),
      kokoroVoice:d.kokoroVoice,
      kokoroRuVoice:d.kokoroRuVoice,piperVoice:d.piperVoice,sileroVoice:d.sileroVoice,
-     qwen3Voice:d.qwen3Voice});
+     openaudioVoice:d.openaudioVoice,qwen3Voice:d.qwen3Voice});
  },
  metric(entry,event,extra={}){
    if(!this.metricsEnabled)return;
@@ -297,7 +303,7 @@ const speech = {
    if(backend==='piper'||backend==='silero'){this.playKokoro(entry,gen);return;}
    if(backend==='kokoro-ru'&&isRussian(entry.text)){this.playKokoroRu(entry,gen);return;}
    if(backend==='kokoro'&&!isRussian(entry.text)){this.playKokoro(entry,gen);return;}
-   if(backend==='qwen3-tts'){this.playKokoro(entry,gen);return;}
+   if(backend==='qwen3-tts'||backend==='openaudio-s1-mini'){this.playKokoro(entry,gen);return;}
 
    this.playBrowser(entry,gen);
  },
@@ -444,10 +450,11 @@ const speech = {
      if(!this.ctx)throw Error('WebAudio недоступен');
      if(this.ctx.state==='suspended')await this.ctx.resume();
 
-      const addon=backend==='piper'||backend==='silero'||backend==='qwen3-tts';
-      const backendLabel=backend==='piper'?'Piper':backend==='silero'?'Silero':backend==='qwen3-tts'?'Qwen3':'Kokoro';
+      const addon=backend==='piper'||backend==='silero'||backend==='qwen3-tts'||backend==='openaudio-s1-mini';
+      const backendLabel=backend==='piper'?'Piper':backend==='silero'?'Silero':backend==='qwen3-tts'?'Qwen3':backend==='openaudio-s1-mini'?'OpenAudio S1-mini':'Kokoro';
       const voice=backend==='piper'?(entry.config.piperVoice||piperSpeakers[entry.agent][0]):
           backend==='silero'?(entry.config.sileroVoice||sileroSpeakers[entry.agent][0]):
+          backend==='openaudio-s1-mini'?(entry.config.openaudioVoice||'default'):
           backend==='qwen3-tts'?qwen3VoiceFor(entry.agent, entry.config.qwen3Voice):
           (entry.config.kokoroVoice||'af_heart');
       const endpoint=addon?('/api/voice/'+backend+'/speak'):'/api/voice/kokoro/speak';
@@ -539,6 +546,13 @@ function optionsForVoices(sel,index){
    for(const id of kokoroSpeakers)sel.add(new Option(id,id));
    sel.value=defs[index].kokoroVoice||'af_heart';return;
  }
+ if(mode==='openaudio-s1-mini'){
+   sel.add(new Option('Голос модели (без референса)','default'));
+   for(const voice of openaudioState.references||[])sel.add(new Option('Референс '+voice.slice(-1),voice));
+   const current=defs[index].openaudioVoice||'default';
+   if(current!=='default'&&!(openaudioState.references||[]).includes(current))sel.add(new Option('Референс '+current.slice(-1)+' · загрузите WAV',current));
+   sel.value=current;return;
+ }
  if(mode==='qwen3-tts'){
    for(const id of qwen3SpeakerList())sel.add(new Option('Встроенный · '+id,id));
    for(const v of qwen3Voices)sel.add(new Option('Кастомный · '+v.name,v.id));
@@ -617,7 +631,7 @@ function populateVoices(){
  defs.forEach((d,i)=>{const sel=$('cards').children[i]?.querySelector('.voice-controls select');if(sel)optionsForVoices(sel,i)});
 }
 const PREF_KEY='triad09';
-function savePrefs(){try{localStorage.setItem(PREF_KEY,JSON.stringify({agents:defs.map(d=>({name:d.name,description:d.description,voiceURI:d.voiceURI,kokoroVoice:d.kokoroVoice,kokoroRuVoice:d.kokoroRuVoice,piperVoice:d.piperVoice,sileroVoice:d.sileroVoice,qwen3Voice:d.qwen3Voice })),topic:$('topic').value,sharedGoal:$('sharedGoal').value,showMode:$('showMode').value,voiceEnabled:$('voiceEnabled').checked,ttsBackend:$('ttsBackend').value,rate:$('rate').value,auto:$('auto').checked,directorEnabled:$('directorEnabled').checked,model:$('model').value,qwen3Size:qwen3Size,kokoroModel:kokoroModel}))}catch(_){}}
+function savePrefs(){try{localStorage.setItem(PREF_KEY,JSON.stringify({agents:defs.map(d=>({name:d.name,description:d.description,voiceURI:d.voiceURI,kokoroVoice:d.kokoroVoice,kokoroRuVoice:d.kokoroRuVoice,piperVoice:d.piperVoice,sileroVoice:d.sileroVoice,openaudioVoice:d.openaudioVoice,qwen3Voice:d.qwen3Voice })),topic:$('topic').value,sharedGoal:$('sharedGoal').value,showMode:$('showMode').value,voiceEnabled:$('voiceEnabled').checked,ttsBackend:$('ttsBackend').value,rate:$('rate').value,auto:$('auto').checked,directorEnabled:$('directorEnabled').checked,model:$('model').value,qwen3Size:qwen3Size,kokoroModel:kokoroModel}))}catch(_){}}
 function restorePrefs(){
  try{
   const modern=localStorage.getItem(PREF_KEY),p=JSON.parse(modern||localStorage.getItem('triad08')||localStorage.getItem('triad07')||'{}');
@@ -640,6 +654,7 @@ function restorePrefs(){
      if(kokoroRuSpeakers.some(([id])=>id===a.kokoroRuVoice))d.kokoroRuVoice=a.kokoroRuVoice;
      if(piperSpeakers.some(([id])=>id===a.piperVoice))d.piperVoice=a.piperVoice;
      if(sileroSpeakers.some(([id])=>id===a.sileroVoice))d.sileroVoice=a.sileroVoice;
+     if(['default','voice-1','voice-2','voice-3'].includes(a.openaudioVoice))d.openaudioVoice=a.openaudioVoice;
      if(typeof a.qwen3Voice==='string'&&a.qwen3Voice)d.qwen3Voice=a.qwen3Voice;
      // Legacy pitch/speed/volume prefs are deliberately not restored.
     }
@@ -653,7 +668,7 @@ function restorePrefs(){
    else if(p.showMode==='debate')$('showMode').value='science';
    else if(p.showMode==='scene')$('showMode').value='live';
   if(typeof p.voiceEnabled==='boolean')$('voiceEnabled').checked=p.voiceEnabled;
-  if(['kokoro','piper','silero','qwen3-tts','browser'].includes(p.ttsBackend))$('ttsBackend').value=p.ttsBackend;
+  if(['kokoro','piper','silero','qwen3-tts','openaudio-s1-mini','browser'].includes(p.ttsBackend))$('ttsBackend').value=p.ttsBackend;
   else if(p.ttsBackend==='kokoro-ru'){$('ttsBackend').value='kokoro';kokoroModel='ru';}
   if(typeof p.auto==='boolean')$('auto').checked=p.auto;
   if(typeof p.directorEnabled==='boolean')$('directorEnabled').checked=p.directorEnabled;
@@ -1693,13 +1708,15 @@ const addons=[
  {key:'kokoro',id:'kokoro',state:kokoroState},
  {key:'piper',id:'piper',state:piperState},
  {key:'silero',id:'silero',state:sileroState},
- {key:'qwen3-tts',id:'qwen3',state:qwen3State}
+ {key:'qwen3-tts',id:'qwen3',state:qwen3State},
+ {key:'openaudio-s1-mini',id:'openaudio',state:openaudioState}
 ];
 const engineHints={
  kokoro:'Kokoro 82M · выбери модель: русский (Света, Маша, Дима) или английский INT8',
  piper:'Piper · четыре русских голоса · ONNX · низкая задержка',
  silero:'Silero V5 · пять русских голосов · автоматические ударения',
  'qwen3-tts':'Qwen3-TTS MLX · Apple Silicon · клонирование / дизайн / кастомные голоса',
+ 'openaudio-s1-mini':'OpenAudio S1-mini · локально · автозагрузка · CUDA / CPU · клонирование по WAV',
  browser:'Голоса macOS и браузера · не требуют установки'
 };
 let activeVoiceBackend=null;
@@ -1744,6 +1761,7 @@ function setAgentVoice(agent,voice){
  }else if(backend==='silero')def.sileroVoice=voice;
  else if(backend==='kokoro'){if(kokoroModel==='ru')def.kokoroRuVoice=voice;else def.kokoroVoice=voice;}
  else if(backend==='qwen3-tts')def.qwen3Voice=voice;
+ else if(backend==='openaudio-s1-mini')def.openaudioVoice=voice;
  else def.voiceURI=voice;
  savePrefs();
 }
@@ -1765,6 +1783,13 @@ function syncVoicePanel(){
 function renderAddonStatus(addon,data){
  const id=addon.id,job=data.installation||{},state=addon.state;
  const previous=state.ready;
+ if(addon.key==='openaudio-s1-mini'){
+  const refs=Array.isArray(data.references)?data.references:[];
+  const changed=JSON.stringify(state.references)!==JSON.stringify(refs);
+  state.references=refs;
+  $('openaudioReferences').textContent=refs.length?'Загружены референсы: '+refs.map(v=>v.slice(-1)).join(', '):'Референсы не загружены · используется голос модели';
+  if(changed&&$('ttsBackend').value===addon.key)forceRenderCards();
+ }
  state.ready=!!data.ready;state.installation=job;
  state.status=data.status||'stopped';
  const failure=(data.status==='ready'||data.status==='starting')?'':(data.error||job.error||'');
@@ -1964,3 +1989,24 @@ $('qwen3VoiceSave').onclick=saveQwen3Voice;
 $('qwen3VoiceCancel').onclick=()=>{$('qwen3VoiceForm').hidden=true;};
 populateQwen3PresetSpeaker();
 loadQwen3Voices();
+
+// Reference audio stays on this machine and is never sent to a hosted TTS API.
+$('openaudioReferenceSave').onclick=async()=>{
+ const button=$('openaudioReferenceSave');button.disabled=true;
+ try{
+  const file=$('openaudioReferenceAudio').files[0];
+  if(!file||file.size>6000000)throw Error('Выбери PCM WAV 16 бит, 3–30 секунд, до 6 МБ');
+  const audio=await new Promise((resolve,reject)=>{
+   const reader=new FileReader();
+   reader.onload=()=>resolve(String(reader.result).split(',')[1]);
+   reader.onerror=()=>reject(Error('Не удалось прочитать WAV'));
+   reader.readAsDataURL(file);
+  });
+  await api('/api/voice/openaudio-s1-mini/reference',{
+   voice:$('openaudioReferenceVoice').value,text:$('openaudioReferenceText').value,audio});
+  $('openaudioReferenceAudio').value='';
+  await refreshAddon(addons.find(a=>a.key==='openaudio-s1-mini'));
+  system('Референс OpenAudio сохранён. Выбери его в карточке персонажа.');
+ }catch(err){$('openaudioError').hidden=false;$('openaudioError').textContent=err.message;}
+ finally{button.disabled=false;}
+};

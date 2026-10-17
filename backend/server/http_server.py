@@ -576,10 +576,10 @@ class Handler(BaseHTTPRequestHandler):
             self.close_connection = True
         self.send_json(code, {"error": msg})
 
-    def data(self):
+    def data(self, limit=100_000):
         try:
             size = int(self.headers.get("Content-Length", "0"))
-            if size < 1 or size > 100_000:
+            if size < 1 or size > limit:
                 raise BridgeError("Некорректный размер сообщения")
             value = json.loads(self.rfile.read(size))
             if not isinstance(value, dict):
@@ -662,7 +662,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         path = urllib.parse.urlparse(self.path).path
         try:
-            data = self.data()
+            data = self.data(8_100_000 if path == "/api/voice/openaudio-s1-mini/reference" else 100_000)
             if path == "/api/qwen3/voices":
                 try:
                     return self.send_json(200, {"voice": QWEN3_VOICES.create(data)})
@@ -697,6 +697,9 @@ class Handler(BaseHTTPRequestHandler):
                 if len(parts) != 4 or parts[2] not in ADDONS:
                     return self.error(404, "Неизвестный синтезатор")
                 engine, action = ADDONS[parts[2]], parts[3]
+                if action == "reference" and parts[2] == "openaudio-s1-mini":
+                    from ..audio.openaudio import save_reference
+                    return self.send_json(200, save_reference(engine.root, data))
                 if action == "browse":
                     return self.send_json(200, {"directory": pick_directory(parts[2])})
                 if action == "activate":

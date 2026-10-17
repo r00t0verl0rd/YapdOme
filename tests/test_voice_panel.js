@@ -12,13 +12,14 @@ const section=(start,end)=>{
 };
 // The dropdown exposes one kokoro entry; internally there are two kokoro addons
 // (English INT8 and Russian) plus the other local engines.
-const dropdown=['piper','silero','kokoro','qwen3-tts','browser'];
+const dropdown=['piper','silero','kokoro','qwen3-tts','openaudio-s1-mini','browser'];
 const addons=[
  {key:'kokoro-ru',id:'kokoroRu'},
  {key:'kokoro',id:'kokoro'},
  {key:'piper',id:'piper'},
  {key:'silero',id:'silero'},
- {key:'qwen3-tts',id:'qwen3'}
+ {key:'qwen3-tts',id:'qwen3'},
+ {key:'openaudio-s1-mini',id:'openaudio'}
 ];
 const effectiveFor=key=>key==='kokoro'?'kokoro-ru':key;
 function harness(){
@@ -35,7 +36,7 @@ function harness(){
  const context={
   $:id=>nodes[id],defs,kokoroModel:'ru',
   addons:addons.map(x=>({...x})),
-  engineHints:{piper:'Piper',silero:'Silero',kokoro:'Kokoro','qwen3-tts':'Qwen3',browser:'macOS'},
+  engineHints:{piper:'Piper',silero:'Silero',kokoro:'Kokoro','qwen3-tts':'Qwen3','openaudio-s1-mini':'OpenAudio',browser:'macOS'},
   activateVoiceEngine:key=>activation.push(key),
   warmPiperVoice:voice=>warmups.push(voice),piperState:{ready:true},
   savePrefs:()=>save.push(1),forceRenderCards:()=>cardRenders.push(1)
@@ -73,6 +74,9 @@ test('voice selection stays in character cards and persists separately per engin
  h.nodes.ttsBackend.value='silero';h.nodes.ttsBackend.onchange();
  h.context.setAgentVoice(0,'eugene');
  assert.equal(h.defs[0].sileroVoice,'eugene');
+ h.nodes.ttsBackend.value='openaudio-s1-mini';h.nodes.ttsBackend.onchange();
+ h.context.setAgentVoice(0,'voice-2');
+ assert.equal(h.defs[0].openaudioVoice,'voice-2');
  h.nodes.ttsBackend.value='piper';h.nodes.ttsBackend.onchange();
  assert.equal(h.defs[0].piperVoice,'denis');
  assert.match(code,/select\.onchange=\(\)=>setAgentVoice\(i,select\.value\)/);

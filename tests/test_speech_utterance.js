@@ -24,6 +24,7 @@ function harness(backend='browser'){
   piperSelected:()=>nodes.ttsBackend.value==='piper',sileroSelected:()=>nodes.ttsBackend.value==='silero',
   kokoroSelected:()=>nodes.ttsBackend.value==='kokoro',kokoroRuSelected:()=>nodes.ttsBackend.value==='kokoro-ru',
   qwen3Selected:()=>nodes.ttsBackend.value==='qwen3-tts',
+  openaudioSelected:()=>nodes.ttsBackend.value==='openaudio-s1-mini',
   audioAvailable:()=>true,isRussian:s=>/[а-я]/i.test(s),
   languageFor:()=> 'Russian',isMarker:()=>false,maybeConsultListeners(){},
   SpeechSynthesisUtterance:function(text){this.text=text;utterances.push(this)},
