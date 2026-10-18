@@ -504,8 +504,15 @@ function installDuration(seconds){
 function status(head,desc='',cls=''){$('connection').textContent=head;$('detail').textContent=desc;$('indicator').className='led '+cls;}
 function runStatus(text){$('runstate').textContent=text;}
 function updateDonationBadge(){
- const element=$('queueStatus');if(!element)return;
  const waiting=state.donationQueue.length,active=state.activeDonation;
+ for(const [index,donation] of state.donationQueue.entries()){
+  if(state.donationRouting===donation)continue;
+  const reason=active?'сначала «'+active.text.slice(0,60)+'» · осталось ответов: '+active.remaining:
+    state.current||state.audibleTurn?'ждём окончания текущей озвучки':'ожидает передачи слова';
+  donation.item.meta.textContent='В ОЧЕРЕДИ · № '+(index+1)+' · '+reason+
+    (donation.routingError?' · '+donation.routingError:'');
+ }
+ const element=$('queueStatus');if(!element)return;
  element.classList.toggle('busy',!!active||waiting>0);
  element.textContent=active?'⚡ '+active.donor+' · '+active.responses.length+'/'+active.total+(waiting?' · +'+waiting:''):
    waiting?'⚡ В ОЧЕРЕДИ '+waiting+' · ПОСЛЕ РЕПЛИКИ':'◌ ОЧЕРЕДЬ ПУСТА';
@@ -1128,6 +1135,15 @@ function scheduleNext(){
 }
 async function endTurn(c,success,msg){
  if(state.current!==c)return;
+ // The WAV pipeline releases most tickets when playback starts. A donation's
+ // last reply must drain before it is marked complete or another donor starts.
+ if(success&&c.donation&&c.donation.remaining===1&&c.audioStarted&&!c.audioFinished){
+  const epoch=state.epoch;
+  c.donation.item.meta.textContent='ОЗВУЧИВАЕТСЯ ПОСЛЕДНЯЯ РЕПЛИКА · '+c.donation.total+'/'+c.donation.total;
+  state.pipelineReady=false;updateDonationBadge();
+  await speech.idle();
+  if(state.current!==c||epoch!==state.epoch)return;
+ }
  cancelListeners(c);c.item.el.classList.remove('live');
  const value=c.text.trim(),epoch=state.epoch;
  if(!success){
@@ -1193,7 +1209,7 @@ async function endTurn(c,success,msg){
           c.donation.topicChanged?'✓ ТЕМА ИЗМЕНЕНА · '+c.donation.topicReview.topic:
           '✓ ОТВЕТ ПОЛУЧЕН · '+used+' '+(used===1?'реплика':used<5?'реплики':'реплик');
         state.lastDonationName=c.donation.donor;
-        state.activeDonation=null;updateDonationBadge();
+        state.activeDonation=null;
       }else{
         c.donation.item.meta.textContent='ОБСУЖДАЮТ · осталось '+c.donation.remaining+' реплик';
         c.donation.nextSpeaker=(c.agent+1)%3;
@@ -1203,12 +1219,13 @@ async function endTurn(c,success,msg){
       c.donation.emptyReplies=(c.donation.emptyReplies||0)+1;
       if(c.donation.emptyReplies>=2){
         c.donation.item.meta.textContent='⚠ МОДЕЛЬ НЕ ДАЛА СОДЕРЖАТЕЛЬНОГО ОТВЕТА';
-        state.activeDonation=null;updateDonationBadge();
+        state.activeDonation=null;
       }else{
         c.donation.nextSpeaker=(c.agent+1)%3;
         c.donation.item.meta.textContent='ПУСТОЙ ОТВЕТ · пробуем другого персонажа';
       }
     }
+    updateDonationBadge();
   }
   if(s.status==='RUNNING'){
     if(state.donationQueue.length&&!state.activeDonation)void activateNextDonation();
@@ -1253,6 +1270,13 @@ function queueWholeSpeech(c){
    c.audioFinished=true;
    if(state.audibleTurn===c)state.audibleTurn=null;
    c.item.meta.textContent=c.finalMeta||'Завершено · '+new Date().toLocaleTimeString('ru-RU');
+   // Playback completion is an explicit wake-up for queued donations. The
+   // microtask runs after the audio lane clears its playing/node flags.
+   Promise.resolve().then(()=>{
+    if(c.epoch===state.epoch&&state.running&&!state.paused&&!state.stopping&&
+       !state.current&&!state.activeDonation&&state.donationQueue?.length&&!state.donationRouting)
+      void activateNextDonation();
+   });
  },c.speechConfig);
  // A failed TTS transport still releases the native ticket after the
  // playback lane drains, instead of hanging the whole live show forever.
@@ -1459,11 +1483,13 @@ async function activateNextDonation(){
  // IMPORTANT: a high-priority donor waits until the current turn has been
  // completely synthesized and played. Only the human host may barge in.
  if(state.current||speech.playing||speech.queue.length||speech.nodes.size){
+   updateDonationBadge();
    stopTimer();state.timer=setTimeout(claimNext,200);
    return;
  }
  const epoch=state.epoch,donation=state.donationQueue[0];
  state.donationRouting=donation;
+ donation.routingError='';
  donation.item.meta.textContent='⚡ ПЕРЕДАЁМ СЛОВО · предыдущая реплика завершена';
  try{
   if(donation.amount>=100&&!donation.topicReview){
@@ -1493,6 +1519,7 @@ async function activateNextDonation(){
   donation.item.meta.textContent=(donation.amount>=100?'ТЕМА НЕ ПРИНЯТА · ':'')+'В ЭФИРЕ · '+donation.total+' реплик · ждём ответа';
  }catch(err){
   if(epoch===state.epoch){
+    donation.routingError=err.message;
     donation.item.meta.textContent='⚠ ОЖИДАЕТ ПЕРЕДАЧИ СЛОВА · '+err.message;
     // Leave the accepted tip in the FIFO for the next *valid* transition.
   }

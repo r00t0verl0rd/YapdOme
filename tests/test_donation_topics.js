@@ -79,3 +79,59 @@ test('the normal scene completes after five successful replies, including short 
  }
  assert.equal(h.donation.responses.length,5);assert.match(h.donation.item.meta.textContent,/5 реплик/);
 });
+
+function loadQueueStatus(h){
+ h.fields.queueStatus={textContent:'',classList:{toggle(){}}};
+ vm.runInContext(code.slice(code.indexOf('function updateDonationBadge(){'),code.indexOf('// Bound both transcript DOM')),h.context);
+}
+const flush=async()=>{for(let i=0;i<6;i++)await Promise.resolve();};
+
+test('GTA donation from the log stays queued until the fifth greeting reply finishes audibly',async()=>{
+ const h=harness({amount:5});loadQueueStatus(h);
+ const first=h.donation;first.text='здарова';first.responses=['1','2','3','4'];first.remaining=1;
+ const gta={id:'gta-donation',amount:5,text:'а что насчёт гта 6?',donor:'Зритель',total:5,remaining:5,
+  responses:[],acknowledged:false,item:{meta:{textContent:''}}};
+ h.state.activeDonation=first;h.state.donationQueue=[gta];
+ const turn={agent:0,ticket:5,donation:first,audioStarted:true,audioFinished:false,
+  text:'Пятая реплика.',generatedText:'Пятая реплика.',item:{el:{classList:{remove(){}},remove(){}},meta:{textContent:''}}};
+ h.state.current=turn;h.state.audibleTurn=turn;h.context.speech.playing=true;
+ let drain;h.context.speech.idle=()=>new Promise(resolve=>{drain=resolve;});
+ const pending=h.context.endTurn(turn,true,'Готово');
+ await flush();
+ assert.equal(h.routes.length,0,'native COMPLETE must not precede the audible tail');
+ assert.match(first.item.meta.textContent,/ОЗВУЧИВАЕТСЯ ПОСЛЕДНЯЯ/);
+ assert.match(gta.item.meta.textContent,/В ОЧЕРЕДИ · № 1/);
+ assert.match(gta.item.meta.textContent,/здарова.*осталось ответов: 1/);
+ assert.equal(h.state.activeDonation,first);assert.equal(h.state.donationQueue[0],gta);
+ h.context.speech.playing=false;turn.audioFinished=true;h.state.audibleTurn=null;drain();
+ await pending;await flush();
+ assert.match(first.item.meta.textContent,/✓ ОТВЕТ ПОЛУЧЕН · 5 реплик/);
+ assert.equal(h.state.activeDonation,gta);assert.equal(h.state.donationQueue.length,0);
+ assert.equal(gta.remaining,5);assert.deepEqual(h.routes,['complete','priority_donation']);
+});
+
+test('STOP while the last donation reply is playing prevents a late completion or routing',async()=>{
+ const h=harness({amount:5});
+ h.donation.remaining=1;h.state.activeDonation=h.donation;h.state.donationQueue=[];
+ const turn={donation:h.donation,audioStarted:true,audioFinished:false};h.state.current=turn;
+ let drain;h.context.speech.idle=()=>new Promise(resolve=>{drain=resolve;});
+ const pending=h.context.endTurn(turn,true,'Готово');
+ h.state.epoch++;h.state.running=false;h.state.current=null;h.state.activeDonation=null;drain();
+ await pending;
+ assert.equal(h.routes.length,0);assert.ok(!h.donation.item.meta.textContent.includes('✓'));
+});
+
+test('audio completion explicitly wakes a waiting donation once, without a polling timer',async()=>{
+ const h=harness({amount:5});
+ h.fields.voiceEnabled={checked:true};h.fields.feed={scrollHeight:100,scrollTop:0};
+ h.context.ttsText=s=>s;
+ let finish;
+ h.context.speech.push=(agent,text,onStart,onFinish)=>{finish=onFinish;};
+ h.context.speech.idle=()=>Promise.resolve();
+ vm.runInContext(code.slice(code.indexOf('function queueWholeSpeech(c){'),code.indexOf('function maybeConsultListeners(c){')),h.context);
+ const turn={epoch:1,agent:0,text:'Предыдущая реплика',item:{body:{textContent:''},meta:{textContent:''}}};
+ await h.context.queueWholeSpeech(turn);
+ finish(turn.text);finish(turn.text);await flush();
+ assert.equal(h.state.activeDonation,h.donation);assert.equal(h.state.donationQueue.length,0);
+ assert.deepEqual(h.routes,['priority_donation']);
+});
