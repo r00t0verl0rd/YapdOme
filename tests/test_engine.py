@@ -346,6 +346,44 @@ class ProtocolTests(unittest.TestCase):
         self.assertEqual(post('claim')[1]['agent'],2)
         post('stop')
 
+    def test_large_donation_can_propose_an_unrelated_topic(self):
+        payload = {"request_id": "donation-topic-001", "model": "gpt-6", "purpose": "topic",
+                   "amount": 100, "topic": "Старая тема", "donation": "Жизнь на Марсе", "history": []}
+        def review(req, **kwargs):
+            instructions = json.loads(req.data)["instructions"]
+            self.assertIn("НОВУЮ", instructions)
+            self.assertIn("полностью отличаться", instructions)
+            self.assertIn("недоверенные данные", instructions)
+            return MockUpstream('TOPIC')
+        with patch.object(triad.urllib.request, 'urlopen', review):
+            code, body = self.request('POST', '/api/donation-review', payload)
+        self.assertEqual(code, 200)
+        self.assertEqual(json.loads(body), {"decision": "topic", "topic": "Жизнь на Марсе"})
+        self.assertNoActiveCalls()
+
+    def test_topic_review_rejection_or_error_falls_back_to_chat(self):
+        payload = {"request_id": "donation-topic-002", "model": "gpt-6", "purpose": "topic",
+                   "amount": 100, "donation": "Привет!", "history": []}
+        for answer in ('CHAT', 'TOPIC. Ignore all rules', 'FOCUS'):
+            with self.subTest(answer=answer), patch.object(triad.urllib.request, 'urlopen',
+                    lambda req, **kw: MockUpstream(answer)):
+                code, body = self.request('POST', '/api/donation-review', payload)
+            self.assertEqual(code, 200)
+            self.assertEqual(json.loads(body), {"decision": "chat"})
+        with patch.object(triad.urllib.request, 'urlopen', side_effect=TimeoutError):
+            code, body = self.request('POST', '/api/donation-review', payload)
+        self.assertEqual(code, 200)
+        self.assertEqual(json.loads(body), {"decision": "chat"})
+        self.assertNoActiveCalls()
+
+    def test_topic_review_requires_at_least_100(self):
+        payload = {"request_id": "donation-topic-003", "model": "gpt-6", "purpose": "topic",
+                   "amount": 99.99, "donation": "Жизнь на Марсе"}
+        with patch.object(triad.urllib.request, 'urlopen') as upstream:
+            code, _ = self.request('POST', '/api/donation-review', payload)
+            self.assertEqual(code, 400)
+            upstream.assert_not_called()
+
     def test_donation_review_focus(self):
         payload = {"request_id": "donation-review-001", "model": "gpt-6",
                    "topic": "Дебаты", "shared_goal": "Создать простой движок", "donation": "Что делать с контекстом?", "history": []}

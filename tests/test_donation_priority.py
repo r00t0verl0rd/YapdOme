@@ -92,9 +92,10 @@ class DonationTests(unittest.TestCase):
         finally:
             engine.close()
 
-    def test_no_separate_donation_moderator_call_in_client(self):
+    def test_topic_review_is_reserved_for_donations_from_100(self):
         js=(ROOT/"frontend/client.js").read_text()
-        self.assertNotIn("reviewDonation(d)",js)
+        self.assertIn("donation.amount>=100&&!donation.topicReview",js)
+        self.assertIn("reviewDonationTopic(donation)",js)
         self.assertIn("priority_donation",js)
         self.assertIn("donationQueue",js)
         self.assertIn("donation_context",js)
