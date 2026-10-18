@@ -57,27 +57,25 @@ class CoreSafety(unittest.TestCase):
 
     def test_rejected_callbacks_preserve_kind(self):
         done = self.route('[[PASS]]')
-        for action in ['complete', 'recover', 'fail', 'interrupt', 'decision']:
+        for action in ['complete', 'recover', 'fail', 'interrupt', 'director']:
             result = self.core.event(action, agent=0, ticket=0)
             self.assertFalse(result['accepted'])
             self.assertEqual(self.core.state(), done)
 
-    def test_fail_invalidates_review(self):
+    def test_fail_invalidates_speaker_callbacks(self):
         self.core.event('start')
-        s = self.core.event('claim')
-        d = self.core.event('donation')
-        self.core.event('fail', ticket=s['ticket'])
-        self.assertFalse(self.core.state()['reviewing'])
-        self.assertFalse(self.core.event('decision', ticket=d['review_ticket'], text='focus')['accepted'])
+        turn = self.core.event('claim')
+        failed = self.core.event('fail', ticket=turn['ticket'])
+        self.assertEqual(failed['status'], 'ERROR')
+        self.assertFalse(self.core.event('complete', agent=turn['agent'], ticket=turn['ticket'], text='Late')['accepted'])
+        self.assertFalse(self.core.event('priority_donation', agent=2)['accepted'])
 
-    def test_recover_at_limit_invalidates_review(self):
+    def test_recover_at_limit_rejects_donation_priority(self):
         self.core.event('start', max_turns=1)
-        s = self.core.event('claim')
-        d = self.core.event('donation')
-        result = self.core.event('recover', ticket=s['ticket'])
+        turn = self.core.event('claim')
+        result = self.core.event('recover', ticket=turn['ticket'])
         self.assertEqual(result['status'], 'LIMIT')
-        self.assertFalse(result['reviewing'])
-        self.assertFalse(self.core.event('decision', ticket=d['review_ticket'], text='focus')['accepted'])
+        self.assertFalse(self.core.event('priority_donation', agent=2)['accepted'])
 
     def test_names_are_bounded_at_the_public_api(self):
         with self.assertRaises(ValueError):

@@ -15,7 +15,7 @@ class Snapshot:
 
     fields = ("status", "agent", "next_agent", "turns", "max_turns", "revision",
               "ticket", "passes", "kind", "result", "cooldown_until", "errors",
-              "timeout_ms", "reviewing", "review_ticket", "review_ms")
+              "timeout_ms")
 
     def __init__(self, **values):
         for field in self.fields:
@@ -51,9 +51,6 @@ def as_json(snapshot, route_reason=-1):
         "cooldown_until": snapshot["cooldown_until"],
         "errors": snapshot["errors"],
         "timeout_ms": snapshot["timeout_ms"],
-        "reviewing": bool(snapshot["reviewing"]),
-        "review_ticket": snapshot["review_ticket"],
-        "review_ms": snapshot["review_ms"],
         "route_reason": E.ROUTE_REASONS.get(route_reason, "none"),
     }
 

@@ -33,7 +33,6 @@ async function verify(action){
    defs:[{name:'Альфа'},{name:'Бета'},{name:'Гамма'}],
    rememberClaim:()=>{},
    $:id=>id==='showMode'?{value:'live'}:null,
-   donationRepeats:()=>false,
    updateDonationBadge:()=>{},
    activateNextDonation:()=>{notifications.push('donor activated');},
    requestDirector:()=>{},
@@ -55,11 +54,11 @@ async function verify(action){
  // An incoming donation cannot run the NEXT claim while native C is still busy.
  const fields={donationAmount:{value:'50'},donor:{value:'Тест'},donationText:{value:'Привет'}};
  const donorFactory=Function('state','$','system','feedItem','requestID',
-   'donationBudget','scheduleNext','updateDonationBadge','cancelListeners',
+   'DONATION_REPLIES','scheduleNext','updateDonationBadge','cancelListeners',
    grab('donationMessage')+';return donationMessage');
  const donate=donorFactory(state,id=>fields[id],()=>{},
    ()=>({body:{textContent:''},meta:{textContent:''}}),
-   ()=>'donation-test',()=>1,()=>scheduled.push('early'),()=>{},helpers.cancelListeners);
+   ()=>'donation-test',5,()=>scheduled.push('early'),()=>{},helpers.cancelListeners);
  donate();
  assert.equal(state.donationQueue.length,1);
  assert.equal(scheduled.length,0,'donor may not schedule claim before native ACK');

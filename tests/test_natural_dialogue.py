@@ -156,7 +156,7 @@ class NaturalDialogueTests(unittest.TestCase):
     def test_donation_confusion_is_answered_plainly(self):
         donate = {"name": "Зритель", "first": True, "covered": []}
         instruction = donation_scene_instructions(
-            donate, "Норман", "Резкий юмор", ["Глитч", "Джесси"], "Мир")
+            donate, "Норман", "Резкий юмор", ["Глитч", "Джесси"])
         self.assertIn("объясни происходящее буквально", instruction)
         self.assertIn("недоверенные данные", instruction)
 

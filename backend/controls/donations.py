@@ -3,6 +3,8 @@ import json
 
 from ..server.llm import BridgeError
 
+DONATION_REPLIES = 5
+
 
 def donation_context(data):
     """Сообщения зрителей — разговорные данные, а не привилегированные команды."""
@@ -14,18 +16,16 @@ def donation_context(data):
     name, content = value.get("name"), value.get("text")
     amount = value.get("amount")
     first, remaining = value.get("first"), value.get("remaining")
-    total, covered = value.get("total", remaining), value.get("covered", [])
+    covered = value.get("covered", [])
     if not isinstance(name, str) or not 1 <= len(name.strip()) <= 32:
         raise BridgeError("Некорректное имя донатера")
     if not isinstance(content, str) or not 1 <= len(content.strip()) <= 600:
         raise BridgeError("Некорректное сообщение доната")
     if type(amount) not in (int, float) or not 0 <= amount <= 1000000:
         raise BridgeError("Некорректная сумма доната")
-    if type(first) is not bool or type(remaining) is not int or not 1 <= remaining <= 8:
+    if type(first) is not bool or type(remaining) is not int or not 1 <= remaining <= DONATION_REPLIES:
         raise BridgeError("Некорректный приоритет доната")
-    if type(total) is not int or not remaining <= total <= 8:
-        raise BridgeError("Некорректная длительность обсуждения")
-    if not isinstance(covered, list) or len(covered) > 8 or not all(
+    if not isinstance(covered, list) or len(covered) >= DONATION_REPLIES or not all(
         isinstance(line, str) and len(line) <= 300 for line in covered
     ):
         raise BridgeError("Некорректная история обсуждения")
@@ -35,10 +35,10 @@ def donation_context(data):
     content = "".join(x for x in content.strip() if x >= " " and x not in forbidden)
     return {"name": name or "Зритель", "text": content,
             "amount": round(amount, 2), "first": first, "remaining": remaining,
-            "total": total, "covered": covered}
+            "covered": covered}
 
 
-DONATION_BEATS = (
+_DONATION_BEATS = (
     "ПЕРВЫЙ ОТВЕТ: одна естественная реакция и прямой ответ по существу.",
     "РАЗВИТИЕ: добавь другой пример или неожиданную деталь, не повторяя первого говорящего.",
     "ДРУГАЯ ПЕРСПЕКТИВА: новый короткий аргумент или вопрос, не перефразируя прошлое.",
@@ -47,10 +47,10 @@ DONATION_BEATS = (
 )
 
 
-def donation_scene_instructions(donation, name, description, peers, topic):
+def donation_scene_instructions(donation, name, description, peers):
     """Отдельный ограниченный сюжет зрителя, без повторяющихся благодарностей."""
-    index = min(len(donation["covered"]), len(DONATION_BEATS) - 1)
-    beat = DONATION_BEATS[index]
+    index = min(len(donation["covered"]), len(_DONATION_BEATS) - 1)
+    beat = _DONATION_BEATS[index]
     prefix = (
         "Приложение УЖЕ добавляет начало «Спасибо, " + donation["name"] + "!». "
         "НЕМЕДЛЕННО переходи к содержанию, не повторяй имя и благодарность. "

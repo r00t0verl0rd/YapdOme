@@ -35,13 +35,10 @@ class StateMachine:
         self.kind = E.NORMAL
         self.cooldown_until = 0
         self.errors = 0
-        self.reviewing = 0
         self.pending_reply = -1
         self.revision = 0
         self.ticket = 0
-        self.review_ticket = 0
         self.deadline_ms = 0
-        self.review_deadline_ms = 0
         self.names = list(DEFAULT_NAMES)        # lowercased display names
         self.route_override = -1
         self.route_reason = E.ROUTE_NONE
@@ -54,11 +51,8 @@ class StateMachine:
     # ------------------------------------------------------------------ снимок
 
     def snapshot(self, result=E.OK):
-        review_ms = 0
-        if self.reviewing:
-            review_ms = max(0, self.review_deadline_ms - now_ms())
         timeout_ms = 0
-        if self.deadline_ms and self.status in (E.REVIEW, E.WAIT_USER):
+        if self.deadline_ms and self.status == E.WAIT_USER:
             timeout_ms = max(0, min(60000, self.deadline_ms - now_ms()))
         return {
             "status": self.status,
@@ -74,9 +68,6 @@ class StateMachine:
             "cooldown_until": self.cooldown_until,
             "errors": self.errors,
             "timeout_ms": int(timeout_ms),
-            "reviewing": bool(self.reviewing),
-            "review_ticket": self.review_ticket,
-            "review_ms": int(review_ms),
         }
 
     # ------------------------------------------------------------------- имена
@@ -136,32 +127,23 @@ class StateMachine:
 
         # 32-битные поколения: отказ закрытым способом, а не переиспользование
         # токена, который может нести задержанный колбэк.
-        if self.ticket == E.UINT_MAX or self.review_ticket == E.UINT_MAX:
-            if self.status != E.ERROR or self.agent != -1 or self.reviewing:
+        if self.ticket == E.UINT_MAX:
+            if self.status != E.ERROR or self.agent != -1:
                 self.revision += 1
             self.status = E.ERROR
             self.agent = -1
-            self.reviewing = 0
             self.deadline_ms = 0
-            self.review_deadline_ms = 0
             return self.snapshot(E.REJECT)
 
         # Просроченные решения не применяются, даже если TICK ещё не пришёл.
-        if self.status in (E.WAIT_USER, E.REVIEW) and self._expired():
+        if self.status == E.WAIT_USER and self._expired():
             self.status = E.RUNNING
             self.agent = -1
             self.deadline_ms = 0
             self.ticket += 1
             self.revision += 1
             self.passes = 0
-            self.kind = E.IGNORE
-
-        # Классификация доната — отдельная неблокирующая линия, речь не глушит.
-        if self.reviewing and now_ms() >= self.review_deadline_ms:
-            self.reviewing = 0
-            self.review_deadline_ms = 0
-            self.kind = E.IGNORE
-            self.revision += 1
+            self.kind = E.NORMAL
 
         previous_kind = self.kind
         if action != E.TICK:
@@ -169,10 +151,6 @@ class StateMachine:
         result = self._apply(action, agent, ticket, max_turns, auto_interrupt, text)
         if result != E.OK:
             self.kind = previous_kind
-        if self.reviewing and self.status != E.RUNNING:
-            self.reviewing = 0
-            self.review_deadline_ms = 0
-            self.review_ticket += 1
 
         self._record_audit(action, agent, result, before_status, before_speaker)
         return self.snapshot(result)
@@ -188,9 +166,6 @@ class StateMachine:
             self.cooldown_until = 0
             self.deadline_ms = 0
             self.errors = 0
-            self.reviewing = 0
-            self.review_deadline_ms = 0
-            self.review_ticket += 1
             self.pending_reply = -1
             self.route_reason = E.ROUTE_ROTATION
             self.last_turn = [-1, -1, -1]
@@ -247,7 +222,6 @@ class StateMachine:
             if self.max_turns > 0 and self.turns >= self.max_turns:
                 self.status = E.LIMIT
                 self.deadline_ms = 0
-                self.reviewing = 0
             # Завершение хода инвалидирует его ticket: поздние события
             # директора/слушателей не действуют на межходовое состояние.
             self.ticket += 1
@@ -268,25 +242,20 @@ class StateMachine:
             self.revision += 1
             self.passes = 0
             self.deadline_ms = 0
-            self.reviewing = 0
-            self.review_ticket += 1
-            self.review_deadline_ms = 0
             # Текст — разговорный ввод, а не команда бессрочной остановки.
             self.status = E.RUNNING
             return E.OK
 
         if action == E.PAUSE:
-            if self.status not in (E.RUNNING, E.WAIT_USER, E.REVIEW):
+            if self.status not in (E.RUNNING, E.WAIT_USER):
                 return E.REJECT
             if self.agent >= 0:
                 self.next_agent = self.agent
             self.agent = -1
             self.status = E.PAUSED
             self.deadline_ms = 0
-            self.reviewing = 0
             self.revision += 1
             self.ticket += 1
-            self.review_ticket += 1
             return E.OK
 
         if action == E.RESUME:
@@ -304,11 +273,9 @@ class StateMachine:
             self.status = E.STOPPED
             self.agent = -1
             self.deadline_ms = 0
-            self.reviewing = 0
             self.pending_reply = -1
             self.revision += 1
             self.ticket += 1
-            self.review_ticket += 1
             return E.OK
 
         if action == E.INTERRUPT:
@@ -354,13 +321,11 @@ class StateMachine:
             self.deadline_ms = 0
             self.cooldown_until = 0
             self.errors = 0
-            self.reviewing = 0
             self.pending_reply = -1
             self.route_reason = E.ROUTE_NONE
             self.last_turn = [-1, -1, -1]
             self.revision += 1
             self.ticket += 1
-            self.review_ticket += 1
             return E.OK
 
         if action == E.FAIL:
@@ -368,9 +333,6 @@ class StateMachine:
                 return E.STALE
             self.agent = -1
             self.status = E.ERROR
-            self.reviewing = 0
-            self.review_deadline_ms = 0
-            self.review_ticket += 1
             self.revision += 1
             self.ticket += 1
             return E.OK
@@ -387,8 +349,6 @@ class StateMachine:
             self.revision += 1
             if self.errors >= 3:
                 self.status = E.ERROR
-                self.reviewing = 0
-                self.review_ticket += 1     # не жечь подписку бесконечно
             elif self.max_turns > 0 and self.turns >= self.max_turns:
                 self.status = E.LIMIT
             return E.OK
@@ -437,35 +397,6 @@ class StateMachine:
             self.passes = 0
             self.ticket += 1
             self.revision += 1
-            return E.OK
-
-        if action == E.DONATION:
-            if (self.status not in (E.RUNNING, E.WAIT_USER)) or self.reviewing:
-                return E.REJECT
-            self.reviewing = 1
-            self.review_deadline_ms = now_ms() + E.DONATION_REVIEW_MS
-            self.review_ticket += 1
-            self.revision += 1
-            self.kind = E.DONATION_INPUT
-            return E.OK
-
-        if action == E.DECISION:
-            if not self.reviewing or self.review_ticket != ticket:
-                return E.STALE
-            if text == "focus":
-                self.kind = E.FOCUS
-            elif text == "brief":
-                self.kind = E.BRIEF
-            else:
-                self.kind = E.IGNORE
-            self.reviewing = 0
-            self.review_deadline_ms = 0
-            self.revision += 1
-            self.review_ticket += 1
-            if self.status == E.WAIT_USER and self.kind != E.IGNORE:
-                self.status = E.RUNNING
-                self.deadline_ms = 0
-                self.passes = 0
             return E.OK
 
         if action == E.TICK:

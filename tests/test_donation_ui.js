@@ -10,21 +10,15 @@ function grab(name){
  }
  throw Error('Missing closing brace: '+name);
 }
-const tiers=Function(grab('donationTurns')+';return donationTurns')();
-for(const amount of [0,4.99,5,20,50,99.99,100,1000000])assert.equal(tiers(amount),5);
-const budget=Function('donationTurns',grab('donationBudget')+';return donationBudget')(tiers);
-assert.equal(budget(0,'Привет'),5);
-assert.equal(budget(99.99,'Что вы тут делаете?'),5);
-assert.equal(budget(100,'Не прошедшая проверку тема'),5);
 const controls={donationAmount:{value:'50'},donor:{value:'Даша'},donationText:{value:'Здарова пацаны'}};
 const state={running:true,stopping:false,paused:false,current:{agent:0},
  donationRouting:false,activeDonation:null,donationQueue:[],lastDonationAt:0};
 const messages=[],items=[],scheduled=[],cancelled=[];
-const ui=Function('state','$','system','feedItem','requestID','donationBudget','scheduleNext','updateDonationBadge','cancelListeners',
+const ui=Function('state','$','system','feedItem','requestID','DONATION_REPLIES','scheduleNext','updateDonationBadge','cancelListeners',
  grab('donationMessage')+';return donationMessage')(
  state,k=>controls[k],msg=>messages.push(msg),
  name=>{const item={name,body:{textContent:''},meta:{textContent:''}};items.push(item);return item;},
- ()=>String(items.length),budget,()=>scheduled.push(true),()=>{},c=>cancelled.push(c));
+ ()=>String(items.length),5,()=>scheduled.push(true),()=>{},c=>cancelled.push(c));
 ui();
 assert.equal(state.donationQueue.length,1);
 assert.equal(state.donationQueue[0].donor,'Даша');

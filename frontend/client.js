@@ -746,12 +746,12 @@ function applyCore(s){
  // Use C revision as an ordering guard against delayed GET/poll responses.
  if(state.core && s.revision<state.core.revision)return false;
  state.core=s;state.turns=s.turns;
- state.running=['RUNNING','PAUSED','WAIT_USER','REVIEW'].includes(s.status);
+ state.running=['RUNNING','PAUSED','WAIT_USER'].includes(s.status);
  $('start').disabled=state.running||state.stopping||state.starting;
- state.paused=s.status==='PAUSED'||s.status==='WAIT_USER'; // donation REVIEW never pauses dialogue
+ state.paused=s.status==='PAUSED'||s.status==='WAIT_USER';
  $('pause').textContent=s.status==='PAUSED'?'▶ ПРОДОЛЖИТЬ':'Ⅱ ПАУЗА';
  const labels={IDLE:'ГОТОВ К ЭФИРУ',RUNNING:`В ЭФИРЕ · ХОД ${s.turns}`, 
-  PAUSED:'ПАУЗА ВЕДУЩЕГО',WAIT_USER:'НЕБОЛЬШАЯ ПАУЗА',REVIEW:'ОЦЕНКА ДОНАТА',STOPPED:'ОСТАНОВЛЕНО',
+  PAUSED:'ПАУЗА ВЕДУЩЕГО',WAIT_USER:'НЕБОЛЬШАЯ ПАУЗА',STOPPED:'ОСТАНОВЛЕНО',
   LIMIT:'ЛИМИТ ХОДОВ',ERROR:'ОШИБКА'};
  // Debate phase is meaningful only if the host explicitly selected debates.
  const phase=$('showMode').value==='science'?(PHASE_LABEL[currentPhase(s.turns)]||''):'';
@@ -1359,7 +1359,7 @@ async function realTurn(c){
   director_plan:!state.activeDonation&&!c.socialFocus&&state.directorPlan&&$('directorEnabled').checked&&state.directorPlan.topic===$('topic').value&&state.turns<=state.directorPlan.at+4?state.directorPlan:null,
   donation_context:c.donation&&!c.donation.topicChanged?{name:c.donation.donor,amount:c.donation.amount,
       text:c.donation.text,first:!c.donation.acknowledged,remaining:c.donation.remaining,
-      total:c.donation.total,covered:c.donation.responses}:null,
+      covered:c.donation.responses}:null,
   post_donation_name:!c.donation?state.lastDonationName:''})});
  if(!response.ok){const d=await response.json().catch(()=>({}));throw Error(d.error||'HTTP '+response.status)}
  if(!response.body)throw Error('Браузер не поддерживает потоковый вывод');
@@ -1427,16 +1427,14 @@ async function humanMessage(){
 
 
 // Donations remain in FIFO; viewer topics need a separate AI verdict at 100+.
-function donationTurns(amount){return 5;}
-function donationBudget(amount,text){return donationTurns(amount);}
+const DONATION_REPLIES=5;
 async function reviewDonationTopic(donation){
  const controller=new AbortController(),request_id=requestID();
  const timeout=setTimeout(()=>controller.abort(),15000);
  try{
-  const response=await fetch('/api/donation-review',{method:'POST',
+  const response=await fetch('/api/donation-topic',{method:'POST',
    headers:{'Content-Type':'application/json'},signal:controller.signal,
-   body:JSON.stringify({request_id,model:$('model').value,purpose:'topic',amount:donation.amount,
-     donation:donation.text,topic:$('topic').value,shared_goal:$('sharedGoal').value,history:[]})});
+   body:JSON.stringify({request_id,model:$('model').value,amount:donation.amount,donation:donation.text})});
   if(!response.ok)return {decision:'chat'};
   const result=await response.json();
   return result.decision==='topic'&&typeof result.topic==='string'&&result.topic.trim().length>=2&&result.topic.length<=600?
@@ -1519,7 +1517,7 @@ function donationMessage(){
  if(state.donationQueue.length>=256){
    system('Очередь донатов заполнена (256). Отправка не принята — попробуй позже.');return;
  }
- const total=donationBudget(value,text);
+ const total=DONATION_REPLIES;
  const item=feedItem('⚡ ДОНАТ · '+donor,null,'donation');
  item.body.textContent=value.toFixed(2)+' · '+text;
  item.meta.textContent='ПРИНЯТ · ждём окончания текущей реплики · '+(value>=100?'проверим новую тему через ИИ':'5 реплик')+' · локальный тест';

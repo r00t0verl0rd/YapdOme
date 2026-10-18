@@ -14,24 +14,23 @@ from backend.engine import Engine
 from backend.engine import enums as E
 
 ACTIONS = ["start", "claim", "complete", "user", "pause", "resume", "stop",
-           "interrupt", "reset", "fail", "donation", "decision", "tick",
+           "interrupt", "reset", "fail", "tick",
            "recover", "director", "priority_donation", "social"]
 SAMPLES = ["", "[[PASS]]", "[[WAIT_USER]]", "Хм.", "[[TO:SELF]]", "[[TO:ANY]]",
            "Экспериментатор, ответь", "Он сказал «Экспериментатор, ответь»",
-           "focus", "brief", "[[TO:я]]"]
+           "[[TO:я]]"]
 
 
 def assert_invariants(test, core):
     s = core.state()
     test.assertIn(s["status"], E.MODES)
-    test.assertNotIn(s["status"], ("WAIT_USER", "REVIEW"))
+    test.assertNotEqual(s["status"], "WAIT_USER")
     test.assertIn(s["agent"], (-1, 0, 1, 2))
     test.assertIn(s["next_agent"], (0, 1, 2))
     test.assertTrue(s["agent"] < 0 or s["status"] == "RUNNING")
     test.assertTrue(0 <= s["passes"] <= 3)
     test.assertTrue(s["turns"] >= 0 and 0 <= s["errors"] <= 3)
     test.assertIn(s["kind"], E.KINDS)
-    test.assertTrue(not s["reviewing"] or s["status"] == "RUNNING")
     test.assertIn(s["route_reason"], E.ROUTE_REASONS.values())
 
 
@@ -56,7 +55,6 @@ class EngineFuzz(unittest.TestCase):
                         for snap in (before, after):
                             snap["result"] = 0
                             snap["accepted"] = True
-                            snap["review_ms"] = 0
                             snap["timeout_ms"] = 0
                         self.assertEqual(after, before, (run, action, agent))
                     assert_invariants(self, core)
@@ -94,25 +92,6 @@ class EngineFuzz(unittest.TestCase):
             self.assertEqual(core.event("complete", agent=claimed["agent"],
                                         ticket=claimed["ticket"], text="hello")["status"], "ERROR")
             self.assertFalse(core.event("start")["accepted"])
-        finally:
-            core.close()
-        # UINT_MAX review_ticket блокирует донаты тем же способом.
-        core = Engine()
-        try:
-            core.event("start")
-            core._engine.review_ticket = E.UINT_MAX
-            self.assertEqual(core.event("donation")["status"], "ERROR")
-        finally:
-            core.close()
-        # Просроченная классификация доната не применяется.
-        core = Engine()
-        try:
-            core.event("start")
-            donation = core.event("donation")
-            core._engine.review_deadline_ms = 0
-            decision = core.event("decision", ticket=donation["review_ticket"], text="focus")
-            self.assertFalse(decision["accepted"])
-            self.assertFalse(core.state()["reviewing"])
         finally:
             core.close()
 

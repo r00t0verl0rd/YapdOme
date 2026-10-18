@@ -30,7 +30,7 @@ class DonationTests(unittest.TestCase):
 
     def test_malformed_donations_rejected(self):
         for invalid in ({"amount":-1},{"amount":"100"},{"amount":float("inf")},
-                        {"remaining":99},{"first":"true"},{"text":""},
+                        {"remaining":6},{"first":"true"},{"text":""},
                         {"name":"X"*80}):
             data={"name":"Имя","amount":5,"text":"Привет",
                   "first":True,"remaining":2}
@@ -102,24 +102,24 @@ class DonationTests(unittest.TestCase):
 
     def test_donation_scene_progresses_not_repeats_thanks(self):
         donation={"name":"Клоп","amount":50,"text":"Здарова пацаны",
-                  "first":True,"remaining":1,"total":1,"covered":[]}
+                  "first":True,"remaining":1,"covered":[]}
         first=donation_scene_instructions(donation,"Лимур","Добрый шутник",
-                                           ["Лимур","Кизаро","Овелито"],"Будущее")
+                                           ["Лимур","Кизаро","Овелито"])
         self.assertIn("ПЕРВЫЙ ОТВЕТ",first)
         self.assertIn("УЖЕ добавляет начало",first)
-        donation.update(first=False,remaining=1,total=2,covered=["Привет, рады видеть!"])
+        donation.update(first=False,remaining=1,covered=["Привет, рады видеть!"])
         second=donation_scene_instructions(donation,"Кизаро","Скептик",
-                                           ["Лимур","Кизаро","Овелито"],"Будущее")
+                                           ["Лимур","Кизаро","Овелито"])
         self.assertIn("РАЗВИТИЕ",second)
         self.assertIn("НЕ повторяй имя",second)
         self.assertNotIn("ПЕРВЫЙ ОТВЕТ",second)
 
     def test_extra_donation_history_is_bounded(self):
         base={"name":"Даша","text":"Объясни проект","amount":100,
-              "first":False,"remaining":3,"total":8,"covered":["Первый аргумент"]}
+              "first":False,"remaining":3,"covered":["Первый аргумент"]}
         self.assertEqual(donation_context({"donation_context":base})["covered"],
                          ["Первый аргумент"])
-        base["covered"]=["реплика"]*9
+        base["covered"]=["реплика"]*5
         with self.assertRaises(BridgeError):
             donation_context({"donation_context":base})
 

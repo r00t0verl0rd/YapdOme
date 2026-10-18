@@ -19,7 +19,7 @@ function harness({amount=100,verdict={decision:'topic',topic:'Жизнь на М
   stopTimer:()=>{},claimNext:()=>{},cancelListeners:()=>{},isMarker:()=>false,stripDirectives:s=>s,
   defs:[{name:'Альфа'},{name:'Бета'},{name:'Гамма'}],requestDirector:()=>{},engineError:e=>{throw e;}};
  vm.createContext(context);
- vm.runInContext(code.slice(code.indexOf('function donationTurns('),code.indexOf('function donationMessage(')),context);
+ vm.runInContext(code.slice(code.indexOf('const DONATION_REPLIES='),code.indexOf('function donationMessage(')),context);
  vm.runInContext(code.slice(code.indexOf('async function endTurn('),code.indexOf('// The research notebook')),context);
  return {context,state,fields,donation,calls,routes,scheduled};
 }
@@ -32,7 +32,7 @@ test('0 and 99.99 enter the five-reply scene without an AI review',async()=>{
 });
 test('100 changes the persistent topic after approval and waits for an audible reply before the next donor',async()=>{
  const h=harness();await h.context.activateNextDonation();
- assert.equal(h.calls.length,1);assert.equal(h.calls[0].purpose,'topic');assert.equal(h.calls[0].amount,100);
+ assert.equal(h.calls.length,1);assert.equal(h.calls[0].amount,100);
  assert.equal(h.fields.topic.value,'Жизнь на Марсе');assert.equal(h.state.journal.length,0);
  assert.equal(h.state.history.length,1);assert.match(h.state.history[0].text,/Жизнь на Марсе/);
  assert.equal(h.state.activeDonation,h.donation);assert.equal(h.donation.topicChanged,true);
