@@ -120,6 +120,18 @@
         <button id="sendDonation" class="primary">⚡ В ЭФИР</button>
       </div>
       <p class="field-tip">Сначала завершаем текущую реплику · затем отвечаем зрителю. Меньше 100 — 5 реплик по сообщению. От 100 — смена темы после проверки ИИ; если тема не прошла проверку — 5 реплик. Платёж тестовый.</p>
+      <details id="donationQueueSettings" class="scene-advanced donation-queue-settings">
+        <summary><span>⚙ РУЧНОЙ ПОДСЧЁТ ОЧЕРЕДИ</span><span class="fold-arrow" aria-hidden="true">⌄</span></summary>
+        <div class="scene-advanced-body">
+          <label class="section-title" for="queueCountMode">КАК СЧИТАТЬ ОЖИДАЮЩИХ</label>
+          <select id="queueCountMode" aria-label="Способ подсчёта очереди донатов">
+            <option value="messages">По сообщениям</option>
+            <option value="viewers">По уникальным зрителям</option>
+          </select>
+          <p id="queueCountPreview" class="field-tip" role="status" aria-live="polite">Ожидают: 0 сообщений · порог: более 5</p>
+          <p class="field-tip">Ручной выбор меняет только счётчик порога «более 5», а не порядок FIFO. Динамическая цена пока отображается как индикатор: реальные платежи не подключены. В локальном тесте уникальность определяется именем; при подключении Twitch понадобится ID аккаунта.</p>
+        </div>
+      </details>
     </section>
     </div>
 
