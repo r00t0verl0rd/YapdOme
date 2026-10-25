@@ -503,8 +503,26 @@ function installDuration(seconds){
 }
 function status(head,desc='',cls=''){$('connection').textContent=head;$('detail').textContent=desc;$('indicator').className='led '+cls;}
 function runStatus(text){$('runstate').textContent=text;}
+function donationQueueCount(){
+ if($('queueCountMode')?.value!=='viewers')return state.donationQueue.length;
+ // Stable account IDs take precedence when a real chat provider is connected.
+ // Names are all the local donation simulation currently provides.
+ const viewers=new Set();
+ for(const donation of state.donationQueue){
+  const id=String(donation.viewerId||'').trim();
+  const name=String(donation.donor||'Аноним').trim().toLocaleLowerCase('ru');
+  viewers.add(id?'id:'+id:'name:'+name);
+ }
+ return viewers.size;
+}
 function updateDonationBadge(){
  const waiting=state.donationQueue.length,active=state.activeDonation;
+ const countMode=$('queueCountMode')?.value==='viewers'?'viewers':'messages';
+ const counted=donationQueueCount();
+ const countLabel=countMode==='viewers'?'зрителей':'сообщений';
+ const preview=$('queueCountPreview');
+ if(preview)preview.textContent='Ожидают: '+counted+' '+countLabel+
+   ' · порог: более 5 · '+(counted>5?'ПОВЫШЕННАЯ ЦЕНА (демо)':'БАЗОВАЯ ЦЕНА (демо)');
  for(const [index,donation] of state.donationQueue.entries()){
   if(state.donationRouting===donation)continue;
   const reason=active?'сначала «'+active.text.slice(0,60)+'» · осталось ответов: '+active.remaining:
@@ -515,7 +533,7 @@ function updateDonationBadge(){
  const element=$('queueStatus');if(!element)return;
  element.classList.toggle('busy',!!active||waiting>0);
  element.textContent=active?'⚡ '+active.donor+' · '+active.responses.length+'/'+active.total+(waiting?' · +'+waiting:''):
-   waiting?'⚡ В ОЧЕРЕДИ '+waiting+' · ПОСЛЕ РЕПЛИКИ':'◌ ОЧЕРЕДЬ ПУСТА';
+   waiting?'⚡ В ОЧЕРЕДИ '+waiting+' · СЧЁТЧИК '+counted+' ('+countLabel+') · ПОСЛЕ РЕПЛИКИ':'◌ ОЧЕРЕДЬ ПУСТА';
 }
 // Bound both transcript DOM and TXT archive for arbitrarily long shows.
 const VISIBLE_FEED_LIMIT = 180;
@@ -642,7 +660,7 @@ function populateVoices(){
  defs.forEach((d,i)=>{const sel=$('cards').children[i]?.querySelector('.voice-controls select');if(sel)optionsForVoices(sel,i)});
 }
 const PREF_KEY='triad09';
-function savePrefs(){try{localStorage.setItem(PREF_KEY,JSON.stringify({agents:defs.map(d=>({name:d.name,description:d.description,voiceURI:d.voiceURI,kokoroVoice:d.kokoroVoice,kokoroRuVoice:d.kokoroRuVoice,piperVoice:d.piperVoice,sileroVoice:d.sileroVoice,openaudioVoice:d.openaudioVoice,qwen3Voice:d.qwen3Voice })),topic:$('topic').value,sharedGoal:$('sharedGoal').value,showMode:$('showMode').value,voiceEnabled:$('voiceEnabled').checked,ttsBackend:$('ttsBackend').value,rate:$('rate').value,auto:$('auto').checked,directorEnabled:$('directorEnabled').checked,model:$('model').value,qwen3Size:qwen3Size,kokoroModel:kokoroModel}))}catch(_){}}
+function savePrefs(){try{localStorage.setItem(PREF_KEY,JSON.stringify({agents:defs.map(d=>({name:d.name,description:d.description,voiceURI:d.voiceURI,kokoroVoice:d.kokoroVoice,kokoroRuVoice:d.kokoroRuVoice,piperVoice:d.piperVoice,sileroVoice:d.sileroVoice,openaudioVoice:d.openaudioVoice,qwen3Voice:d.qwen3Voice })),topic:$('topic').value,sharedGoal:$('sharedGoal').value,showMode:$('showMode').value,voiceEnabled:$('voiceEnabled').checked,ttsBackend:$('ttsBackend').value,rate:$('rate').value,auto:$('auto').checked,queueCountMode:$('queueCountMode').value,directorEnabled:$('directorEnabled').checked,model:$('model').value,qwen3Size:qwen3Size,kokoroModel:kokoroModel}))}catch(_){}}
 function restorePrefs(){
  try{
   const modern=localStorage.getItem(PREF_KEY),p=JSON.parse(modern||localStorage.getItem('triad08')||localStorage.getItem('triad07')||'{}');
@@ -682,6 +700,7 @@ function restorePrefs(){
   if(['kokoro','piper','silero','qwen3-tts','openaudio-s1-mini','browser'].includes(p.ttsBackend))$('ttsBackend').value=p.ttsBackend;
   else if(p.ttsBackend==='kokoro-ru'){$('ttsBackend').value='kokoro';kokoroModel='ru';}
   if(typeof p.auto==='boolean')$('auto').checked=p.auto;
+  if(['messages','viewers'].includes(p.queueCountMode))$('queueCountMode').value=p.queueCountMode;
   if(typeof p.directorEnabled==='boolean')$('directorEnabled').checked=p.directorEnabled;
   if(p.rate&&Number(p.rate)>=.75&&Number(p.rate)<=1.5)$('rate').value=p.rate;
   if(['pro','lite'].includes(p.qwen3Size)){qwen3Size=p.qwen3Size;if($('qwen3Size'))$('qwen3Size').value=qwen3Size;}
@@ -1690,6 +1709,7 @@ $('directorEnabled').onchange=()=>{
  savePrefs();
 };
 $('sendInterject').onclick=humanMessage;
+$('queueCountMode').onchange=()=>{savePrefs();updateDonationBadge()};
 $('sendDonation').onclick=donationMessage;$('donationText').onkeydown=e=>{if(e.key==='Enter')donationMessage()};$('interject').onkeydown=e=>{if(e.key==='Enter')humanMessage()};
 $('voiceEnabled').onchange=()=>{if(!$('voiceEnabled').checked)speech.stop();savePrefs()};
 $('voiceStudioButton').onclick=()=>{
@@ -1716,7 +1736,7 @@ $('export').onclick=()=>{
  const blob=new Blob([logs.join('\n\n')],{type:'text/plain;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='TRIAD-v0.2.0-'+new Date().toISOString().slice(0,10)+'.txt';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1500);
 };
 window.addEventListener('beforeunload',()=>{cancelDirector();if(micRecognition){try{micRecognition.abort()}catch(_){}}speech.stop();if(state.current){state.current.controller.abort();cancelListeners(state.current);}});
-restorePrefs();fitTopicField();updateScienceUI();renderCards();$('feed').innerHTML='<div class="empty">ОЖИДАНИЕ СИГНАЛА\nПОДКЛЮЧИ CHATGPT И ЗАПУСТИ ЭФИР</div>';
+restorePrefs();updateDonationBadge();fitTopicField();updateScienceUI();renderCards();$('feed').innerHTML='<div class="empty">ОЖИДАНИЕ СИГНАЛА\nПОДКЛЮЧИ CHATGPT И ЗАПУСТИ ЭФИР</div>';
 if(haveSpeech){populateVoices();window.speechSynthesis.onvoiceschanged=populateVoices;}
 refreshStatus();
 fetch('/api/engine').then(r=>{if(!r.ok)throw Error('Ядро C недоступно');return r.json()})
