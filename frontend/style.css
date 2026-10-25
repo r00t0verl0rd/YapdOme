@@ -774,3 +774,8 @@ input[type=text],input[type=number],textarea,select{transition:border-color .18s
 .qwen3-voice-form textarea,.qwen3-voice-form input[type=text],.qwen3-voice-form input[type=file],.qwen3-voice-form select{font:inherit;width:100%;box-sizing:border-box}
 .qwen3-voice-actions{display:flex;gap:8px}
 #kokoroModelWrap{margin:0 0 10px;padding:10px;background:#0a1620;border:1px solid #2a4c60;border-radius:8px}
+
+/* Manual queue-count mode for local donation preview; payment flow is unchanged. */
+.donation-queue-settings{margin-top:14px}
+.donation-queue-settings .scene-advanced-body select{width:100%}
+#queueCountPreview{color:var(--cyan);font-weight:750}
