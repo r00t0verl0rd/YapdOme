@@ -151,7 +151,7 @@ class State:
             self.last_error = ""
             args = {"client_id": cid or "dynamic_agent_client", "response_type": "code",
                     "redirect_uri": redirect,
-                    "scope": "openid profile email offline_access resource.invoke chatgpt.tokens.use.direct",
+                    "scope": "openid profile email offline_access resource.invoke",
                     "resource": RESOURCE, "state": state, "nonce": nonce,
                     "ext_agent_host_id": self.credentials["host_id"],
                     "code_challenge_method": "S256",
@@ -220,12 +220,9 @@ class State:
             raise BridgeError("OpenAI не вернул ID token")
         claims = verify_jwt(token_data["id_token"], cid, pending["nonce"])
         scopes = token_data.get("scope", "").split()
-        if "chatgpt.tokens.use.direct" not in scopes:
-            raise BridgeError(
-                "Вход завершён без разрешения ChatGPT plan usage. "
-                "Для генерации через лимиты ChatGPT нужен подходящий тариф и согласие "
-                "пользователя. Обычный вход в аккаунт сам по себе не даёт доступа к моделям."
-            )
+        # Experimental identity-only flow: permit sign-in without the optional
+        # ChatGPT plan-usage scope. This does NOT authorize Responses API inference;
+        # access_token() continues to fail closed unless the scope was granted.
         if not token_data.get("access_token"):
             raise BridgeError("OpenAI не выдал access_token")
         with self.lock:
@@ -248,8 +245,14 @@ class State:
         with self.refresh_lock:
             with self.lock:
                 record = self.selected()
-                if not record or "chatgpt.tokens.use.direct" not in record.get("scopes", []):
-                    raise BridgeError("Сначала войди через ChatGPT и разреши использование подписки")
+                if not record:
+                    raise BridgeError("Сначала войди через ChatGPT")
+                if "chatgpt.tokens.use.direct" not in record.get("scopes", []):
+                    raise BridgeError(
+                        "Экспериментальный вход без chatgpt.tokens.use.direct успешен, "
+                        "но разрешение на запросы к моделям не выдано. "
+                        "Для проверки генерации нужно повторно войти с разрешением ChatGPT plan usage."
+                    )
                 if record.get("access_token") and float(record.get("expires_at", 0)) > time.time() + 90:
                     return record["access_token"]
                 refresh = record.get("refresh_token")
