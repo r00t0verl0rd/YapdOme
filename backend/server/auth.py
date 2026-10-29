@@ -163,6 +163,10 @@ class State:
                     args["login_hint"] = account["email"]
             elif cid is None:
                 args["agent_name_hint"] = "YapdOme"
+            if mode == "switch":
+                # Explicitly ask the OpenID provider to show account selection.
+                # Do not carry the previous account's id_token_hint/login_hint.
+                args["prompt"] = "select_account"
             return AUTHORIZE_URL + "?" + urllib.parse.urlencode(args)
 
     def finish_auth(self, query):
