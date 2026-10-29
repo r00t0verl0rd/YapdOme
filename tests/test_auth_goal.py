@@ -66,6 +66,7 @@ class OAuthTests(unittest.TestCase):
         self.assertEqual(returning['login_hint'],'one@example.net')
         switching=self.params(self.auth.start_auth('switch'))
         self.assertEqual(switching['client_id'],'dynamic_agent_client')
+        self.assertEqual(switching['prompt'],'select_account')
         self.assertNotIn('id_token_hint',switching)
         self.assertNotIn('login_hint',switching)
         token={'id_token':'FAKE','access_token':'T2','refresh_token':'R2',
