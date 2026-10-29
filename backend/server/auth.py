@@ -162,7 +162,7 @@ class State:
                 if account.get("email"):
                     args["login_hint"] = account["email"]
             elif cid is None:
-                args["agent_name_hint"] = "TRIAD Live"
+                args["agent_name_hint"] = "YapdOme"
             return AUTHORIZE_URL + "?" + urllib.parse.urlencode(args)
 
     def finish_auth(self, query):
@@ -177,7 +177,16 @@ class State:
                 raise BridgeError("Проверка OAuth state не пройдена")
             self.pending = None
             if "error" in query:
-                raise BridgeError("Вход отклонён: " + str(query["error"][0])[:100])
+                oauth_error = str(query["error"][0])[:100]
+                if oauth_error == "access_denied":
+                    raise BridgeError(
+                        "OpenAI не выдал разрешение ChatGPT plan usage. "
+                        "В open-source интеграции использование лимитов ChatGPT доступно "
+                        "подходящим аккаунтам Plus/Pro; на Free это разрешение недоступно. "
+                        "Это ограничение доступа OpenAI, а не ошибка локального OAuth. "
+                        "Используй доступного другого провайдера или модель."
+                    )
+                raise BridgeError("Вход отклонён: " + oauth_error)
             code = query.get("code", [""])[0]
             returned_id = query.get("client_id", [""])[0]
             cid = pending["client_id"]
@@ -208,7 +217,11 @@ class State:
         claims = verify_jwt(token_data["id_token"], cid, pending["nonce"])
         scopes = token_data.get("scope", "").split()
         if "chatgpt.tokens.use.direct" not in scopes:
-            raise BridgeError("Доступ к подписке не разрешён; проверь разрешения ChatGPT")
+            raise BridgeError(
+                "Вход завершён без разрешения ChatGPT plan usage. "
+                "Для генерации через лимиты ChatGPT нужен подходящий тариф и согласие "
+                "пользователя. Обычный вход в аккаунт сам по себе не даёт доступа к моделям."
+            )
         if not token_data.get("access_token"):
             raise BridgeError("OpenAI не выдал access_token")
         with self.lock:
