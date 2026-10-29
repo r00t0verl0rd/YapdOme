@@ -86,6 +86,14 @@ class OAuthTests(unittest.TestCase):
                 self.auth.finish_auth({'state':['wrong'],'code':['x'],'client_id':['oaiapp_id']})
             caller.assert_not_called()
 
+    def test_access_denied_explains_plan_eligibility(self):
+        params = self.params(self.auth.start_auth())
+        with self.assertRaisesRegex(triad.BridgeError, "Plus/Pro"):
+            self.auth.finish_auth({
+                "state": [params["state"]],
+                "error": ["access_denied"],
+            })
+
     def test_bad_unicode_callback_does_not_consume_oauth_state(self):
         self.auth.start_auth()
         pending = self.auth.pending
