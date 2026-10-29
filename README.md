@@ -4,6 +4,27 @@
 На macOS также доступен `START.command`. Порт по умолчанию — 13180;
 его можно переопределить переменной `TRIAD_PORT`.
 
+## Авторизация ChatGPT (Sign in with ChatGPT)
+
+YapdOme использует официальный open-source flow OpenAI: динамическую регистрацию клиента,
+PKCE, стабильный `ext_agent_host_id` и локальное хранение токенов с правами владельца.
+Имя приложения при регистрации — `YapdOme`.
+
+**Важно о бесплатном тарифе:** вход в ChatGPT и разрешение использовать лимиты ChatGPT —
+разные права. Текущий flow запрашивает `chatgpt.tokens.use.direct` для генерации ответов.
+По опубликованным правилам OpenAI, использование лимитов в open-source приложениях доступно
+подходящим аккаунтам Plus/Pro; аккаунт Free не может рассчитывать на это разрешение.
+Изменение кода приложения не может включить недоступное разрешение или обойти лимиты.
+При отказе YapdOme показывает объяснение, а не бесконечно повторяет вход.
+
+Официальные документы:
+- [OpenAI: интеграция Sign in with ChatGPT для open-source приложений](https://developers.openai.com/cookbook/articles/sign-in-with-chatgpt)
+- [OpenAI: open-source flow и регистрация клиента](https://developers.openai.com/siwc/token-sharing-open-source/sign-in)
+- [Условия Sign in with ChatGPT](https://openai.com/policies/sign-in-with-chatgpt-terms/)
+
+Токены сохраняются локально в `~/.triad-dialogue/accounts.json`; каталог и файл защищаются
+правами доступа пользователя. Не публикуй этот файл и не отправляй его в issue.
+
 ## OpenAudio S1-mini — локальная озвучка
 
 1. Открой голосовую студию и выбери **OpenAudio S1-mini**.
