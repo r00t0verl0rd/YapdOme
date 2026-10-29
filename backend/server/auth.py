@@ -151,7 +151,7 @@ class State:
             self.last_error = ""
             args = {"client_id": cid or "dynamic_agent_client", "response_type": "code",
                     "redirect_uri": redirect,
-                    "scope": "openid profile email offline_access resource.invoke",
+                    "scope": "openid profile email offline_access resource.invoke chatgpt.tokens.use.direct",
                     "resource": RESOURCE, "state": state, "nonce": nonce,
                     "ext_agent_host_id": self.credentials["host_id"],
                     "code_challenge_method": "S256",
