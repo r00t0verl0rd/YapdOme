@@ -53,6 +53,21 @@ class OAuthTests(unittest.TestCase):
         self.assertEqual(revived.credentials['active'],issued)
         self.assertFalse(revived.status()['recoverable'])
 
+    def test_experiment_requests_identity_without_direct_scope(self):
+        params = self.params(self.auth.start_auth())
+        self.assertNotIn('chatgpt.tokens.use.direct', params['scope'].split())
+        token = {'id_token': 'FAKE', 'access_token': 'TOKEN',
+                 'scope': 'openid profile email offline_access resource.invoke',
+                 'expires_in': 3600}
+        with patch.object(triad, 'json_request', return_value=token), \
+             patch.object(triad, 'verify_jwt', return_value={'sub': 'user-free', 'email': 'free@example.net'}):
+            self.auth.finish_auth({'state': [params['state']], 'code': ['test-code'],
+                                   'client_id': ['oaiapp_identity_only']})
+        self.assertEqual(self.auth.credentials['active'], 'oaiapp_identity_only')
+        self.assertFalse(self.auth.status()['connected'])
+        with self.assertRaisesRegex(triad.BridgeError, 'без chatgpt.tokens.use.direct'):
+            self.auth.access_token()
+
     def test_other_account_does_not_reuse_old_client_or_hints(self):
         self.auth.credentials['accounts']['oaiapp_first']={
             'client_id':'oaiapp_first','subject':'user1','email':'one@example.net',
