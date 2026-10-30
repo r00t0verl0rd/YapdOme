@@ -105,9 +105,9 @@ class Engine:
             return as_json(snapshot, self._engine.route_reason)
 
     def complete_to(self, agent, ticket, text, target_agent=-1):
-        if type(agent) is not int or not 0 <= agent <= 2:
+        if type(agent) is not int or not 0 <= agent < len(self._engine.names):
             raise ValueError("Неверный номер агента")
-        if type(target_agent) is not int or not -1 <= target_agent <= 2 or target_agent == agent:
+        if type(target_agent) is not int or not -1 <= target_agent < len(self._engine.names) or target_agent == agent:
             raise ValueError("Неверный адресат")
         if type(ticket) is not int or not 0 <= ticket <= 0xFFFFFFFF:
             raise ValueError("Неверный ticket")

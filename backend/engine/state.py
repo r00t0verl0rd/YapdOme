@@ -75,6 +75,9 @@ class StateMachine:
             return False
         if lowered != list(self.names):
             self.names = lowered
+            self.last_turn = [-1] * len(lowered)
+            if self.next_agent >= len(lowered):
+                self.next_agent = 0
             self.revision += 1
         return True
 
@@ -276,7 +279,7 @@ class StateMachine:
             self.deadline_ms = 0
             self.errors = 0
             self.route_reason = E.ROUTE_NONE
-            self.last_turn = [-1, -1, -1]
+            self.last_turn = [-1] * len(self.names)
             self.revision += 1
             self.ticket += 1
             return E.OK

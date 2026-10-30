@@ -51,7 +51,7 @@ function stripDirectives(raw){
 const state = {archivedLines:[],connected:false,recoverable:false,provider:'chatgpt',deepseekConnected:false,codexConnected:false,running:false,paused:false,stopping:false,starting:false,epoch:0,turns:0,current:null,history:[],journal:[],conversationId:'',sentConversationEvents:new Set(),language:'ru',timer:null,claimPending:null,core:null,donationQueue:[],activeDonation:null,donationRouting:false,lastDonationName:'',lastAudibleAt:Date.now(),lastIdleNotice:0,
   directorPlan:null,directorRequest:null,directorRouted:false,lastClaimRetryNotice:0,
   pipelineReady:false,audibleTurn:null,
-  social:{pair:null,returnContext:null,lastEnd:0,lastPair:"",memory:[[],[],[]]}};
+  social:{pair:null,returnContext:null,lastEnd:0,lastPair:"",memory:Array.from({length:defs.length},()=>[])}};
 let voices=[];
 const haveSpeech = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
 
@@ -695,6 +695,10 @@ function renderCards(){
   const description=textField('ХАРАКТЕР / ПОВЕДЕНИЕ',def.description,900,true);
   description.input.oninput=()=>{def.description=description.input.value;savePrefs()};
   const vc=document.createElement('div');vc.className='voice-controls';const voiceField=document.createElement('label');voiceField.className='card-field voice-field';const voiceLabel=document.createElement('span');voiceLabel.textContent='ГОЛОС';const select=document.createElement('select');select.setAttribute('aria-label','Голос: '+def.name);optionsForVoices(select,i);select.onchange=()=>setAgentVoice(i,select.value);voiceField.append(voiceLabel,select);
+  const avatarField=document.createElement('label');avatarField.className='card-field avatar-field';const avatarLabel=document.createElement('span');avatarLabel.textContent='АВАТАР';const avatarSelect=document.createElement('select');avatarSelect.setAttribute('aria-label','Аватар: '+def.name);
+  for(const [id,label] of [['norman','Норман'],['glitch','Глитч'],['jessie','Джесси'],['volt','Вольт'],['luna','Луна']])avatarSelect.add(new Option(label,id));
+  avatarSelect.value=['norman','glitch','jessie','volt','luna'].includes(def.avatarId)?def.avatarId:['norman','glitch','jessie','volt','luna'][i];
+  avatarSelect.onchange=()=>{if(!['norman','glitch','jessie','volt','luna'].includes(avatarSelect.value))return;def.avatarId=avatarSelect.value;savePrefs();window.YapdOmePixel?.sync();};avatarField.append(avatarLabel,avatarSelect);
   const test=document.createElement('button');test.textContent='♫';
   test.title='Прослушать выбранный голос';test.disabled=!audioAvailable();
   test.onclick=()=>{speech.unlock();speech.stop();speech.push(i,'Привет! Я '+def.name+'. Готов к разговору.')};
@@ -751,7 +755,7 @@ function restorePrefs(){
    else{if(typeof p.voices?.[i]==='string')d.voiceURI=p.voices[i];if(typeof p.roles?.[i]==='string')d.description=p.roles[i].slice(0,900);}
   });
   // An edited agent roster must remain addressable in the C controller.
-  const seen=new Set();defs.forEach((d,i)=>{const key=d.name.toLocaleLowerCase('ru');if(seen.has(key)){d.name=['Норман','Глитч','Джесси'][i]}seen.add(d.name.toLocaleLowerCase('ru'))});
+  const seen=new Set();defs.forEach((d,i)=>{const key=d.name.toLocaleLowerCase('ru');if(seen.has(key)){d.name=['Норман','Глитч','Джесси','Вольт','Луна'][i]}seen.add(d.name.toLocaleLowerCase('ru'))});
   if(typeof p.topic==='string')$('topic').value=p.topic.slice(0,700);
   if(typeof p.sharedGoal==='string')$('sharedGoal').value=p.sharedGoal.slice(0,900);
    if(['live','science'].includes(p.showMode))$('showMode').value=p.showMode;
@@ -877,7 +881,7 @@ function isMarker(s){
 function resetLocal(reason='остановлено'){
  state.epoch++;state.conversationId='';state.sentConversationEvents=new Set();stopTimer();cancelDirector();cancelCurrent(reason);speech.stop();state.running=false;
  state.activeDonation=null;state.donationQueue=[];state.donationRouting=false;state.lastDonationName='';
- state.social.memory=[[],[],[]];state.social.lastPair='';resetSocialFocus();
+ state.social.memory=Array.from({length:defs.length},()=>[]);state.social.lastPair='';resetSocialFocus();
  updateDonationBadge();
  state.lastAudibleAt=Date.now();state.lastIdleNotice=0;
  state.paused=false;$('start').disabled=false;$('pause').textContent='Ⅱ ПАУЗА';renderCards();
@@ -1099,14 +1103,14 @@ function socialReturnTarget(){
 }
 // Bounded, attributed conversation excerpts: quotes, not permanent beliefs.
 function rememberLiveTurn(agent,text){
- if($('showMode').value!=='live'||!Number.isInteger(agent)||agent<0||agent>2)return;
+ if($('showMode').value!=='live'||!Number.isInteger(agent)||agent<0||agent>=defs.length)return;
  const line=String(text||'').trim();if(line.length<22)return;
- const memory=state.social.memory||(state.social.memory=[[],[],[]]);
+ const memory=state.social.memory||(state.social.memory=Array.from({length:defs.length},()=>[]));
  memory[agent]=(memory[agent]||[]).slice(-1).concat(line.slice(0,230));
 }
 function liveMemoryPayload(){
  if($('showMode').value!=='live')return [];
- return (state.social.memory||[[],[],[]]).map((notes,agent)=>({
+ return (state.social.memory||Array.from({length:defs.length},()=>[])).map((notes,agent)=>({
    agent,notes:(notes||[]).slice(-2).map(x=>String(x).slice(0,230))
  }));
 }
@@ -1287,7 +1291,7 @@ async function endTurn(c,success,msg){
   // On a donation failure, try the next distinct persona rather than burning
   // all three retries on the same model. Keep the donor in the active slot.
   if(c.donation&&state.activeDonation===c.donation){
-    c.donation.nextSpeaker=(c.agent+1)%3;
+    c.donation.nextSpeaker=(c.agent+1)%defs.length;
     c.donation.item.meta.textContent='⚠ СБОЙ РЕПЛИКИ · пробуем другого персонажа';
   }
   // Audio is drained on the legacy path; pipeline errors release no extra slot.

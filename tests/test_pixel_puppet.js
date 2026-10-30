@@ -7,11 +7,11 @@ const vm = require('node:vm');
 const engine = require('../frontend/animation/pixel-puppet-engine.js');
 const adapter = fs.readFileSync(path.join(__dirname, '../frontend/animation/pixel-puppet.js'), 'utf8');
 
-test('real engine: 48×48 literal LEDs 0..3, three distinct robots and expressions', () => {
+test('real engine: 48×48 literal LEDs 0..3, five distinct robots and expressions', () => {
   assert.equal(engine.W, 48); assert.equal(engine.H, 48);
   assert.equal(Object.keys(engine.EMOTIONS).length, 10);
   const faces = new Set();
-  for (const id of ['norman', 'glitch', 'jessie']) {
+  for (const id of ['norman', 'glitch', 'jessie', 'volt', 'luna']) {
     const expressions = new Set();
     for (const pose of Object.values(engine.EMOTIONS)) {
       const pixels = engine.draw(id, pose, {t:0, talk:0, blink:0});
@@ -24,7 +24,7 @@ test('real engine: 48×48 literal LEDs 0..3, three distinct robots and expressio
     faces.add(Buffer.from(engine.draw(id, engine.EMOTIONS.neutral)).toString('base64'));
     assert.notDeepEqual(engine.draw(id, {}, {talk:0}), engine.draw(id, {}, {talk:1}));
   }
-  assert.equal(faces.size, 3);
+  assert.equal(faces.size, 5);
 });
 
 class Element {
@@ -60,7 +60,7 @@ function setup({stored = null, reduced = false, storageThrows = false} = {}) {
   let now = 1000, seq = 0, observerCallback;
   const frames = new Map(), draws = [], buffers = [], writes = [];
   const root = new Element();
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 5; i++) {
     const tile = new Element(); tile.className = 'live-tile';
     const portrait = new Element(); portrait.className = 'hud-portrait';
     tile.append(portrait); root.append(tile);
@@ -89,7 +89,7 @@ function setup({stored = null, reduced = false, storageThrows = false} = {}) {
   ctx.window = ctx;
   vm.runInContext(`const speech = {audibleAgent:null, audibleEntry:null, audioMeter:null};
     const state = {current:null, paused:false};
-    const defs = [{name:'Норман'}, {name:'Глитч'}, {name:'Джесси'}];`, ctx);
+    const defs = [{name:'Норман'}, {name:'Глитч'}, {name:'Джесси'}, {name:'Вольт'}, {name:'Луна'}];`, ctx);
   vm.runInContext(adapter, ctx);
   const speech = vm.runInContext('speech', ctx), state = vm.runInContext('state', ctx);
   return {ctx, root, cards, document, speech, state, frames, draws, buffers, writes, media,
@@ -104,15 +104,15 @@ function setup({stored = null, reduced = false, storageThrows = false} = {}) {
   };
 }
 
-test('mounts exactly 3×2304 DOM LEDs, no fallback SVGs, default 12fps and diff-only writes', () => {
+test('mounts exactly 5×2304 DOM LEDs, no fallback SVGs, default 12fps and diff-only writes', () => {
   const h = setup();
-  assert.equal(h.root.querySelectorAll('.pixel-led').length, 6912);
+  assert.equal(h.root.querySelectorAll('.pixel-led').length, 11520);
   assert.equal(h.root.querySelectorAll('svg').length, 0);
   assert.equal(h.root.querySelectorAll('.pixel-controls').length, 0);
-  assert.equal(h.cards.querySelectorAll('.pixel-mood').length, 3);
+  assert.equal(h.cards.querySelectorAll('.pixel-mood').length, 5);
   for (const select of h.cards.querySelectorAll('.pixel-mood')) assert.equal(select.children.length, 11);
   assert.equal(h.api.getStatus().fps, 12);
-  assert.equal(h.cards.querySelectorAll('.pixel-fps').length, 3);
+  assert.equal(h.cards.querySelectorAll('.pixel-fps').length, 5);
   for (const select of h.cards.querySelectorAll('.pixel-fps')) assert.equal(select.value, '12');
   assert.equal(h.document.getElementById('pixelPuppetEnabled'), null);
 
@@ -175,7 +175,7 @@ test('manual mood priority; strict temporary events cannot control actual speech
   select.value = 'auto'; select.dispatch('change'); assert.equal(h.api.getStatus().agents[0].mood, 'joy');
   h.tick(200); assert.equal(h.api.getStatus().agents[0].mood, 'neutral');
   for (const evt of [null, {type:'speech_start', agent:2}, {type:'audio_level', agent:2, level:1},
-    {type:'reaction', agent:3, emotion:'joy'}, {type:'reaction', agent:0, emotion:'__proto__'},
+    {type:'reaction', agent:5, emotion:'joy'}, {type:'reaction', agent:0, emotion:'__proto__'},
     {type:'gaze', agent:1, direction:NaN}, {type:'gaze', agent:1, direction:2},
     {type:'reaction', agent:0, emotion:'joy', duration:Infinity},
     {type:'reaction', agent:0, emotion:'joy', speaking:true}]) assert.equal(h.api.receive(evt), false);
