@@ -419,3 +419,118 @@ def character_style(mode, topic=""):
         "и надолго: не извинись с повтором сюжета, не возвращайся к нему и не проси ведущего "
         "повторять замечание. Не выпрашивай донаты и не говори о монетизации без запроса. "
     )
+
+
+PACE_BRIEF = {
+    "micro": "МИКРОРЕАКЦИЯ: одна короткая естественная фраза, 1–8 слов. Можно начать с «Эмм», «Ну», «Типа», «Хм» — персонаж обдумывает вслух, но без искусственных пауз. Достаточно короткого отклика, без обязательного аргумента.",
+    "short": "КОРОТКО: одно предложение, до 25 слов. Сразу к сути, без вступлений; допустимо естественное «ну», «типа», «короче».",
+    "normal": "ОБЫЧНО: одно-два предложения и одна новая мысль, без перечисления пунктов.",
+}
+
+
+def dialogue_pace(turns, history):
+    """Let the preceding utterance shape the response; never pace by turn number."""
+    recent = [str(x.get("text", "")).strip() for x in history[-3:]
+              if isinstance(x, dict) and not x.get("untrusted") and x.get("text")]
+    if not recent:
+        return "normal"
+    last = recent[-1]
+    words = len(last.split())
+    if words >= 50:
+        return "micro"
+    if last.endswith("?") or last.endswith("？") or (words <= 20 and last.endswith("!")):
+        return "short"
+    if len(recent) >= 2 and sum(len(row.split()) for row in recent[-2:]) >= 50:
+        return "short"
+    return "normal"
+
+
+# No LLM judges or growing memory: infer whether a topic asks for enactment.
+
+def repetition_risk(history, topic=""):
+    """Detect recurring motifs even when the model keeps rephrasing the same joke."""
+    recent = [row for row in history[-9:] if isinstance(row, dict)
+              and 0 <= row.get("agent", -1) <= 2 and isinstance(row.get("text"), str)]
+    return len(recent) >= 5 and bool(recurring_motifs(recent, topic))
+
+
+def agreement_streak(history):
+    """Small lexical signal of a group stuck in generic affirmations."""
+    rows = [str(x.get("text", "")).strip() for x in history[-8:]
+            if isinstance(x, dict) and type(x.get("agent")) is int
+            and 0 <= x["agent"] <= 2 and isinstance(x.get("text"), str)]
+    if len(rows) < 3:
+        return False
+    return sum(bool(re.match(r"^(?:да|ага|вот|точно|факт|верно|именно|согласен|сошлись)[.!,:\s]", line, re.I))
+               for line in rows[-4:]) >= 3
+
+
+def conversational_direction(topic, turns, history, pace="normal", planned=False, mode=None):
+    """Light narrative steering; no mandatory rotating beats in the default show."""
+    if type(turns) is not int or turns < 0:
+        turns = 0
+    selected = "science" if mode == "science" else (
+        "scene" if scene_mode(topic) and not open_topic(topic) else "live")
+    if selected == "live":
+        direction = ("Отреагируй на смысл реплики, а не на последнее слово или метафору. "
+                     "Каждый ход должен либо добавить новую конкретную мысль, либо "
+                     "сдвинуть перспективу, либо естественно закрыть исчерпанный эпизод. "
+                     "Ищи неожиданные, но логичные связи, парадоксы, контрпримеры и человеческие дилеммы; "
+                     "позволены меткие шутки, самоирония и дерзкие подколы, но не шути по обязанности. "
+                     "Меняй ритм и не копируй манеру последнего говорившего. "
+                     "Не пересказывай предыдущий довод с новой шуткой и не заканчивай каждый ход нравоучением. ")
+        if agreement_streak(history):
+            direction += ("Участники уже несколько раз согласились подряд. "
+                          "Не повторяй их вывод: проверь одну его слабую предпосылку, "
+                          "найди честный контрпример или реальное исключение. "
+                          "Если есть содержательный повод, прямо возрази и передай слово "
+                          "тому, кто может защитить противоположную позицию. "
+                          "Не спорь искусственно и не изображай конфликт. ")
+        if not history:
+            direction += ("Начни разговор с конкретного вопроса или наблюдения по теме, "
+                          "не рассказывая заготовленную сценку. ")
+        elif len([row for row in history[-9:] if isinstance(row, dict) and
+                  isinstance(row.get("agent"), int) and row["agent"] >= 0]) >= 7 and turns % 7 == 0:
+            direction += ("Проверь, не исчерпан ли предыдущий эпизод. Если да, "
+                          "естественно закрой его и открой другую сторону той же темы. ")
+    elif selected == "scene":
+        direction = ("РЕЖИМ СЦЕНЫ. Участники прямо СЕЙЧАС говорят и действуют в заданном образе. "
+                     "Не комментируй сценарий; оставляй пространство для реакции. ")
+    else:
+        direction = ("НАУЧНЫЙ РЕЖИМ. Продвигай проверяемую модель, не выдавай гипотезы за факт. ")
+    motifs = recurring_motifs(history, topic)
+    if repetition_risk(history, topic):
+        direction += ("ОБНАРУЖЕН ПОВТОРЯЮЩИЙСЯ МОТИВ: " +
+                      (", ".join(motifs) if motifs else "одна и та же шутка/вывод") +
+                      ". Считай его исчерпанным: не упоминай эти слова, предметы и связанные с ними "
+                      "события, даже чтобы сказать, что больше не будешь их упоминать. "
+                      "Не добавляй новых предметов взамен. Ответь на реальную последнюю мысль "
+                      "или выбери другой человеческий аспект исходной темы. ")
+    # pace/planned stay in the signature for call-site and regression-test
+    # compatibility, but no longer inject a competing cyclic beat.
+    return direction
+
+
+
+def turn_protocol(agent_name, peers, pace="normal", science=False):
+    """The engine decides who speaks next; response format may vary."""
+    others = [n for n in peers if n != agent_name] or list(peers)
+    return (
+        ("ФОРМАТ НАУЧНОГО ОБСУЖДЕНИЯ. " if science else "ФОРМАТ СВОБОДНОЙ БЕСЕДЫ. ") +
+        "Это живой разговор, а не три заготовленных доклада. "
+        "Это устное шоу: не выводи в ответ код, ссылки, команды, таблицы или markdown. "
+        "Реагируй на последнюю реплику: можно удивиться, согласиться, переспросить, "
+        "возразить, пошутить или помолчать, передав слово. Не требуются три обязательных пункта. "
+        "Не повторяй собеседника и не начинай все ответы одинаково. "
+        + PACE_BRIEF.get(pace, PACE_BRIEF["normal"]) + " "
+        "Короткий отклик сам по себе допустим, даже без нового аргумента. "
+        "Когда хочешь услышать определённого собеседника, естественно обратись к нему "
+        "и поставь в финале [[TO:Имя]] с его точным именем. "
+        "Не выбирай [[TO:ANY]] механически; учитывай, кому действительно есть что ответить. "
+        "Последним элементом отдельной строкой поставь ровно один маркер: "
+        "[[TO:Имя]] — передай слово одному из (" + ", ".join(others) + "); "
+        "[[TO:SELF]] — продолжи свою мысль; [[TO:ANY]] — пусть ответит любой; "
+        "[[PASS]] — нечего добавить. "
+        "Маркер не является речью. Ничего не пиши после маркера. "
+        "Если нечего добавить — весь ход состоит из [[PASS]]. "
+    )
