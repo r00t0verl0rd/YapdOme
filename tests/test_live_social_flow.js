@@ -59,4 +59,9 @@ assert.equal(commands.hostTopicChange('поговорите о девушках'
 assert.equal(commands.hostTopicChange('смените тему'),'');
 assert.equal(commands.hostTopicChange('смените тему на автомобили'),'автомобили');
 assert.equal(commands.hostTopicChange('Это просто шутка'),null);
+// The UI sends event deltas; it never serializes the growing transcript to the API.
+assert(src.includes("conversationId:'',sentConversationEvents:new Set()"));
+assert(src.includes("events:pendingEvents"));
+assert(src.includes("conversation_id:state.conversationId"));
+assert(!src.includes("history:state.provider==='codex'?state.history"));
 console.log('PASS: duo, listener rejoin, priority exceptions and hot edits');
