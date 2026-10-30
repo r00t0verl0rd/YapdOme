@@ -22,7 +22,8 @@ from ..audio.qwen3 import (Qwen3Voices, QWEN3_BUILTIN, QWEN3_MODEL_FOLDERS,
                           QWEN3_VOICES_DIR, preset_speakers)
 from .auth import State, LiveCall
 from .config import HOST, PORT
-from .llm import API_URL, DEEPSEEK_URL, BridgeError, json_request, sse_events
+from .llm import BridgeError, json_request, sse_events
+from .provider_adapters import get_http_adapter
 from .codex import CODEX, CodexError
 from .conversation_policy import build_turn_policy
 from .conversation import (
@@ -56,59 +57,19 @@ def _llm_provider():
 
 
 def _llm_auth(provider):
-    if provider == "deepseek":
-        key = STATE.deepseek_key()
-        if not key:
-            raise BridgeError("Сначала введи API-ключ DeepSeek")
-        return "Bearer " + key
-    return "Bearer " + STATE.access_token()
+    return "Bearer " + get_http_adapter(provider).access_token(STATE)
 
 
 def _llm_request(provider, model, instructions, inp):
-    if provider == "deepseek":
-        return urllib.request.Request(
-            DEEPSEEK_URL + "/chat/completions",
-            data=json.dumps({"model": model,
-                             "messages": [{"role": "system", "content": instructions}] + inp,
-                             "stream": True}).encode(),
-            headers={"Authorization": _llm_auth(provider), "Content-Type": "application/json",
-                     "Accept": "text/event-stream"})
-    return urllib.request.Request(
-        API_URL + "/responses",
-        data=json.dumps({"model": model, "instructions": instructions, "input": inp,
-                         "store": False, "stream": True}).encode(),
-        headers={"Authorization": _llm_auth(provider), "Content-Type": "application/json",
-                 "Accept": "text/event-stream"})
+    return get_http_adapter(provider).request(STATE, model, instructions, inp)
 
 
 def _llm_event(provider, event):
-    if provider == "deepseek":
-        if event.get("error"):
-            return "error", str(event["error"])[:400]
-        choices = event.get("choices")
-        if isinstance(choices, list) and choices and isinstance(choices[0], dict):
-            choice = choices[0]
-            delta = choice.get("delta")
-            content = delta.get("content") if isinstance(delta, dict) else None
-            if isinstance(content, str) and content:
-                return "delta", content
-            if choice.get("finish_reason") is not None:
-                return "done", ""
-        return "ignore", ""
-    kind = event.get("type")
-    if kind == "response.output_text.delta":
-        return "delta", str(event.get("delta", ""))
-    if kind == "response.completed":
-        return "done", ""
-    if kind in ("response.failed", "response.incomplete", "error"):
-        detail = (event.get("response", {}).get("error") or event.get("error")
-                  or event.get("response", {}).get("incomplete_details"))
-        return "error", "OpenAI: " + str(detail)[:400]
-    return "ignore", ""
+    return get_http_adapter(provider).parse_event(event)
 
 
 def _llm_models(provider):
-    return DEEPSEEK_URL + "/models" if provider == "deepseek" else API_URL + "/models"
+    return get_http_adapter(provider).models_url
 
 
 def register_call(request_id):
@@ -251,15 +212,7 @@ class Handler(BaseHTTPRequestHandler):
                 provider = _llm_provider()
                 if provider == "codex":
                     return self.send_json(200, {"models": CODEX.models()})
-                token = STATE.deepseek_key() if provider == "deepseek" else STATE.access_token()
-                data = json_request(_llm_models(provider), token=token)
-                if provider == "deepseek":
-                    models = [{"slug": m["id"], "name": m.get("id")}
-                              for m in data.get("data", []) if isinstance(m.get("id"), str)]
-                else:
-                    models = [{"slug": m["slug"], "name": m.get("display_name") or m["slug"]}
-                              for m in data.get("models", []) if m.get("visibility") == "list" and isinstance(m.get("slug"), str)]
-                return self.send_json(200, {"models": models})
+                return self.send_json(200, {"models": get_http_adapter(provider).models(STATE)})
             except (BridgeError, urllib.error.URLError, TimeoutError) as exc:
                 return self.error(502, str(exc))
         return self.error(404, "Нет такого адреса")
