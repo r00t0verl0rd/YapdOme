@@ -747,6 +747,7 @@ function restorePrefs(){
      else if(typeof a.role==='string')d.description=
        (a.role+(typeof a.goal==='string'&&a.goal.trim()?' '+a.goal:'')).slice(0,900);
      if(typeof a.voiceURI==='string')d.voiceURI=a.voiceURI;
+     if(AVATAR_SKINS.some(skin=>skin.id===a.avatarId))d.avatarId=a.avatarId;
      if(kokoroSpeakers.includes(a.kokoroVoice))d.kokoroVoice=a.kokoroVoice;
      if(kokoroRuSpeakers.some(([id])=>id===a.kokoroRuVoice))d.kokoroRuVoice=a.kokoroRuVoice;
      if(piperSpeakers.some(([id])=>id===a.piperVoice))d.piperVoice=a.piperVoice;
