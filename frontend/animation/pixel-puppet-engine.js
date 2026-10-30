@@ -1,5 +1,5 @@
-/* YapdOme Pixel Puppet v5 / procedural 48x48 RGB-indexed pixel robotics.
-   Pixels remain hard-edged LED cells. Values 1..7 are material/light palette IDs. */
+/* YapdOme Pixel Puppet v4 / procedural 48x48 monochrome robotics.
+   Each output cell is a literal LED value 0..3. No bitmap/sprite/image. */
 (function(root,factory){
   const api=factory();
   if(typeof module==='object'&&module.exports) module.exports=api;
@@ -35,9 +35,7 @@
     const p={...EMOTIONS.neutral,...pose};const r=new Raster();
     const t=meta.t||0,talk=clamp(meta.talk||0,0,1),blink=clamp(meta.blink||0,0,1),beat=clamp(meta.beat||0,0,1);
     const yaw=clamp(p.yaw,-1,1), nod=clamp(p.pitch,-1.4,1.4);
-    const phase=id==='norman'?0:id==='glitch'?2.1:4.2;
-    const shiftX=yaw*2.35+Math.sin(t*.55+phase)*.18;
-    const shiftY=nod*.9+Math.sin(t*1.35+phase)*.24+beat*.48;
+    const shiftX=yaw*2.35, shiftY=nod*.9+Math.sin(t*1.4)*.16+beat*.35;
     const HX=(x,y)=>Math.round(24+(x-24)*(1-.075*Math.abs(yaw))+shiftX+(y-20)*yaw*.036);
     const HY=(x,y)=>Math.round(y+shiftY+(x-24)*yaw*.032);
     const hd=(x,y,v=3)=>r.dot(HX(x,y),HY(x,y),v);
@@ -57,11 +55,6 @@
     if(id==='glitch'){r.line(21,38,27,44,2);r.line(27,38,21,44,3)}
     if(id==='jessie'){r.path([[21,39],[24,42],[27,39],[29,41],[24,46],[19,41]],2);r.dot(24,42,3)}
     if(id==='norman'){r.line(21,36,23,38,2);r.line(27,36,25,38,2)}
-    // Layered chest plating, status rail and a live speech reactor.
-    r.path([[16,39],[19,37],[29,37],[32,39]],2,false);
-    r.line(18,44,30,44,4);r.rect(22,40,4,2,4,false);
-    r.line(20,46,28,46,2);
-    if(beat>.18){r.rect(23,41,2,1,5,true);r.dot(24,43,5)}
 
     if(id==='norman'){
       // five-point electro crown, rigid ear modules
@@ -77,12 +70,8 @@
       for(let y=18;y<=27;y++)for(let x=17;x<=31;x++)he(x,y);
       for(let y=29;y<=34;y++)for(let x=18;x<=30;x++)he(x,y);
       hl(17,18,31,18,3);hl(17,27,31,27,2);
-      // Crown circuitry and cheek-side power rails.
-      hpath([[12,15],[15,13],[18,14]],4,false);hpath([[30,14],[33,12],[36,15]],4,false);
-      hd(24,6,5);hl(23,9,24,12,4);hl(24,12,25,14,5);
       drawFace('norman',r,{hd,hl,hpath,hfill,he,HX,HY,gaze},p,talk,blink,beat);
       hl(17,32,20,36,2);hl(31,32,28,36,2);hl(20,36,28,36,3);
-      hd(14,25,4);hd(34,25,4);hd(24,34,5);
     }
     else if(id==='glitch'){
       // terminal hood: slim face enclosed by oversized glowing cloth-shell
@@ -90,8 +79,6 @@
       hfill(hood,1);hpath(hood,3);
       hpath([[10,34],[11,24],[16,15],[22,9],[26,8],[34,17],[37,27],[38,36]],2,false);
       hpath([[15,14],[22,7],[28,8],[34,16]],3,false);
-      hpath([[12,17],[18,10],[23,8]],4,false);hpath([[29,8],[34,12],[37,19]],4,false);
-      hd(24,6,5);hd(13,20,4);hd(35,20,4);
       // folded hood seams
       hl(10,28,8,38,2);hl(38,28,40,38,2);hl(12,35,17,31,2);hl(36,35,31,31,2);
       const mask=[[17,19],[20,15],[28,15],[32,19],[31,29],[28,34],[20,34],[17,29]];
@@ -104,8 +91,7 @@
       hl(9,39,17,35,2);hl(31,35,39,39,2);
       hd(12,20,3);hd(36,21,3);hd(24,7,3);
       // periodic corrupt data bits, only squared cells
-      if((meta.glitch||0)>.35){let gy=18+Math.floor((t*13)%16);for(let x=13;x<37;x+=3){const xx=HX(x,gy),yy=HY(x,gy);r.erase(xx,yy);r.dot(xx+1,yy,5)}}
-      if(beat>.7){hd(14,32,5);hd(34,32,5)}
+      if((meta.glitch||0)>.35){let gy=18+Math.floor((t*13)%16);for(let x=13;x<37;x+=3){const xx=HX(x,gy),yy=HY(x,gy);r.erase(xx,yy);r.dot(xx+1,yy,3)}}
     }
     else if(id==='jessie'){
       // robot cable locks: thick modular curls on left and right
@@ -115,7 +101,7 @@
         [[30,10],[35,12],[38,18],[37,25],[40,32],[38,41]],
         [[33,13],[39,15],[41,22],[39,27],[42,35],[40,43]]
       ];
-      locks.forEach((arr,i)=>{hpath(arr,3,false);hpath(arr.map(([x,y])=>[x+(i<2?2:-2),y+1]),i%2===0?4:2,false)});
+      locks.forEach((arr,i)=>{hpath(arr,3,false);if(i%2===0)hpath(arr.map(([x,y])=>[x+(i<2?2:-2),y+1]),1,false)});
       const crown=[[14,17],[15,12],[19,9],[23,8],[29,9],[33,12],[34,17]];
       hfill(crown,2);hpath(crown,3);
       const face=[[16,17],[18,13],[29,13],[33,17],[34,26],[31,33],[27,36],[21,36],[17,33],[14,27]];
@@ -127,10 +113,9 @@
       for(let y=19;y<=27;y++)for(let x=17;x<=31;x++)he(x,y);
       for(let y=29;y<=33;y++)for(let x=19;x<=29;x++)he(x,y);
       drawFace('jessie',r,{hd,hl,hpath,hfill,he,HX,HY,gaze},p,talk,blink,beat);
-      // Signature cable locks, status gems and cheek speakers.
-      hd(9,31,4);hd(39,31,4);hd(19,12,5);hd(29,12,5);
-      hl(12,34,15,37,4);hl(36,34,33,37,4);
-      if(p.cheek>.4){hd(15,29,5);hd(33,29,5)}
+      // signature earpiece signals
+      hd(9,31,2);hd(39,31,2);
+      if(p.cheek>.4){hd(15,29,2);hd(33,29,2)}
     }
     return r.a;
   }
@@ -149,15 +134,14 @@
     hl(right-2+shift,browY+bx2+tense*2,right+3+shift,browY+bx2,3);
     function eye(cx,ey,extent){
       const open=clamp(Math.round(extent),0,5);
-      if(open<2){hl(cx-2+shift,ey,cx+2+shift,ey,4);return}
+      if(open<2){hl(cx-2+shift,ey,cx+2+shift,ey,3);return}
       const w=id==='glitch'?2:3;
       for(let y=0;y<open;y++){
         const ww=(y===0||y===open-1)?w-1:w;
-        hl(cx-ww+shift,ey+y,cx+ww+shift,ey+y,6);
+        hl(cx-ww+shift,ey+y,cx+ww+shift,ey+y,3);
       }
-      hd(cx+shift+Math.sign(p.gaze)*1,ey+Math.min(1,open-1),7);
-      if(open>3)hd(cx+shift,ey+2,6);
-      hd(cx-1+shift,ey,7);
+      hd(cx+shift+Math.sign(p.gaze)*1,ey+Math.min(1,open-1),1);
+      if(open>3)hd(cx+shift,ey+2,2);
     }
     if(p.smile>.85&&o>.75){
       hl(left-2+shift,baseline+1,left+2+shift,baseline+2,3);
@@ -166,8 +150,8 @@
       eye(left,baseline,Math.max(.5,openness-.25));eye(right,baseline,Math.max(.5,openness-.25));
       if(p.frown>.3){hd(left-2,baseline-1,3);hd(right+2,baseline-1,3)}
     }else{eye(left,baseline,openness);eye(right,baseline,openness*.97)}
-    if(id!=='glitch'){hd(24+shift,26,4);hd(24+shift,27,4)}
-    else hd(24+shift,27,5);
+    if(id!=='glitch'){hd(24+shift,26,2);hd(24+shift,27,2)}
+    else hd(24+shift,27,2);
     // actual mouth LEDs changing geometry, never overlay images
     let y=id==='glitch'?30:30;
     if(id==='jessie')y=30;
@@ -196,9 +180,9 @@
       hl(24-4,y+1,24+4,y+1,3);hd(29,y,3);
     }else{hl(21,y+1,27,y+1,3)}
     // cheeks and speech actuators
-    if(p.cheek>.35){hd(16,28,4);hd(32,28,4);if(id==='jessie'){hd(17,29,5);hd(31,29,5)}}
+    if(p.cheek>.35){hd(16,28,2);hd(32,28,2);if(id==='jessie'){hd(17,29,3);hd(31,29,3)}}
     if(fr>.65){hl(17,27,19,28,2);hl(29,28,31,27,2)}
-    if(beat>.65){hd(15,31,5);hd(33,31,5)}
+    if(beat>.65){hd(15,31,2);hd(33,31,2)}
   }
   return {W,H,EMOTIONS,keys,draw,clamp};
 });
