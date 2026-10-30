@@ -158,12 +158,12 @@ test('each of the three portraits gets an independent absolute CSS hue value', (
   assert.equal(grids[0].style.getPropertyValue('--avatar-hue'), '72');
 });
 
-test('all three live tiles share Norman green for name, status and waveform', () => {
+test('all three live tiles share Norman green for tabletop nameplates and waveform', () => {
   assert.ok(hudCss.includes('.live-tile{--agent-glow:#39f6a7'));
   assert.ok(hudCss.includes('.live-tile:nth-child(2),.live-tile:nth-child(3){--agent-glow:#39f6a7}'));
   assert.ok(!hudCss.includes('--agent-glow:#29e8ff'));
   assert.ok(!hudCss.includes('--agent-glow:#ffc936'));
-  assert.ok(hudCss.includes('.live-tile-top{') && hudCss.includes('color:var(--agent-glow)'));
+  assert.ok(hudCss.includes('.table-nameplate{') && hudCss.includes('color:#39f6a7'));
   assert.ok(hudCss.includes('.wave-lane i{') && hudCss.includes('background:var(--agent-glow)'));
 });
 
@@ -173,8 +173,8 @@ test('agent names are mounted on three tabletop plaques and status labels are re
   assert.match(indexHtml, /class="table-nameplate" data-agent-index="1"><span class="tile-name">Глитч/);
   assert.match(indexHtml, /class="table-nameplate" data-agent-index="2"><span class="tile-name">Джесси/);
   assert.doesNotMatch(indexHtml, /live-tile-top|tile-mode/);
-  assert.match(hudCss, /\\.table-nameplate\\{/);
-  assert.match(hudCss, /\\.table-nameplates\\{/);
+  assert.ok(hudCss.includes('.table-nameplate{'));
+  assert.ok(hudCss.includes('.table-nameplates{'));
   assert.doesNotMatch(hudCss, /live-tile-top|tile-mode/);
   assert.doesNotMatch(hudJs, /tile-mode|ГОТОВ|ЖДЁТ|ГОВОРИТ|ДУМАЕТ/);
   assert.match(hudJs, /nameNodes\\[i\\]/);
