@@ -94,6 +94,16 @@ class CodexSessionTests(unittest.TestCase):
         self.assertIn("Новая тема заменяет прежнюю", prompts[2])
         self.assertIn("СЕЙЧАС ГОВОРИТ: Джесси", prompts[2])
 
+    def test_live_brief_supports_real_disagreement_and_argument(self):
+        client, calls = self.make_client()
+        self.run_turn(client, self.turn_data("Глитч"))
+        prompt = next(params["input"][0]["text"] for method, params in calls
+                      if method == "turn/start")
+        self.assertIn("ПОЛЕМИКА — НОРМАЛЬНАЯ ЧАСТЬ ЭФИРА", prompt)
+        self.assertIn("прямо возрази и объясни почему", prompt)
+        self.assertIn("можешь изменить мнение", prompt)
+        self.assertIn("не сглаживай настоящее разногласие", prompt)
+
     def test_live_brief_prioritizes_spontaneity_humor_and_nonrepetition_once(self):
         client, calls = self.make_client()
         self.run_turn(client, self.turn_data("Глитч"))
