@@ -7,10 +7,12 @@ const client=fs.readFileSync(path.join(__dirname,'../frontend/client.js'),'utf8'
 const hud=fs.readFileSync(path.join(__dirname,'../frontend/animation/hud-reference.css'),'utf8');
 
 test('chat transcript shows speaker and spoken text without engine metadata',()=>{
-  const transcript=client.match(/function transcriptLine\\(el\\)\\s*\\{[\\s\\S]*?\\n\\}/);
-  assert.ok(transcript);
-  assert.ok(transcript[0].includes("querySelector('.who').textContent+': '+el.querySelector('.body').textContent"));
-  assert.ok(!transcript[0].includes("querySelector('.meta')"));
+  const start=client.indexOf('function transcriptLine(el){');
+  const end=client.indexOf('\\n}',start);
+  assert.ok(start>=0&&end>start);
+  const transcript=client.slice(start,end+2);
+  assert.ok(transcript.includes("querySelector('.who').textContent+': '+el.querySelector('.body').textContent"));
+  assert.ok(!transcript.includes("querySelector('.meta')"));
   assert.ok(hud.includes('.feed .message .meta{display:none!important}'));
   assert.ok(hud.includes('.feed .message .body{'));
 });
