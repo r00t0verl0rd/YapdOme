@@ -138,6 +138,32 @@ class CodexSessionTests(unittest.TestCase):
         self.assertIn("ТЕПЕРЬ ВСТУПАЕТ СЛУШАВШИЙ", prompt)
         self.assertIn("снова участвуют все трое", prompt)
 
+    def test_provider_switch_imports_only_missing_external_turns(self):
+        client, calls = self.make_client()
+        data = self.turn_data("Норман", history=[
+            {"event_id": "evt-deepseek-0001", "agent": 0, "provider": "deepseek",
+             "name": "Норман", "text": "Реплика из DeepSeek."},
+            {"event_id": "evt-codex-00002", "agent": 1, "provider": "codex",
+             "name": "Глитч", "text": "Эта реплика уже есть в Codex thread."},
+            {"event_id": "evt-host-0000001", "agent": -1,
+             "name": "Ведущий", "text": "Добавь пример."},
+        ])
+        meta = client._session_snapshot(data)
+        prompt, fresh_ids = client._build_turn_prompt(data, meta)
+        self.assertIn("Реплика из DeepSeek", prompt)
+        self.assertIn("Добавь пример", prompt)
+        self.assertNotIn("Эта реплика уже есть в Codex thread", prompt)
+        self.assertEqual(set(fresh_ids), {
+            "evt-deepseek-0001", "evt-codex-00002", "evt-host-0000001"
+        })
+
+        client.seen_event_ids.update(fresh_ids)
+        client.session_meta = meta
+        repeated, repeated_ids = client._build_turn_prompt(data, meta)
+        self.assertNotIn("Реплика из DeepSeek", repeated)
+        self.assertNotIn("Добавь пример", repeated)
+        self.assertEqual(repeated_ids, [])
+
     def test_compaction_only_runs_near_real_context_limit(self):
         client, calls = self.make_client()
         client.thread_id = "thread-live"
