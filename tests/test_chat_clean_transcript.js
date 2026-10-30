@@ -8,9 +8,9 @@ const hud=fs.readFileSync(path.join(__dirname,'../frontend/animation/hud-referen
 
 test('chat transcript shows speaker and spoken text without engine metadata',()=>{
   const start=client.indexOf('function transcriptLine(el){');
-  const end=client.indexOf('\\n}',start);
+  const end=client.indexOf('}',start);
   assert.ok(start>=0&&end>start);
-  const transcript=client.slice(start,end+2);
+  const transcript=client.slice(start,end+1);
   assert.ok(transcript.includes("querySelector('.who').textContent+': '+el.querySelector('.body').textContent"));
   assert.ok(!transcript.includes("querySelector('.meta')"));
   assert.ok(hud.includes('.feed .message .meta{display:none!important}'));
