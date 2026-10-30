@@ -59,6 +59,7 @@ class ConversationCoreTests(unittest.TestCase):
         # Later turns receive only changed/new events plus compact dynamic hints.
         server.session_meta = meta
         prompt, fresh = server._build_turn_prompt({
+            "agent_name": "Норман",
             "history": [{"event_id": "event-new-0001", "agent": -1,
                          "name": "Ведущий", "text": "Теперь поговорите о собаках."}]
         }, server._session_snapshot({**data, "topic": "Собаки", "turns": 4,
