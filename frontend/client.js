@@ -1190,14 +1190,23 @@ async function reconcileClaimConflict(epoch,reason){
 
 async function claimNext(){
  if(!state.running||state.paused||state.current)return;
- const claim=reserveClaimSlot();
- if(!claim)return;
+ // Notice an epoch change even while the audio lane is still draining.
+ // Do not reserve a new slot until the drain check passes.
+ if(state.claimPending){
+  if(state.claimPending.epoch!==state.epoch){
+   state.claimPending.rerun=true;
+   state.claimPending.rerunEpoch=state.epoch;
+  }
+  return;
+ }
  // One-ahead handoff: a committed WAV reply has STARTED playing, so the
  // the engine may claim one new model turn while it finishes audibly.
  if(!state.pipelineReady&&(speech.playing||speech.queue.length||speech.nodes.size)){
   // A transient system notice or a recovering turn must not lose the next claim.
   stopTimer();state.timer=setTimeout(claimNext,250);return;
  }
+ const claim=reserveClaimSlot();
+ if(!claim)return;
  const epoch=claim.epoch;
  try{
   if(state.donationRouting)return;
