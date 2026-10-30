@@ -67,10 +67,10 @@ def director_context(data):
     if not isinstance(mode, str) or mode not in ("live", "science"):
         raise ValueError("Неверный режим эфира")
     names = data.get("agents", [])
-    if not isinstance(names, list) or len(names) != 3 or not all(
+    if not isinstance(names, list) or len(names) not in (3, 5) or not all(
         isinstance(name, str) and 1 <= len(name) <= 30 for name in names
     ):
-        raise ValueError("Нужны три имени персонажей")
+        raise ValueError("Нужны три или пять имён персонажей")
     history = data.get("history", [])
     if not isinstance(history, list):
         raise ValueError("Неверная история режиссёра")
@@ -81,7 +81,7 @@ def director_context(data):
               and isinstance(item.get("text"), str)]
     raw_profiles = data.get("cast_profiles", [])
     profiles = []
-    if mode == "live" and isinstance(raw_profiles, list) and len(raw_profiles) == 3:
+    if mode == "live" and isinstance(raw_profiles, list) and len(raw_profiles) == len(names):
         for index, item in enumerate(raw_profiles):
             if (isinstance(item, dict) and item.get("name") == names[index]
                     and isinstance(item.get("description"), str)):

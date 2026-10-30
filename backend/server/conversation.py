@@ -32,23 +32,23 @@ def discussion_frame(topic, mission, mode="live"):
 
 def social_focus_instructions(data, agent, peers, mode):
     """Canonical instructions for bounded pair, invitation and listener rejoin."""
-    if mode != "live" or not isinstance(data, dict) or not isinstance(peers, list) or len(peers) != 3:
+    if mode != "live" or not isinstance(data, dict) or not isinstance(peers, list) or len(peers) not in (3, 5):
         return ""
     focus = data.get("social_focus")
     if not isinstance(focus, dict):
         return ""
     kind, pair, listener = focus.get("kind"), focus.get("pair"), focus.get("listener")
     if (kind not in ("duo", "rejoin", "invite") or not isinstance(pair, list)
-            or len(pair) != 2 or any(type(i) is not int or i not in range(3) for i in pair)
-            or pair[0] == pair[1] or type(listener) is not int or listener not in range(3)
-            or listener in pair or type(agent) is not int or agent not in range(3)):
+            or len(pair) != 2 or any(type(i) is not int or i not in range(len(peers)) for i in pair)
+            or pair[0] == pair[1] or type(listener) is not int or listener not in range(len(peers))
+            or listener in pair or type(agent) is not int or agent not in range(len(peers))):
         return ""
     partner_names = ", ".join(peers[i] for i in pair)
     if kind == "duo" and agent in pair:
         return (
             "КОРОТКИЙ ВРЕМЕННЫЙ ФОКУС: диалог между " + partner_names + ". "
-            "Третий участник " + peers[listener] + " пока слушает. "
-            "Парный обмен ограничен тремя репликами пары. "
+            "Остальные участники, включая " + peers[listener] + " пока слушает. "
+            "Парный обмен ограничен тремя репликами пары; остальные участники могут вернуться в обсуждение. "
             "Отвечай по существу на последний аргумент; не заканчивай каждый ход новым вопросом "
             "и не удерживай собеседника в бесконечной цепочке уточнений. "
             "Не повторяй уже разобранные выводы. После короткого обмена передай слово слушавшему. "
@@ -241,6 +241,8 @@ SCIENCE_ROLES = (
     "ТЕОРЕТИК: формулируй модели, связи и исходные допущения.",
     "КРИТИК: ищи опровержения, слабые посылки и логические ошибки, а не повод поспорить.",
     "ЭКСПЕРИМЕНТАТОР: проектируй независимые воспроизводимые проверки и метрики.",
+    "ИНЖЕНЕР: ищи практическую реализацию, ограничения и проверяемые технические решения.",
+    "СИНТЕЗАТОР: связывай позиции участников, выявляй общую картину и фиксируй нерешённые вопросы.",
 )
 
 
@@ -251,7 +253,7 @@ def science_phase(turns):
 
 
 def science_protocol(phase, agent):
-    if type(agent) is not int or agent not in range(3):
+    if type(agent) is not int or agent not in range(len(peers)):
         raise ValueError("Неверный исследователь")
     return (
         "НАУЧНЫЙ РЕЖИМ / TRIAD SCIENCE. " + SCIENCE_ROLES[agent] + " " +

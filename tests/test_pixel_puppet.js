@@ -66,7 +66,7 @@ function setup({stored = null, reduced = false, storageThrows = false} = {}) {
     tile.append(portrait); root.append(tile);
   }
   const cards = new Element(); cards.className = 'right-column';
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 5; i++) {
     const card = new Element('article'); card.className = 'card';
     const slot = new Element(); slot.className = 'emotion-slot';
     card.append(slot); cards.append(card);
@@ -120,7 +120,7 @@ test('mounts exactly 5×2304 DOM LEDs, no fallback SVGs, default 12fps and diff-
   const before = leds.reduce((n, led) => n + led.writes, 0);
   h.api.sync(); h.api.boot();
   assert.equal(leds.reduce((n, led) => n + led.writes, 0), before);
-  assert.equal(h.root.querySelectorAll('.pixel-led').length, 6912);
+  assert.equal(h.root.querySelectorAll('.pixel-led').length, 11520);
   h.tick(1); const count = h.draws.length; h.tick(10);
   assert.equal(h.draws.length, count, 'render capped below 12fps');
 });

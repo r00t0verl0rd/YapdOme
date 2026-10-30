@@ -953,7 +953,7 @@ function cancelDirector(){
 // This deliberately conservative signal does not treat a shared topic as a loop.
 function directorStuck(recent){
  const lines=recent.slice(-8).filter(row=>row&&!row.untrusted&&
-   Number.isInteger(row.agent)&&row.agent>=0&&row.agent<3&&typeof row.text==='string')
+   Number.isInteger(row.agent)&&row.agent>=0&&row.agent<defs.length&&typeof row.text==='string')
   .map(row=>{
    const words=stripDirectives(row.text.slice(0,420)).toLowerCase().match(/[\p{L}\p{N}]+/gu)||[];
    const grams=new Set();
@@ -999,7 +999,7 @@ function requestDirector(currentTurn=null){
     if(state.directorRequest!==job||state.epoch!==epoch||topic!==$('topic').value||
        !$('directorEnabled').checked||!state.running||state.stopping||state.paused||
        state.activeDonation||state.donationQueue.length||state.turns>at+4)return;
-    if(plan&&Number.isInteger(plan.speaker)&&plan.speaker>=0&&plan.speaker<3&&
+    if(plan&&Number.isInteger(plan.speaker)&&plan.speaker>=0&&plan.speaker<defs.length&&
        typeof plan.beat==='string'&&plan.beat.length<=190){
        state.directorPlan={...plan,at,topic};
        state.directorRouted=false;
@@ -1076,7 +1076,7 @@ function socialRouteHint(){
  if(state.turns<4||state.turns-social.lastEnd<4)return null;
  const speakers=[];
  for(const line of state.history.slice().reverse()){
-  if(Number.isInteger(line.agent)&&line.agent>=0&&line.agent<3&&!speakers.includes(line.agent))
+  if(Number.isInteger(line.agent)&&line.agent>=0&&line.agent<defs.length&&!speakers.includes(line.agent))
     speakers.push(line.agent);
   if(speakers.length===2)break;
  }
@@ -1118,10 +1118,10 @@ function liveMemoryPayload(){
 // the ongoing topic and explicit questions; C retains all final authority.
 function liveFloorBid(speaker,text){
  if($('showMode').value!=='live'||state.activeDonation||state.donationQueue.length)return null;
- if(!Number.isInteger(speaker)||speaker<0||speaker>2)return null;
+ if(!Number.isInteger(speaker)||speaker<0||speaker>=defs.length)return null;
  const terms=new Set((String(text||'').toLowerCase().match(/[\p{L}\p{N}]{4,}/gu)||[]).map(w=>w.slice(0,5)));
  const question=/[?？]/.test(text||'');
- const past=state.history.filter(h=>Number.isInteger(h.agent)&&h.agent>=0&&h.agent<3).slice(-12);
+ const past=state.history.filter(h=>Number.isInteger(h.agent)&&h.agent>=0&&h.agent<defs.length).slice(-12);
  const bids=[0,1,2].filter(i=>i!==speaker).map(i=>{
    const lines=past.filter(h=>h.agent===i),last=lines.at(-1);
    const idle=last?past.length-1-past.lastIndexOf(last):12;
@@ -1327,7 +1327,7 @@ async function endTurn(c,success,msg){
    // Silent PASS is an immediate turn handoff, never a 20-second timeout.
   }else if(value){
    const spoken=stripDirectives(value);
-   c.finalMeta=msg+(s.next_agent>=0&&s.next_agent<3?' · слово отдано: '+defs[s.next_agent].name:'');
+   c.finalMeta=msg+(s.next_agent>=0&&s.next_agent<defs.length?' · слово отдано: '+defs[s.next_agent].name:'');
    c.item.meta.textContent=c.pipeline&&c.audioStarted&&!c.audioFinished?
      'ГОВОРИТ · '+defs[c.agent].name:c.finalMeta;
    if(spoken&&(!c.donation||c.donation.topicChanged)){
@@ -1355,7 +1355,7 @@ async function endTurn(c,success,msg){
         donationFinished=true;
       }else{
         c.donation.item.meta.textContent='ОБСУЖДАЮТ · осталось '+c.donation.remaining+' реплик';
-        c.donation.nextSpeaker=(c.agent+1)%3;
+        c.donation.nextSpeaker=(c.agent+1)%defs.length;
       }
     }else{
       // Repeated marker-only replies must not lock the whole show forever.
@@ -1364,7 +1364,7 @@ async function endTurn(c,success,msg){
         c.donation.item.meta.textContent='⚠ МОДЕЛЬ НЕ ДАЛА СОДЕРЖАТЕЛЬНОГО ОТВЕТА';
         state.activeDonation=null;
       }else{
-        c.donation.nextSpeaker=(c.agent+1)%3;
+        c.donation.nextSpeaker=(c.agent+1)%defs.length;
         c.donation.item.meta.textContent='ПУСТОЙ ОТВЕТ · пробуем другого персонажа';
       }
     }
@@ -1578,7 +1578,7 @@ async function humanMessage(){
   if(newTopic!==null){
    $('topic').value=newTopic;fitTopicField();savePrefs();
    state.history=[{event_id:requestID(),agent:-1,name:'Ведущий',text:newTopic?'Новая тема: '+newTopic:'Полностью смените тему, выберите другое направление. Не возвращайтесь к прошлому обсуждению.'}];
-   state.journal=[];state.directorBudget=null;state.lastDonationName='';state.social.memory=[[],[],[]];updateScienceUI();
+   state.journal=[];state.directorBudget=null;state.lastDonationName='';state.social.memory=Array.from({length:defs.length},()=>[]);updateScienceUI();
    system('Новая тема разговора: '+(newTopic||'свободная беседа'));
   }else{
    state.history.push({event_id:requestID(),agent:-1,name:'Ведущий',text});state.history=state.history.slice(-16);
@@ -1611,7 +1611,7 @@ async function reviewDonationTopic(donation){
 function applyDonationTopic(donation,topic){
  $('topic').value=topic;fitTopicField();savePrefs();cancelDirector();resetSocialFocus();
  state.history=[{event_id:requestID(),agent:-1,name:donation.donor,text:'Новая тема разговора от зрителя: '+topic}];
- state.journal=[];state.directorBudget=null;state.lastDonationName='';state.social.memory=[[],[],[]];
+ state.journal=[];state.directorBudget=null;state.lastDonationName='';state.social.memory=Array.from({length:defs.length},()=>[]);
  updateScienceUI();
  donation.item.meta.textContent='✓ ТЕМА ИЗМЕНЕНА · '+topic;
  system('Тема от зрителя '+donation.donor+': '+topic);
@@ -1638,7 +1638,7 @@ async function activateNextDonation(){
    donation.topicReview=review;
   }
   if(epoch!==state.epoch||state.stopping||state.paused)return;
-  const target=state.core?.next_agent>=0&&state.core?.next_agent<3?
+  const target=state.core?.next_agent>=0&&state.core?.next_agent<defs.length?
     state.core.next_agent:0;
   const routed=await coreEvent('priority_donation',{agent:target});
   if(epoch!==state.epoch||state.stopping)return;
@@ -1705,7 +1705,7 @@ setInterval(async()=>{
  if(Date.now()-c.lastTokenAt<18000)return;
  c.timingOut=true;const ticket=c.ticket,epoch=state.epoch;
  if(c.donation&&state.activeDonation===c.donation)
-   c.donation.nextSpeaker=(c.agent+1)%3;
+   c.donation.nextSpeaker=(c.agent+1)%defs.length;
  cancelCurrent('ТАЙМАУТ · нет ответа 18 секунд');
  try{
   const s=await coreEvent('recover',{ticket});
@@ -1802,9 +1802,9 @@ const fitTopicField=()=>{
  field.style.height=Math.min(field.scrollHeight,maxHeight)+'px';
  field.style.overflowY=field.scrollHeight>maxHeight?'auto':'hidden';
 };
-$('topic').oninput=()=>{fitTopicField();state.social.memory=[[],[],[]];cancelDirector();resetSocialFocus();savePrefs()};
+$('topic').oninput=()=>{fitTopicField();state.social.memory=Array.from({length:defs.length},()=>[]);cancelDirector();resetSocialFocus();savePrefs()};
 $('sharedGoal').oninput=savePrefs;
-$('showMode').onchange=()=>{state.journal=[];state.social.memory=[[],[],[]];cancelDirector();resetSocialFocus();updateScienceUI();savePrefs();if(state.running)system('Режим изменён: применится к следующей реплике.');};
+$('showMode').onchange=()=>{state.journal=[];state.social.memory=Array.from({length:defs.length},()=>[]);cancelDirector();resetSocialFocus();updateScienceUI();savePrefs();if(state.running)system('Режим изменён: применится к следующей реплике.');};
 
 $('directorEnabled').onchange=()=>{
  if(!$('directorEnabled').checked){

@@ -333,7 +333,7 @@ class StateMachine:
                         E.ROUTE_ROTATION, E.ROUTE_TOKEN, E.ROUTE_ADDRESS,
                         E.ROUTE_DIRECTOR, E.ROUTE_SOCIAL
                     )
-                    or agent < 0 or agent > 2):
+                    or agent < 0 or agent >= len(self.names)):
                 return E.REJECT
             self.next_agent = agent
             self.route_reason = E.ROUTE_SOCIAL_RETURN
@@ -348,7 +348,7 @@ class StateMachine:
             if (self.status != E.RUNNING or self.agent != -1
                     or ticket != self.ticket
                     or self.route_reason != E.ROUTE_ROTATION
-                    or agent < 0 or agent > 2
+                    or agent < 0 or agent >= len(self.names)
                     or self.last_turn[agent] == self.turns):
                 return E.REJECT
             self.next_agent = agent
@@ -362,7 +362,7 @@ class StateMachine:
             # попадает. Донат приоритетнее обычной/явной/директорской
             # маршрутизации, но не может перебить говорящего или PAUSE/STOP.
             if (self.status != E.RUNNING or self.agent != -1
-                    or agent < 0 or agent > 2):
+                    or agent < 0 or agent >= len(self.names)):
                 return E.REJECT
             self.next_agent = agent
             self.route_reason = E.ROUTE_DONATION

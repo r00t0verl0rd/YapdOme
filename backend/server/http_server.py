@@ -521,7 +521,7 @@ class Handler(BaseHTTPRequestHandler):
         if not (12 <= len(rid) <= 70 and all(ch.isalnum() or ch in "-_" for ch in rid)):
             raise BridgeError("Некорректный request_id")
         agent = data.get("agent")
-        if type(agent) is not int or agent not in range(3):
+        if type(agent) is not int or agent not in range(5):
             raise BridgeError("Неверный агент")
         model = data.get("model")
         if not isinstance(model, str) or not (2 <= len(model) <= 120) or not all(c.isalnum() or c in "-_." for c in model):
@@ -530,7 +530,7 @@ class Handler(BaseHTTPRequestHandler):
         mission = shared_goal(data)
         agent_name, description = agent_identity(data)
         peers = data.get("agents", [])
-        if not isinstance(peers, list) or len(peers) != 3 or not all(isinstance(n, str) and 1 <= len(n) <= 30 for n in peers):
+        if not isinstance(peers, list) or len(peers) not in (3, 5) or not all(isinstance(n, str) and 1 <= len(n) <= 30 for n in peers):
             raise BridgeError("Некорректный список агентов")
         conversation_id = str(data.get("conversation_id") or rid)
         event_delta = data.get("events", [])
