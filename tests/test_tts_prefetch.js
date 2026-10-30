@@ -109,3 +109,65 @@ test('OpenAudio uses its local WAV endpoint, selected reference and FIFO prefetc
  h.speech.stop();
  assert.equal(h.sources[1].stopped,true);
 });
+
+function browserHarness(){
+ const spoken=[],cancelled=[];
+ class FakeUtterance{
+  constructor(text){this.text=text;this.lang='';this.rate=1;this.pitch=1;this.volume=1;this.voice=null;}
+ }
+ const dom={voiceEnabled:{checked:true},rate:{value:'1'},ttsBackend:{value:'browser'},feed:{scrollTop:0,scrollHeight:10}};
+ const context={Date,Promise,AbortController,Uint8Array,Float32Array,DataView,console,
+  state:{lastAudibleAt:0},defs:[{name:'Норман',voiceURI:''}],voices:[],haveSpeech:true,
+  SpeechSynthesisUtterance:FakeUtterance,piperSpeakers:[['dmitri']],sileroSpeakers:[['aidar']],
+  piperSelected:()=>false,sileroSelected:()=>false,kokoroSelected:()=>false,kokoroRuSelected:()=>false,
+  qwen3Selected:()=>false,openaudioSelected:()=>false,
+  isRussian:()=>true,languageFor:()=> 'Russian',ttsText:s=>s,
+  window:{speechSynthesis:{speak:u=>spoken.push(u),cancel:()=>cancelled.push(true)}},
+  $:id=>dom[id]||(dom[id]={}),setTimeout,clearTimeout,
+  system:s=>{throw Error('Unexpected TTS error: '+s)}};
+ vm.createContext(context);
+ vm.runInContext(section+'\\nthis.speech=speech;',context);
+ return {speech:context.speech,spoken,cancelled};
+}
+test('browser voice queues the next utterance while current voice is still playing',async()=>{
+ const h=browserHarness(),done=[];
+ const config={backend:'browser',speed:1,name:'Норман',browserVoice:null};
+ h.speech.push(0,'Первая реплика.',null,t=>done.push(t),config);
+ assert.equal(h.spoken.length,1,'first browser utterance starts immediately');
+ const first=h.spoken[0];
+ first.onstart();
+ h.speech.push(0,'Вторая реплика.',null,t=>done.push(t),config);
+ await tick();
+ assert.equal(h.spoken.length,2,'second utterance is sent to native TTS queue before first ends');
+ const second=h.spoken[1];
+ assert.equal(h.speech.queue.length,1,'second entry remains in app FIFO until first drains');
+ assert.equal(h.speech.playing,true);
+ assert.deepEqual(done,[]);
+ first.onend();
+ await tick();
+ assert.equal(h.spoken.length,2,'the prepared utterance is reused, not enqueued twice');
+ assert.equal(h.speech.browserPrefetch,null);
+ assert.equal(h.speech.playing,true);
+ second.onstart();
+ second.onend();
+ await h.speech.idle();
+ assert.deepEqual(done,['Первая реплика.','Вторая реплика.']);
+});
+test('STOP cancels an already queued browser utterance and stale events stay silent',async()=>{
+ const h=browserHarness();
+ const config={backend:'browser',speed:1,name:'Норман'};
+ h.speech.push(0,'Текущая реплика.',null,null,config);
+ const first=h.spoken[0];first.onstart();
+ h.speech.push(0,'Следующую реплику нужно отменить.',null,null,config);
+ await tick();
+ assert.equal(h.spoken.length,2);
+ const stale=h.spoken[1];
+ h.speech.stop();
+ assert.equal(h.cancelled.length,1);
+ assert.equal(h.speech.browserPrefetch,null);
+ assert.equal(h.speech.queue.length,0);
+ stale.onstart?.();
+ stale.onend?.();
+ assert.equal(h.speech.playing,false);
+ assert.equal(h.speech.audibleAgent,null);
+});
