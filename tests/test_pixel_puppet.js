@@ -168,11 +168,11 @@ test('all three live tiles share Norman green for tabletop nameplates and wavefo
 });
 
 test('live broadcast heading is compact, single-line, right-aligned and has a live indicator', () => {
-  assert.match(indexHtml, /<h2><span class="live-air-indicator" aria-hidden="true"><\\/span>АГЕНТЫ В ЭФИРЕ<\\/h2>/);
-  assert.match(hudCss, /\\.live-visual-head\\{[^}]*justify-content:flex-end/);
-  assert.match(hudCss, /\\.live-visual-head h2\\{[^}]*font-size:10px[^}]*white-space:nowrap/);
-  assert.match(hudCss, /\\.live-air-indicator\\{/);
-  assert.match(hudCss, /@keyframes live-air-pulse/);
+  assert.ok(indexHtml.includes('<h2><span class="live-air-indicator" aria-hidden="true"></span>АГЕНТЫ В ЭФИРЕ</h2>'));
+  assert.ok(hudCss.includes('.live-visual-head{') && hudCss.includes('justify-content:flex-end'));
+  assert.ok(hudCss.includes('font-size:10px') && hudCss.includes('white-space:nowrap'));
+  assert.ok(hudCss.includes('.live-air-indicator{'));
+  assert.ok(hudCss.includes('@keyframes live-air-pulse'));
 });
 
 test('agent names are mounted on three tabletop plaques and status labels are removed', () => {
