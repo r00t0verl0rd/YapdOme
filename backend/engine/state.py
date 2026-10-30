@@ -14,7 +14,7 @@ from . import enums as E
 from .routing import (lower_text, output_kind, user_kind, route_from_text,
                       default_target)
 
-DEFAULT_NAMES = ("архитектор", "скептик", "экспериментатор")
+DEFAULT_NAMES = ("норман", "глитч", "джесси", "вольт", "луна")
 
 
 def now_ms():
@@ -40,7 +40,7 @@ class StateMachine:
         self.names = list(DEFAULT_NAMES)        # lowercased display names
         self.route_override = -1
         self.route_reason = E.ROUTE_NONE
-        self.last_turn = [-1, -1, -1]
+        self.last_turn = [-1] * len(self.names)
         self._audit = deque(maxlen=E.AUDIT_CAPACITY)
         self._audit_sequence = 0
         self.lock = threading.RLock()
@@ -71,7 +71,7 @@ class StateMachine:
 
     def set_names(self, names):
         lowered = [lower_text(name) for name in names]
-        if any(not name for name in lowered) or len(set(lowered)) != 3:
+        if any(not name for name in lowered) or len(lowered) not in (3, 5) or len(set(lowered)) != len(lowered):
             return False
         if lowered != list(self.names):
             self.names = lowered
@@ -163,7 +163,7 @@ class StateMachine:
             self.deadline_ms = 0
             self.errors = 0
             self.route_reason = E.ROUTE_ROTATION
-            self.last_turn = [-1, -1, -1]
+            self.last_turn = [-1] * len(self.names)
             self.revision += 1
             self.ticket += 1
             return E.OK
@@ -171,7 +171,7 @@ class StateMachine:
         if action == E.CLAIM:
             if self.status != E.RUNNING or self.agent != -1:
                 return E.REJECT
-            if self.next_agent < 0 or self.next_agent > 2:
+            if self.next_agent < 0 or self.next_agent >= len(self.names):
                 return E.REJECT
             if self.max_turns > 0 and self.turns >= self.max_turns:
                 self.status = E.LIMIT
@@ -194,7 +194,7 @@ class StateMachine:
                 return E.STALE
             self.kind = output_kind(text)
             reason = E.ROUTE_ROTATION
-            if 0 <= self.route_override < 3 and self.route_override != self.agent:
+            if 0 <= self.route_override < len(self.names) and self.route_override != self.agent:
                 self.next_agent = self.route_override
                 reason = E.ROUTE_OVERRIDE
             else:
@@ -220,7 +220,7 @@ class StateMachine:
             if self.status in (E.IDLE, E.STOPPED, E.LIMIT, E.ERROR, E.PAUSED):
                 return E.REJECT
             self.kind = user_kind(text)
-            speaker = self.agent if self.agent >= 0 else (self.next_agent + 2) % 3
+            speaker = self.agent if self.agent >= 0 else (self.next_agent + len(self.names) - 1) % len(self.names)
             self.next_agent, reason = route_from_text(
                 self.names, self.last_turn, text, speaker, True)
             self.route_reason = reason
@@ -312,7 +312,7 @@ class StateMachine:
             if (self.status != E.RUNNING or self.agent != -1
                     or ticket != self.ticket
                     or self.route_reason != E.ROUTE_ROTATION
-                    or agent < 0 or agent > 2
+                    or agent < 0 or agent >= len(self.names)
                     or self.last_turn[agent] == self.turns):
                 return E.REJECT
             self.next_agent = agent
@@ -378,7 +378,7 @@ class StateMachine:
 
     def complete_to(self, agent, ticket, text, target_agent):
         """Стабильный способ адресовать завершённый ход; -1 — прежний парсинг."""
-        if target_agent < -1 or target_agent > 2 or target_agent == agent:
+        if target_agent < -1 or target_agent >= len(self.names) or target_agent == agent:
             return self.snapshot(E.INVALID)
         self.route_override = target_agent
         snapshot = self._event(E.COMPLETE, agent, ticket, 0, text)

@@ -68,8 +68,8 @@ class Engine:
     # -------------------------------------------------------------------- API
 
     def names(self, names):
-        if not isinstance(names, list) or len(names) != 3:
-            raise ValueError("Требуются три имени агентов")
+        if not isinstance(names, list) or len(names) not in (3, 5):
+            raise ValueError("Требуются три или пять имён агентов")
         if not all(isinstance(n, str) and "\0" not in n and n.strip()
                    and len(n) <= 30 and len(n.encode("utf-8")) <= 120
                    for n in names):
@@ -87,7 +87,7 @@ class Engine:
     def event(self, action, agent=-1, ticket=0, max_turns=0, text=""):
         if action not in E.ACTIONS:
             raise ValueError("Неизвестное действие ядра")
-        if type(agent) is not int or agent < -1 or agent > 2:
+        if type(agent) is not int or agent < -1 or agent >= len(self._engine.names):
             raise ValueError("Неверный номер агента")
         if type(ticket) is not int or ticket < 0 or ticket > 0xFFFFFFFF:
             raise ValueError("Некорректный идентификатор хода")
