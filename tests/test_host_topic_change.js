@@ -14,6 +14,6 @@ assert.equal(ctx.hostTopicChange('Это просто обычная репли�
 assert.equal(ctx.hostTopicChange('смените тему на'),null);
 const handler=code.slice(b,code.indexOf('// Donations are locally simulated',b));
 assert(handler.includes("$('topic').value=newTopic"));
-assert(handler.includes('state.history=[{agent:-1'));
+assert(handler.includes('state.history=[{event_id:requestID(),agent:-1'));
 assert(handler.includes('state.journal=[]'));
 console.log('Host topic changes update priority and clear stale context');
