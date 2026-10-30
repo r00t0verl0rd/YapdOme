@@ -6,7 +6,7 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from backend.controls.director import decode_plan, director_context, validate_plan
-from backend.server.http_server import repetition_risk, conversational_direction
+from backend.server.conversation import repetition_risk, conversational_direction
 
 NAMES = ['Лимур', 'Кизаро', 'Овелито']
 PLAN = dict(speaker=1, beat='Сравнить новый пример с предыдущим выводом.',
