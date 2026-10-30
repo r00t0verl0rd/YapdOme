@@ -97,7 +97,7 @@ test('one complete reply waits for the previous audible reply, without splitting
   audibleText:'',heardText:'',item:{body:{textContent:''},meta:{}},
   speechConfig:h.speech.snapshot(0)};
  const wait=h.context.queueWholeSpeech(c);
- assert.equal(h.utterances.length,1);
+ assert.equal(h.utterances.length,2,'the next complete utterance is prequeued natively behind the audible one');
  assert.equal(h.speech.queue.length,1,'only a complete turn is queued');
  assert.match(h.speech.queue[0].text,/Полный ответ/);
  h.utterances[0].onend();
