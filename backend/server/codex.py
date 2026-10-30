@@ -251,7 +251,7 @@ class CodexAppServer:
         topic = meta["topic"] or "Свободная беседа"
         goal = meta["goal"] or ("исследовать гипотезы и способы их опровержения"
                                 if meta["mode"] == "science" else "поддерживать интересную беседу")
-        profiles = "\\n".join(
+        profiles = "\n".join(
             "- " + name + (": " + description if description else "")
             for name, description in meta["profiles"].items()
         )
@@ -288,9 +288,9 @@ class CodexAppServer:
         return (
             shared + science + live + scene +
             (" " + meta["voice_note"] if meta["voice_note"] else "") +
-            "\\nТЕМА И ЦЕЛЬ:\\n" + meta["topic_instruction"] +
-            "\\nПОСТОЯННЫЕ ПРОФИЛИ ПЕРСОНАЖЕЙ:\\n" + profiles +
-            "\\nИстория после этого сообщения — общая история эфира."
+            "\nТЕМА И ЦЕЛЬ:\n" + meta["topic_instruction"] +
+            "\nПОСТОЯННЫЕ ПРОФИЛИ ПЕРСОНАЖЕЙ:\n" + profiles +
+            "\nИстория после этого сообщения — общая история эфира."
         )
 
     def _build_turn_prompt(self, data, meta):
@@ -304,7 +304,7 @@ class CodexAppServer:
                 parts.append("ВЕДУЩИЙ ИЗМЕНИЛ ТЕМУ. Новая тема заменяет прежнюю: " +
                              self._json(new_topic) + ". " + meta["topic_instruction"])
             elif meta["goal"] != previous["goal"] or meta["mode"] != previous["mode"]:
-                parts.append("ОБНОВЛЁН КОНТЕКСТ ТЕМЫ ИЛИ ЦЕЛИ:\\n" + meta["topic_instruction"])
+                parts.append("ОБНОВЛЁН КОНТЕКСТ ТЕМЫ ИЛИ ЦЕЛИ:\n" + meta["topic_instruction"])
             if meta["mode"] != previous["mode"]:
                 parts.append("РЕЖИМ ЭФИРА ИЗМЕНЁН: " + meta["mode"] +
                              ". Правила предыдущего режима больше не применяются.")
