@@ -102,7 +102,7 @@ class CodexSessionTests(unittest.TestCase):
         self.assertIn("ПОЛЕМИКА — НОРМАЛЬНАЯ ЧАСТЬ ЭФИРА", prompt)
         self.assertIn("прямо возрази и объясни почему", prompt)
         self.assertIn("можешь изменить мнение", prompt)
-        self.assertIn("не сглаживай настоящее разногласие", prompt)
+        self.assertIn("Не сглаживай настоящее разногласие", prompt)
 
     def test_live_brief_prioritizes_spontaneity_humor_and_nonrepetition_once(self):
         client, calls = self.make_client()
