@@ -1139,8 +1139,46 @@ function retryClaim(reason){
  }
  stopTimer();state.timer=setTimeout(()=>void claimNext(),700);
 }
+async function reconcileClaimConflict(epoch,reason){
+ if(epoch!==state.epoch||state.stopping)return;
+ try{
+  // A 409 means another engine event won the race. Read the authoritative
+  // ticket instead of blindly repeating CLAIM against an unknown state.
+  const response=await fetch('/api/engine',{cache:'no-store'});
+  if(!response.ok)throw Error('HTTP '+response.status);
+  const snapshot=await response.json();
+  if(epoch!==state.epoch||state.stopping)return;
+  applyCore(snapshot);
+  const live=state.core||snapshot;
+  if(live.status==='RUNNING'&&Number.isInteger(live.agent)&&live.agent>=0){
+   // A competing claim already owns this ticket. Adopt it locally rather
+   // than issuing another CLAIM and leaving the show stuck in a 409 loop.
+   if(!state.current){
+    state.pipelineReady=false;
+    issueTurn(live.agent,live.ticket);
+   }
+   return;
+  }
+  if(live.status==='RUNNING'&&live.agent===-1)
+   retryClaim(reason+' · состояние ядра синхронизировано');
+ }catch(error){
+  if(epoch===state.epoch&&!state.stopping)
+   retryClaim('Не удалось синхронизировать передачу хода: '+error.message);
+ }
+}
+
 async function claimNext(){
- if(!state.running||state.paused||state.current||state.claimPending?.epoch===state.epoch)return;
+ if(!state.running||state.paused||state.current)return;
+ // The claim sequence is a single critical section across epochs. A host
+ // interruption invalidates the old work, but must not start a second claim
+ // while that work is still unwinding through the serialized engine queue.
+ if(state.claimPending){
+  if(state.claimPending.epoch!==state.epoch){
+   state.claimPending.rerun=true;
+   state.claimPending.rerunEpoch=state.epoch;
+  }
+  return;
+ }
  // One-ahead handoff: a committed WAV reply has STARTED playing, so the
  // the engine may claim one new model turn while it finishes audibly.
  if(!state.pipelineReady&&(speech.playing||speech.queue.length||speech.nodes.size)){
@@ -1192,11 +1230,20 @@ async function claimNext(){
  }catch(e){
   if(epoch===state.epoch){
    if(String(e.message).includes('HTTP 409')||e.name==='AbortError')
-    retryClaim('Не удалось подтвердить передачу хода: '+e.message);
+    await reconcileClaimConflict(epoch,'Не удалось подтвердить передачу хода: '+e.message);
    else engineError(e);
   }
  }
- finally{if(state.claimPending===claim)state.claimPending=null}
+ finally{
+  if(state.claimPending===claim)state.claimPending=null;
+  // If the host sent a newer message while this claim was pending, perform
+  // exactly one claim for the latest epoch after the old sequence has ended.
+  if(claim.rerun&&claim.rerunEpoch===state.epoch&&state.running&&!state.paused&&
+     !state.stopping&&!state.current){
+   stopTimer();
+   state.timer=setTimeout(()=>{state.timer=null;void claimNext();},0);
+  }
+ }
 }
 
 function scheduleNext(){
