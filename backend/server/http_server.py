@@ -691,7 +691,7 @@ class Handler(BaseHTTPRequestHandler):
                     "director_plan": proposed,
                     "donation_context": donation,
                     "post_donation_name": data.get("post_donation_name"),
-                    "history": history_delta,
+                    "history": history,
                     "conversation_history": history
                 }
                 self.send_response(200)
