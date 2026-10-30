@@ -864,7 +864,7 @@ function cancelCurrent(reason='прервано'){
  c.controller.abort();api('/api/cancel',{request_id:c.requestId}).catch(()=>{});
  speech.stop();c.item.el.classList.remove('live');c.item.el.classList.add('interrupted');c.item.meta.textContent=reason;
  const heard=($('voiceEnabled').checked&&audioAvailable())?(c.heardText||''):stripDirectives(c.text);
- if(heard.trim()&&!isMarker(heard))state.history.push({agent:c.agent,name:defs[c.agent].name,text:heard+' [прервано]'});
+ if(heard.trim()&&!isMarker(heard))state.history.push({agent:c.agent,name:defs[c.agent].name,provider:c.provider||state.provider,text:heard+' [прервано]'});
  state.history=state.history.slice(-16);state.current=null;
 }
 function isMarker(s){
@@ -919,7 +919,7 @@ async function begin(){
  try{
   await syncAgentNames();
   if(epoch!==state.epoch||state.stopping)return; // a STOP during startup wins
-  if(state.provider==='codex')await api('/codex/session/reset',{});
+  await api('/codex/session/reset',{});
   if(epoch!==state.epoch||state.stopping)return;
   const s=await coreEvent('start',{max_turns:0});
   if(epoch!==state.epoch||state.stopping)return;
@@ -1264,7 +1264,7 @@ async function endTurn(c,success,msg){
    c.item.meta.textContent=c.pipeline&&c.audioStarted&&!c.audioFinished?
      'ГОВОРИТ · '+defs[c.agent].name:c.finalMeta;
    if(spoken&&(!c.donation||c.donation.topicChanged)){
-     state.history.push({agent:c.agent,name:defs[c.agent].name,text:spoken});
+     state.history.push({agent:c.agent,name:defs[c.agent].name,provider:c.provider||state.provider,text:spoken});
      state.history=state.history.slice(-16);
      if($('showMode').value==='science')rememberFinding(c.agent,defs[c.agent].name,spoken);
       else if(typeof rememberLiveTurn==='function')rememberLiveTurn(c.agent,spoken);
@@ -1369,7 +1369,7 @@ async function issueTurn(agent,ticket){
 
  const baseSpeechConfig=speech.snapshot(agent);
  const pipeline=$('voiceEnabled').checked;
- const c={agent,ticket,turn:state.turns,epoch,requestId,item,text:'',generatedText:'',
+ const c={agent,ticket,turn:state.turns,epoch,requestId,provider:state.provider,item,text:'',generatedText:'',
           donation,socialFocus,pipeline,speechConfig:pipeline?Object.freeze({...baseSpeechConfig,wholeWav:true}):baseSpeechConfig,
           audibleText:'',heardText:'',controller:new AbortController(),
           phase:'generating',lastTokenAt:Date.now()};
@@ -1432,6 +1432,7 @@ async function realTurn(c){
  // The browser keeps the local transcript for rendering, but sends only unseen events.
  const pendingEvents=state.history.filter(event=>{
   if(!event.event_id)event.event_id=requestID();
+  if(event.agent>=0&&!event.provider)event.provider=c.provider||state.provider;
   return (!event.untrusted || event.expiresAfter>=state.turns) &&
          !state.sentConversationEvents.has(event.event_id);
  });
