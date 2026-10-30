@@ -4,7 +4,7 @@ import shutil
 import subprocess
 import threading
 
-from .conversation import discussion_frame, social_focus_instructions
+from .conversation import discussion_frame, social_focus_instructions, language_instruction, normalize_language
 
 
 class CodexError(RuntimeError):
