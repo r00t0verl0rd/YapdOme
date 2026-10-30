@@ -774,10 +774,16 @@ input[type=text],input[type=number],textarea,select,button,
 .donation-fields input,.tts-progress-wrap progress{border-radius:12px!important}
 .message.live,.message.system,.message.human,.message.donation{border-radius:16px!important}
 
-/* Five independently animated character tiles. */
-.live-tiles{grid-template-columns:repeat(5,minmax(0,1fr))}
-.voice-controls{display:flex;flex-direction:column;gap:6px;min-width:0}
-.voice-controls .voice-field,.voice-controls .avatar-field{min-width:0;width:100%}
-.voice-controls .avatar-field select,.voice-controls .voice-field select{width:100%;min-width:0}
-@media(max-width:990px){.live-tiles{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media(max-width:600px){.live-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* Three-agent layout: voice and cosmetic avatar stay stacked in the existing voice column. */
+.right-column>.card .voice-controls{
+  display:flex;flex-direction:column;grid-column:2;grid-row:2;
+  gap:5px;min-width:0;margin:0;align-self:start
+}
+.right-column>.card .voice-controls .card-field{
+  display:block;min-width:0;width:100%;margin:0
+}
+.right-column>.card .voice-controls .card-field select{
+  display:block;box-sizing:border-box;width:100%;min-width:0;max-width:100%;
+  height:30px;padding:4px 18px 4px 6px;font-size:10px
+}
+.right-column>.card .voice-controls>button{display:none}

@@ -12,9 +12,12 @@ function requestID(){
 const defs = [
   {name:'Норман',color:'#48eafb',avatarId:'norman',description:'Любит рассказывать истории из жизни, слегка хвастается и часто сам попадает в нелепое положение. Отшучивается, если его поддели; способен искренне признать ошибку.',voiceURI:''},
   {name:'Глитч',color:'#ffb45e',avatarId:'glitch',description:'Быстрый на язык, замечает нелепости и любит добродушно подкалывать друзей. Иногда спорит из азарта, но умеет неожиданно поддержать собеседника.',voiceURI:''},
-  {name:'Джесси',color:'#ed68f8',description:'Остроумная, наблюдательная, прямолинейная. Не любит напускную серьёзность, задаёт неудобные вопросы и иногда выдаёт неожиданный поворот без длинных объяснений.',voiceURI:'',avatarId:'jessie'},
-  {name:'Вольт',color:'#8cff6b',description:'Энергичный инженер и экспериментатор. Любит разбирать сложные вещи на простые механизмы, проверять идеи на практике и находить неожиданные технические решения.',voiceURI:'',avatarId:'volt'},
-  {name:'Луна',color:'#b69cff',description:'Спокойная и внимательная исследовательница. Замечает связи между разными темами, задаёт точные вопросы и помогает увидеть общую картину.',voiceURI:'',avatarId:'luna'}
+  {name:'Джесси',color:'#ed68f8',avatarId:'jessie',description:'Остроумная, наблюдательная, прямолинейная. Не любит напускную серьёзность, задаёт неудобные вопросы и иногда выдаёт неожиданный поворот без длинных объяснений.',voiceURI:''}
+];
+// Cosmetic character skins. This catalogue is independent from the three dialogue agents.
+const AVATAR_SKINS=[
+ {id:'norman',label:'Норман'}, {id:'glitch',label:'Глитч'}, {id:'jessie',label:'Джесси'},
+ {id:'volt',label:'Вольт'}, {id:'luna',label:'Луна'}
 ];
 const SCIENCE_PHASES=['knowledge','gaps','hypothesis','math','experiment'];
 const PHASE_LABEL={knowledge:'01 · КАРТА ЗНАНИЙ',gaps:'02 · ПРОБЕЛЫ',hypothesis:'03 · ГИПОТЕЗА',math:'04 · МАТЕМАТИКА',experiment:'05 · ЭКСПЕРИМЕНТ'};
@@ -51,7 +54,7 @@ function stripDirectives(raw){
 const state = {archivedLines:[],connected:false,recoverable:false,provider:'chatgpt',deepseekConnected:false,codexConnected:false,running:false,paused:false,stopping:false,starting:false,epoch:0,turns:0,current:null,history:[],journal:[],conversationId:'',sentConversationEvents:new Set(),language:'ru',timer:null,claimPending:null,core:null,donationQueue:[],activeDonation:null,donationRouting:false,lastDonationName:'',lastAudibleAt:Date.now(),lastIdleNotice:0,
   directorPlan:null,directorRequest:null,directorRouted:false,lastClaimRetryNotice:0,
   pipelineReady:false,audibleTurn:null,
-  social:{pair:null,returnContext:null,lastEnd:0,lastPair:"",memory:Array.from({length:defs.length},()=>[])}};
+  social:{pair:null,returnContext:null,lastEnd:0,lastPair:"",memory:[[],[],[]]}};
 let voices=[];
 const haveSpeech = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
 
@@ -657,8 +660,6 @@ function forceRenderCards(){agentCards().forEach(card=>card.remove());renderCard
 
 function renderCards(){
  const cards=agentCards();
- const tiles=[...document.querySelectorAll('#liveAvatars .live-tile')];
- defs.forEach((def,i)=>{const tile=tiles[i],label=tile?.querySelector('.tile-name');if(label)label.textContent=def.name;if(tile)tile.setAttribute('aria-label','Агент '+(i+1)+': '+def.name)});
  if(cards.length===defs.length){
   defs.forEach((def,i)=>{
     const c=cards[i],active=state.current?.agent===i,speaking=speech.audibleAgent===i;
@@ -698,9 +699,10 @@ function renderCards(){
   description.input.oninput=()=>{def.description=description.input.value;savePrefs()};
   const vc=document.createElement('div');vc.className='voice-controls';const voiceField=document.createElement('label');voiceField.className='card-field voice-field';const voiceLabel=document.createElement('span');voiceLabel.textContent='ГОЛОС';const select=document.createElement('select');select.setAttribute('aria-label','Голос: '+def.name);optionsForVoices(select,i);select.onchange=()=>setAgentVoice(i,select.value);voiceField.append(voiceLabel,select);
   const avatarField=document.createElement('label');avatarField.className='card-field avatar-field';const avatarLabel=document.createElement('span');avatarLabel.textContent='АВАТАР';const avatarSelect=document.createElement('select');avatarSelect.setAttribute('aria-label','Аватар: '+def.name);
-  for(const [id,label] of [['norman','Норман'],['glitch','Глитч'],['jessie','Джесси'],['volt','Вольт'],['luna','Луна']])avatarSelect.add(new Option(label,id));
-  avatarSelect.value=['norman','glitch','jessie','volt','luna'].includes(def.avatarId)?def.avatarId:['norman','glitch','jessie','volt','luna'][i];
-  avatarSelect.onchange=()=>{if(!['norman','glitch','jessie','volt','luna'].includes(avatarSelect.value))return;def.avatarId=avatarSelect.value;savePrefs();window.YapdOmePixel?.sync();};avatarField.append(avatarLabel,avatarSelect);
+  for(const skin of AVATAR_SKINS)avatarSelect.add(new Option(skin.label,skin.id));
+  avatarSelect.value=AVATAR_SKINS.some(skin=>skin.id===def.avatarId)?def.avatarId:'norman';
+  avatarSelect.onchange=()=>{if(!AVATAR_SKINS.some(skin=>skin.id===avatarSelect.value))return;def.avatarId=avatarSelect.value;savePrefs();window.YapdOmePixel?.sync();};
+  avatarField.append(avatarLabel,avatarSelect);
   const test=document.createElement('button');test.textContent='♫';
   test.title='Прослушать выбранный голос';test.disabled=!audioAvailable();
   test.onclick=()=>{speech.unlock();speech.stop();speech.push(i,'Привет! Я '+def.name+'. Готов к разговору.')};
@@ -740,12 +742,11 @@ function restorePrefs(){
           'Любознательный изобретатель и импровизатор. Любит неожиданные идеи, юмор и короткие эксперименты, которые проверяют смелые гипотезы.'];
         if(a.description!==obsolete[i])d.description=a.description.slice(0,900);
         else if(a.name===['Архитектор','Скептик','Экспериментатор'][i])
-          d.name=['Норман','Глитч','Джесси','Вольт','Луна'][i];
+          d.name=['Норман','Глитч','Джесси'][i];
       }
      else if(typeof a.role==='string')d.description=
        (a.role+(typeof a.goal==='string'&&a.goal.trim()?' '+a.goal:'')).slice(0,900);
      if(typeof a.voiceURI==='string')d.voiceURI=a.voiceURI;
-     if(['norman','glitch','jessie','volt','luna'].includes(a.avatarId))d.avatarId=a.avatarId;
      if(kokoroSpeakers.includes(a.kokoroVoice))d.kokoroVoice=a.kokoroVoice;
      if(kokoroRuSpeakers.some(([id])=>id===a.kokoroRuVoice))d.kokoroRuVoice=a.kokoroRuVoice;
      if(piperSpeakers.some(([id])=>id===a.piperVoice))d.piperVoice=a.piperVoice;
@@ -757,7 +758,7 @@ function restorePrefs(){
    else{if(typeof p.voices?.[i]==='string')d.voiceURI=p.voices[i];if(typeof p.roles?.[i]==='string')d.description=p.roles[i].slice(0,900);}
   });
   // An edited agent roster must remain addressable in the C controller.
-  const seen=new Set();defs.forEach((d,i)=>{const key=d.name.toLocaleLowerCase('ru');if(seen.has(key)){d.name=['Норман','Глитч','Джесси','Вольт','Луна'][i]}seen.add(d.name.toLocaleLowerCase('ru'))});
+  const seen=new Set();defs.forEach((d,i)=>{const key=d.name.toLocaleLowerCase('ru');if(seen.has(key)){d.name=['Норман','Глитч','Джесси'][i]}seen.add(d.name.toLocaleLowerCase('ru'))});
   if(typeof p.topic==='string')$('topic').value=p.topic.slice(0,700);
   if(typeof p.sharedGoal==='string')$('sharedGoal').value=p.sharedGoal.slice(0,900);
    if(['live','science'].includes(p.showMode))$('showMode').value=p.showMode;
@@ -883,7 +884,7 @@ function isMarker(s){
 function resetLocal(reason='остановлено'){
  state.epoch++;state.conversationId='';state.sentConversationEvents=new Set();stopTimer();cancelDirector();cancelCurrent(reason);speech.stop();state.running=false;
  state.activeDonation=null;state.donationQueue=[];state.donationRouting=false;state.lastDonationName='';
- state.social.memory=Array.from({length:defs.length},()=>[]);state.social.lastPair='';resetSocialFocus();
+ state.social.memory=[[],[],[]];state.social.lastPair='';resetSocialFocus();
  updateDonationBadge();
  state.lastAudibleAt=Date.now();state.lastIdleNotice=0;
  state.paused=false;$('start').disabled=false;$('pause').textContent='Ⅱ ПАУЗА';renderCards();
@@ -955,7 +956,7 @@ function cancelDirector(){
 // This deliberately conservative signal does not treat a shared topic as a loop.
 function directorStuck(recent){
  const lines=recent.slice(-8).filter(row=>row&&!row.untrusted&&
-   Number.isInteger(row.agent)&&row.agent>=0&&row.agent<defs.length&&typeof row.text==='string')
+   Number.isInteger(row.agent)&&row.agent>=0&&row.agent<3&&typeof row.text==='string')
   .map(row=>{
    const words=stripDirectives(row.text.slice(0,420)).toLowerCase().match(/[\p{L}\p{N}]+/gu)||[];
    const grams=new Set();
@@ -1001,7 +1002,7 @@ function requestDirector(currentTurn=null){
     if(state.directorRequest!==job||state.epoch!==epoch||topic!==$('topic').value||
        !$('directorEnabled').checked||!state.running||state.stopping||state.paused||
        state.activeDonation||state.donationQueue.length||state.turns>at+4)return;
-    if(plan&&Number.isInteger(plan.speaker)&&plan.speaker>=0&&plan.speaker<defs.length&&
+    if(plan&&Number.isInteger(plan.speaker)&&plan.speaker>=0&&plan.speaker<3&&
        typeof plan.beat==='string'&&plan.beat.length<=190){
        state.directorPlan={...plan,at,topic};
        state.directorRouted=false;
@@ -1078,7 +1079,7 @@ function socialRouteHint(){
  if(state.turns<4||state.turns-social.lastEnd<4)return null;
  const speakers=[];
  for(const line of state.history.slice().reverse()){
-  if(Number.isInteger(line.agent)&&line.agent>=0&&line.agent<5&&!speakers.includes(line.agent))
+  if(Number.isInteger(line.agent)&&line.agent>=0&&line.agent<3&&!speakers.includes(line.agent))
     speakers.push(line.agent);
   if(speakers.length===2)break;
  }
@@ -1105,14 +1106,14 @@ function socialReturnTarget(){
 }
 // Bounded, attributed conversation excerpts: quotes, not permanent beliefs.
 function rememberLiveTurn(agent,text){
- if($('showMode').value!=='live'||!Number.isInteger(agent)||agent<0||agent>=defs.length)return;
+ if($('showMode').value!=='live'||!Number.isInteger(agent)||agent<0||agent>2)return;
  const line=String(text||'').trim();if(line.length<22)return;
- const memory=state.social.memory||(state.social.memory=Array.from({length:defs.length},()=>[]));
+ const memory=state.social.memory||(state.social.memory=[[],[],[]]);
  memory[agent]=(memory[agent]||[]).slice(-1).concat(line.slice(0,230));
 }
 function liveMemoryPayload(){
  if($('showMode').value!=='live')return [];
- return (state.social.memory||Array.from({length:defs.length},()=>[])).map((notes,agent)=>({
+ return (state.social.memory||[[],[],[]]).map((notes,agent)=>({
    agent,notes:(notes||[]).slice(-2).map(x=>String(x).slice(0,230))
  }));
 }
@@ -1120,10 +1121,10 @@ function liveMemoryPayload(){
 // the ongoing topic and explicit questions; C retains all final authority.
 function liveFloorBid(speaker,text){
  if($('showMode').value!=='live'||state.activeDonation||state.donationQueue.length)return null;
- if(!Number.isInteger(speaker)||speaker<0||speaker>=defs.length)return null;
+ if(!Number.isInteger(speaker)||speaker<0||speaker>2)return null;
  const terms=new Set((String(text||'').toLowerCase().match(/[\p{L}\p{N}]{4,}/gu)||[]).map(w=>w.slice(0,5)));
  const question=/[?？]/.test(text||'');
- const past=state.history.filter(h=>Number.isInteger(h.agent)&&h.agent>=0&&h.agent<defs.length).slice(-12);
+ const past=state.history.filter(h=>Number.isInteger(h.agent)&&h.agent>=0&&h.agent<3).slice(-12);
  const bids=[0,1,2].filter(i=>i!==speaker).map(i=>{
    const lines=past.filter(h=>h.agent===i),last=lines.at(-1);
    const idle=last?past.length-1-past.lastIndexOf(last):12;
@@ -1293,7 +1294,7 @@ async function endTurn(c,success,msg){
   // On a donation failure, try the next distinct persona rather than burning
   // all three retries on the same model. Keep the donor in the active slot.
   if(c.donation&&state.activeDonation===c.donation){
-    c.donation.nextSpeaker=(c.agent+1)%defs.length;
+    c.donation.nextSpeaker=(c.agent+1)%3;
     c.donation.item.meta.textContent='⚠ СБОЙ РЕПЛИКИ · пробуем другого персонажа';
   }
   // Audio is drained on the legacy path; pipeline errors release no extra slot.
@@ -1329,7 +1330,7 @@ async function endTurn(c,success,msg){
    // Silent PASS is an immediate turn handoff, never a 20-second timeout.
   }else if(value){
    const spoken=stripDirectives(value);
-   c.finalMeta=msg+(s.next_agent>=0&&s.next_agent<defs.length?' · слово отдано: '+defs[s.next_agent].name:'');
+   c.finalMeta=msg+(s.next_agent>=0&&s.next_agent<3?' · слово отдано: '+defs[s.next_agent].name:'');
    c.item.meta.textContent=c.pipeline&&c.audioStarted&&!c.audioFinished?
      'ГОВОРИТ · '+defs[c.agent].name:c.finalMeta;
    if(spoken&&(!c.donation||c.donation.topicChanged)){
@@ -1357,7 +1358,7 @@ async function endTurn(c,success,msg){
         donationFinished=true;
       }else{
         c.donation.item.meta.textContent='ОБСУЖДАЮТ · осталось '+c.donation.remaining+' реплик';
-        c.donation.nextSpeaker=(c.agent+1)%defs.length;
+        c.donation.nextSpeaker=(c.agent+1)%3;
       }
     }else{
       // Repeated marker-only replies must not lock the whole show forever.
@@ -1366,7 +1367,7 @@ async function endTurn(c,success,msg){
         c.donation.item.meta.textContent='⚠ МОДЕЛЬ НЕ ДАЛА СОДЕРЖАТЕЛЬНОГО ОТВЕТА';
         state.activeDonation=null;
       }else{
-        c.donation.nextSpeaker=(c.agent+1)%defs.length;
+        c.donation.nextSpeaker=(c.agent+1)%3;
         c.donation.item.meta.textContent='ПУСТОЙ ОТВЕТ · пробуем другого персонажа';
       }
     }
@@ -1580,7 +1581,7 @@ async function humanMessage(){
   if(newTopic!==null){
    $('topic').value=newTopic;fitTopicField();savePrefs();
    state.history=[{event_id:requestID(),agent:-1,name:'Ведущий',text:newTopic?'Новая тема: '+newTopic:'Полностью смените тему, выберите другое направление. Не возвращайтесь к прошлому обсуждению.'}];
-   state.journal=[];state.directorBudget=null;state.lastDonationName='';state.social.memory=Array.from({length:defs.length},()=>[]);updateScienceUI();
+   state.journal=[];state.directorBudget=null;state.lastDonationName='';state.social.memory=[[],[],[]];updateScienceUI();
    system('Новая тема разговора: '+(newTopic||'свободная беседа'));
   }else{
    state.history.push({event_id:requestID(),agent:-1,name:'Ведущий',text});state.history=state.history.slice(-16);
@@ -1613,7 +1614,7 @@ async function reviewDonationTopic(donation){
 function applyDonationTopic(donation,topic){
  $('topic').value=topic;fitTopicField();savePrefs();cancelDirector();resetSocialFocus();
  state.history=[{event_id:requestID(),agent:-1,name:donation.donor,text:'Новая тема разговора от зрителя: '+topic}];
- state.journal=[];state.directorBudget=null;state.lastDonationName='';state.social.memory=Array.from({length:defs.length},()=>[]);
+ state.journal=[];state.directorBudget=null;state.lastDonationName='';state.social.memory=[[],[],[]];
  updateScienceUI();
  donation.item.meta.textContent='✓ ТЕМА ИЗМЕНЕНА · '+topic;
  system('Тема от зрителя '+donation.donor+': '+topic);
@@ -1640,7 +1641,7 @@ async function activateNextDonation(){
    donation.topicReview=review;
   }
   if(epoch!==state.epoch||state.stopping||state.paused)return;
-  const target=state.core?.next_agent>=0&&state.core?.next_agent<defs.length?
+  const target=state.core?.next_agent>=0&&state.core?.next_agent<3?
     state.core.next_agent:0;
   const routed=await coreEvent('priority_donation',{agent:target});
   if(epoch!==state.epoch||state.stopping)return;
@@ -1707,7 +1708,7 @@ setInterval(async()=>{
  if(Date.now()-c.lastTokenAt<18000)return;
  c.timingOut=true;const ticket=c.ticket,epoch=state.epoch;
  if(c.donation&&state.activeDonation===c.donation)
-   c.donation.nextSpeaker=(c.agent+1)%defs.length;
+   c.donation.nextSpeaker=(c.agent+1)%3;
  cancelCurrent('ТАЙМАУТ · нет ответа 18 секунд');
  try{
   const s=await coreEvent('recover',{ticket});
@@ -1804,9 +1805,9 @@ const fitTopicField=()=>{
  field.style.height=Math.min(field.scrollHeight,maxHeight)+'px';
  field.style.overflowY=field.scrollHeight>maxHeight?'auto':'hidden';
 };
-$('topic').oninput=()=>{fitTopicField();state.social.memory=Array.from({length:defs.length},()=>[]);cancelDirector();resetSocialFocus();savePrefs()};
+$('topic').oninput=()=>{fitTopicField();state.social.memory=[[],[],[]];cancelDirector();resetSocialFocus();savePrefs()};
 $('sharedGoal').oninput=savePrefs;
-$('showMode').onchange=()=>{state.journal=[];state.social.memory=Array.from({length:defs.length},()=>[]);cancelDirector();resetSocialFocus();updateScienceUI();savePrefs();if(state.running)system('Режим изменён: применится к следующей реплике.');};
+$('showMode').onchange=()=>{state.journal=[];state.social.memory=[[],[],[]];cancelDirector();resetSocialFocus();updateScienceUI();savePrefs();if(state.running)system('Режим изменён: применится к следующей реплике.');};
 
 $('directorEnabled').onchange=()=>{
  if(!$('directorEnabled').checked){

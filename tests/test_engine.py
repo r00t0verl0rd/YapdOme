@@ -243,9 +243,7 @@ class ProtocolTests(unittest.TestCase):
         self.assertEqual(code,200)
         self.assertTrue(json.loads(body)['accepted'])
         five={"action":"names","names":["Норман","Глитч","Джесси","Вольт","Луна"]}
-        code, body=self.request('POST','/api/engine',five)
-        self.assertEqual(code,200)
-        self.assertTrue(json.loads(body)['accepted'])
+        self.assertEqual(self.request('POST','/api/engine',five)[0],400)
         code, body=self.request('POST','/api/engine',{"action":"start","max_turns":0})
         claim=json.loads(self.request('POST','/api/engine',{"action":"claim"})[1])
         self.assertEqual(claim['agent'],0)
