@@ -15,9 +15,9 @@ from backend.server.conversation import (
 class ConversationCoreTests(unittest.TestCase):
     def test_topic_policy_is_shared_and_keeps_topic_above_goal(self):
         topic = discussion_frame("спорт и здоровье", "получить донаты", "live")
-        self.assertIn("ПРИОРИТЕТ 1 — ТЕМА РАЗГОВОРА", topic)
-        self.assertIn("ПРИОРИТЕТ 2 — ОБЩАЯ ЦЕЛЬ", topic)
-        self.assertIn("не агитацией и не просьбами о деньгах", topic)
+        self.assertIn("ТЕМА (приоритет)", topic)
+        self.assertIn("ЦЕЛЬ (только внутри темы)", topic)
+        self.assertIn("не выпрашивай деньги", topic)
 
         data = {
             "agent_name": "Норман",
@@ -29,6 +29,47 @@ class ConversationCoreTests(unittest.TestCase):
         }
         meta = CodexAppServer()._session_snapshot(data)
         self.assertEqual(meta["topic_instruction"], topic)
+
+    def test_codex_sends_static_rules_once_and_only_turn_deltas_afterward(self):
+        server = CodexAppServer()
+        data = {
+            "agent_name": "Норман",
+            "agent": 0,
+            "agents": ["Норман", "Глитч", "Джесси"],
+            "cast_profiles": [],
+            "topic": "Коты",
+            "shared_goal": "Интересная беседа",
+            "show_mode": "live",
+            "language": "ru",
+            "turns": 3,
+            "history": [],
+            "conversation_history": [],
+        }
+        meta = server._session_snapshot(data)
+        initial = server._initial_brief(meta)
+        self.assertIn("одна общая беседа трёх персонажей", initial)
+        self.assertIn("[[TO:Имя]]", initial)
+        self.assertIn("не выдумывай реальные воспоминания", initial)
+        self.assertIn("Отвечай по-русски", meta["turn_policy"])
+        self.assertNotIn("ЖИВОЙ СТУДИЙНЫЙ РАЗГОВОР", meta["turn_policy"])
+        self.assertNotIn("ФОРМАТ СВОБОДНОЙ БЕСЕДЫ", meta["turn_policy"])
+        self.assertNotIn("не выдумывай реальные воспоминания", meta["turn_policy"])
+        self.assertLess(len(meta["turn_policy"]), 120)
+
+        # Later turns receive only changed/new events plus compact dynamic hints.
+        server.session_meta = meta
+        prompt, fresh = server._build_turn_prompt({
+            "history": [{"event_id": "event-new-0001", "agent": -1,
+                         "name": "Ведущий", "text": "Теперь поговорите о собаках."}]
+        }, server._session_snapshot({**data, "topic": "Собаки", "turns": 4,
+                                     "history": [{"event_id": "event-new-0001", "agent": -1,
+                                                  "name": "Ведущий", "text": "Теперь поговорите о собаках."}],
+                                     "conversation_history": [{"event_id": "event-new-0001", "agent": -1,
+                                                               "name": "Ведущий", "text": "Теперь поговорите о собаках."}]}))
+        self.assertIn("ВЕДУЩИЙ ИЗМЕНИЛ ТЕМУ", prompt)
+        self.assertIn("СЕЙЧАС ГОВОРИТ: Норман", prompt)
+        self.assertEqual(fresh, ["event-new-0001"])
+        self.assertNotIn("ФОРМАТ СВОБОДНОЙ БЕСЕДЫ", prompt)
 
     def test_social_policy_is_shared_by_codex_session_prompt(self):
         data = {
