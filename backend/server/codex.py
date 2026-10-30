@@ -450,6 +450,7 @@ class CodexAppServer:
             thread_id = self.thread_id
             done = threading.Event()
             failure = []
+            emit_failure = []
 
             def on_event(msg):
                 params = msg.get("params") or {}
@@ -457,11 +458,19 @@ class CodexAppServer:
                     return
                 method = msg.get("method")
                 if method == "item/agentMessage/delta":
-                    emit("delta", params.get("delta", ""))
+                    if not emit_failure:
+                        try:
+                            emit("delta", params.get("delta", ""))
+                        except Exception as exc:
+                            # Keep draining the active Codex turn; report the
+                            # output limit/error only after turn/completed.
+                            emit_failure.append(str(exc) or "Ошибка передачи реплики")
                 elif method == "turn/completed":
                     turn = params.get("turn") or {}
                     if turn.get("status") == "failed":
                         failure.append((turn.get("error") or {}).get("message", "Codex generation failed"))
+                    if emit_failure:
+                        failure.append(emit_failure[0])
                     done.set()
 
             with self.lock:
