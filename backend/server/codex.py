@@ -12,7 +12,7 @@ class CodexError(RuntimeError):
 class CodexAppServer:
     """One shared Codex thread per YapdOme show, with incremental turn input."""
 
-    COMPACT_EVERY_TURNS = 24
+    COMPACT_AT_CONTEXT_RATIO = 0.75
 
     def __init__(self):
         self.lock = threading.RLock()
@@ -29,6 +29,7 @@ class CodexAppServer:
         self.session_meta = None
         self.seen_event_ids = set()
         self.turn_count = 0
+        self.token_usage = None
         self.compaction_disabled = False
         self.account = None
         self.login_result = None
@@ -66,6 +67,10 @@ class CodexAppServer:
                         waiter["response"] = msg
                         waiter["event"].set()
                 else:
+                    params = msg.get("params") or {}
+                    if msg.get("method") == "thread/tokenUsage/updated":
+                        if params.get("threadId") == self.thread_id:
+                            self.token_usage = params.get("tokenUsage")
                     with self.lock:
                         listeners = list(self.listeners)
                     for listener in listeners:
@@ -144,6 +149,7 @@ class CodexAppServer:
         self.session_meta = None
         self.seen_event_ids.clear()
         self.turn_count = 0
+        self.token_usage = None
         self.compaction_disabled = False
 
     def _archive_current_thread(self):
@@ -390,25 +396,42 @@ class CodexAppServer:
             self.thread_generation = self.process_generation
 
     def _compact_if_needed(self):
-        if (not self.thread_id or self.compaction_disabled or not self.turn_count or
-                self.turn_count % self.COMPACT_EVERY_TURNS != 0):
+        if not self.thread_id or self.compaction_disabled:
             return
+        usage = self.token_usage if isinstance(self.token_usage, dict) else {}
+        last = usage.get("last") if isinstance(usage.get("last"), dict) else {}
+        window = usage.get("modelContextWindow")
+        used = last.get("totalTokens")
+        # Avoid arbitrary per-turn compaction. Compact only when the latest
+        # request shows that the context window is genuinely close to full.
+        if (type(window) is not int or window <= 0 or
+                type(used) is not int or used < window * self.COMPACT_AT_CONTEXT_RATIO):
+            return
+
         thread_id = self.thread_id
         done = threading.Event()
 
         def on_event(msg):
             params = msg.get("params") or {}
-            if msg.get("method") == "turn/completed" and params.get("threadId") == thread_id:
+            if params.get("threadId") != thread_id:
+                return
+            item = params.get("item") or {}
+            if (msg.get("method") == "item/completed" and
+                    item.get("type") == "contextCompaction"):
                 done.set()
 
         with self.lock:
             self.listeners.append(on_event)
         try:
             self._request("thread/compact/start", {"threadId":thread_id}, timeout=15)
-            if not done.wait(90):
+            if not done.wait(45):
                 self.compaction_disabled = True
-                self.error = "Не удалось подтвердить компактизацию Codex; используется штатное управление контекстом."
+                self.error = "Codex не подтвердил компактизацию; дальнейшее управление контекстом передано Codex."
+            else:
+                self.token_usage = None
         except CodexError:
+            # Codex still has its own context management; never block ordinary turns
+            # on a manual compaction method that this CLI version may not support.
             self.compaction_disabled = True
         finally:
             with self.lock:
