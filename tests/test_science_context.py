@@ -242,7 +242,7 @@ class ScienceContextTests(unittest.TestCase):
         self.assertEqual(code, 200)
         tail = body["input"][-1]["content"]
         self.assertIn("Ты уже высказался", tail)
-        self.assertIn("если добавить нечего", tail)
+        self.assertIn("Если добавить нечего", tail)
         self.assertIn("[[PASS]]", tail)
         self.assertNotIn("добавь довод или проверку", tail)
 
