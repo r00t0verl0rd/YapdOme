@@ -9,18 +9,30 @@ from .conversation import (
 
 
 def build_turn_policy(agent, agent_name, peers, topic, turns, history, mode="live",
-                      social_focus=None, planned=False, language="ru", donation=False):
+                      social_focus=None, planned=False, language="ru", donation=False,
+                      persistent_context=False):
+    """Build either a complete HTTP policy or only deltas for a persistent session."""
     pace = dialogue_pace(turns, history)
     focus_data = {"social_focus": social_focus} if isinstance(social_focus, dict) else {}
-    parts = [
-        character_style(mode, topic),
-        live_requested_voice(topic) if mode == "live" else "",
+    dynamic = [
         social_focus_instructions(focus_data, agent, peers, mode) if not donation else "",
         science_protocol(science_phase(turns), agent) if mode == "science" else "",
-        turn_protocol(agent_name, peers, pace, mode == "science"),
         conversational_direction(topic, turns, history, pace, planned=planned, mode=mode),
-        "Ты " + json.dumps(agent_name, ensure_ascii=False) +
-        ". Собеседники: " + json.dumps(peers, ensure_ascii=False) + ". ",
         language_instruction(language),
     ]
+    if persistent_context:
+        # Codex already has the stable policy, cast and transcript in its thread.
+        # Send only this turn's changes; never repeat the full rules on every turn.
+        parts = dynamic
+    else:
+        parts = [
+            character_style(mode, topic),
+            live_requested_voice(topic) if mode == "live" else "",
+            *dynamic[:2],
+            turn_protocol(agent_name, peers, pace, mode == "science"),
+            dynamic[2],
+            "Ты " + json.dumps(agent_name, ensure_ascii=False) +
+            ". Собеседники: " + json.dumps(peers, ensure_ascii=False) + ". ",
+            dynamic[3],
+        ]
     return "\n".join(part.strip() for part in parts if part and part.strip())
