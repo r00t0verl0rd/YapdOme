@@ -83,7 +83,7 @@ def only_marker(text, label):
     return not text.lstrip(_MARKER_SKIP)
 
 
-_DIRECTIVE_PREFIXES = ("to:", "re:", "claim:", "pass", "wait_user", "cont")
+_DIRECTIVE_PREFIXES = ("to:", "to=", "re:", "claim:", "pass", "wait_user", "cont")
 _DIRECTIVE_SKIP = " \t\r\n.,!;:"
 
 
@@ -222,16 +222,17 @@ def mask_quotes(names, text):
 
 
 def token_scan(names, lower):
-    """Явная передача слова: [[TO:Имя]], [TO:Имя], [[TO:ANY]], [[TO:SELF]].
+    """Явная передача слова: [[TO:Имя]] / [[TO=Имя]], [TO:Имя], [[TO:ANY]], [[TO:SELF]].
 
     Проверяется до всех эвристик, чтобы markdown, кавычки и переносы строк
     не лишали модель контроля над роутингом. Повреждённый [[TO:имя] не
     принимается повторным проходом single-bracket как [TO:имя].
     """
-    for mark, close in (("[[to:", "]]"), ("[to:", "]")):
+    for mark, close in (("[[to:", "]]"), ("[[to=", "]]"),
+                        ("[to:", "]"), ("[to=", "]")):
         at = lower.find(mark)
         while at != -1:
-            if mark == "[to:" and at > 0 and lower[at - 1] == "[":
+            if mark.startswith("[to") and at > 0 and lower[at - 1] == "[":
                 at = lower.find(mark, at + 1)
                 continue
             p = at + len(mark)

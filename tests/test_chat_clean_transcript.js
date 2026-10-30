@@ -15,6 +15,8 @@ test('chat transcript shows speaker and spoken text without engine metadata',()=
   assert.ok(!transcript.includes("querySelector('.meta')"));
   assert.ok(hud.includes('.feed .message .meta{display:none!important}'));
   assert.ok(hud.includes('.feed .message .body{'));
+  const strip=client.slice(client.indexOf('function stripDirectives'),client.indexOf('const state',client.indexOf('function stripDirectives')));
+  assert.ok(strip.includes('[:=]'),'both colon and equals control markers must stay invisible');
 });
 
 test('chat start and normal stop do not add system bookkeeping rows',()=>{

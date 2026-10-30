@@ -41,8 +41,8 @@ function stripSpeakerLabels(raw){
 }
 function stripDirectives(raw){
   const text=String(raw||'')
-    .replace(/\[\[\s*(?:TO|RE|CLAIM)\s*:[^\]]*\]\]/gi,' ')
-    .replace(/\[\s*(?:TO|RE|CLAIM)\s*:[^\]]*\]/gi,' ')
+    .replace(/\[\[\s*(?:TO|RE|CLAIM)\s*[:=][^\]]*\]\]/gi,' ')
+    .replace(/\[\s*(?:TO|RE|CLAIM)\s*[:=][^\]]*\]/gi,' ')
     .replace(/\[\[\s*(?:PASS|WAIT_USER|CONT)\s*\]\]/gi,' ')
     .replace(/\[\s*(?:PASS|WAIT_USER|CONT)\s*\]/gi,' ')
     .replace(/\[\[[^\]]*$/,'')

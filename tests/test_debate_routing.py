@@ -55,8 +55,10 @@ class DebateRouting(unittest.TestCase):
 
     def test_explicit_to_token_is_format_independent(self):
         for text, want in [('[[TO:Экспериментатор]] Проверь это.', 2),
+                           ('[[TO=Экспериментатор]] Проверь это.', 2),
                            ('[[TO:Экспериментатор]]\nПроверь это.', 2),
                            ('[TO:Экспериментатор] проверь', 2),
+                           ('[TO=Экспериментатор] проверь', 2),
                            ('Мысль. [[to:экспериментатор]]', 2),
                            ('[[TO:Архитектор]] а ты?', 0)]:
             self.core.event('start', max_turns=0)
@@ -66,10 +68,11 @@ class DebateRouting(unittest.TestCase):
             self.assertEqual(kind, 'normal', text)
 
     def test_to_any_falls_back_to_rotation(self):
-        self.core.event('start', max_turns=0)
-        next_agent, _, reason = self.route(0, '[[TO:ANY]] Кто хочет ответить?')
-        self.assertEqual(next_agent, 1)
-        self.assertEqual(reason, 'rotation')
+        for marker in ("[[TO:ANY]]", "[[TO=ANY]]"):
+            self.core.event('start', max_turns=0)
+            next_agent, _, reason = self.route(0, marker + ' Кто хочет ответить?')
+            self.assertEqual(next_agent, 1)
+            self.assertEqual(reason, 'rotation')
 
     def test_to_self_allows_a_continuation_turn(self):
         self.core.event('start', max_turns=0)
