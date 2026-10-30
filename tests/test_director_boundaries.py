@@ -6,7 +6,7 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from backend.controls.director import decode_plan, director_context, validate_plan
-from backend.server.http_server import repetition_risk
+from backend.server.http_server import repetition_risk, conversational_direction
 
 NAMES = ['Лимур', 'Кизаро', 'Овелито']
 PLAN = dict(speaker=1, beat='Сравнить новый пример с предыдущим выводом.',
@@ -54,6 +54,25 @@ class DirectorBoundaries(unittest.TestCase):
             # Prefix length cannot change the bounded scene window.
             self.assertEqual(context, director_context({'topic': 'Тема ' * 200,
                              'agents': NAMES, 'history': history[-8:]}))
+
+    def test_counterargument_guidance_only_after_repetitive_agreement(self):
+        agreement = [
+            {"agent": i % 3, "text": "Да, согласен, это хороший вывод."}
+            for i in range(4)
+        ]
+        direction = conversational_direction("свободная беседа", 8, agreement)
+        self.assertIn("проверь одну его слабую предпосылку", direction)
+        self.assertIn("прямо возрази", direction)
+        self.assertIn("Не спорь искусственно", direction)
+
+        mixed = [
+            {"agent": 0, "text": "Я не согласен, потому что есть исключение."},
+            {"agent": 1, "text": "Не уверен, но вот другой аргумент."},
+            {"agent": 2, "text": "Интересно, однако причина может быть иной."},
+            {"agent": 0, "text": "С другой стороны, есть такой риск."},
+        ]
+        ordinary = conversational_direction("свободная беседа", 8, mixed)
+        self.assertNotIn("проверь одну его слабую предпосылку", ordinary)
 
     def test_synthetic_loop_vs_topic_progression(self):
         # Exercise the existing detector, not a competing Python decision policy.
