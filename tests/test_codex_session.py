@@ -83,14 +83,14 @@ class CodexSessionTests(unittest.TestCase):
         self.assertEqual(len(turns), 3, "each agent response is a turn in that same thread")
 
         prompts = [params["input"][0]["text"] for params in turns]
-        self.assertIn("ТЕМА ЭТОГО ЭФИРА", prompts[0])
+        self.assertIn("ТЕМА И ЦЕЛЬ", prompts[0])
         self.assertIn("Норман profile", prompts[0])
         self.assertIn("Добавь конкретный пример", prompts[1])
         self.assertNotIn("Предыдущая реплика уже есть", prompts[1],
                          "agent transcript is already stored in the Codex thread")
         self.assertNotIn("Добавь конкретный пример", prompts[2],
                          "the same host event must not be sent twice")
-        self.assertNotIn("ТЕМА ЭТОГО ЭФИРА", prompts[1])
+        self.assertNotIn("ТЕМА И ЦЕЛЬ", prompts[1])
         self.assertIn("Новая тема заменяет прежнюю", prompts[2])
         self.assertIn("СЕЙЧАС ГОВОРИТ: Джесси", prompts[2])
 
@@ -99,10 +99,10 @@ class CodexSessionTests(unittest.TestCase):
         self.run_turn(client, self.turn_data("Глитч"))
         prompt = next(params["input"][0]["text"] for method, params in calls
                       if method == "turn/start")
-        self.assertIn("ПОЛЕМИКА — НОРМАЛЬНАЯ ЧАСТЬ ЭФИРА", prompt)
-        self.assertIn("прямо возрази и объясни почему", prompt)
-        self.assertIn("можешь изменить мнение", prompt)
-        self.assertIn("Не сглаживай настоящее разногласие", prompt)
+        self.assertIn("сохраняй самостоятельное мнение", prompt.lower())
+        self.assertIn("искренне соглашайся или возражай", prompt)
+        self.assertIn("меняй мнение под сильным аргументом", prompt)
+        self.assertIn("не спорь для галочки", prompt)
 
     def test_live_brief_prioritizes_spontaneity_humor_and_nonrepetition_once(self):
         client, calls = self.make_client()
@@ -111,11 +111,11 @@ class CodexSessionTests(unittest.TestCase):
 
         turns = [params for method, params in calls if method == "turn/start"]
         first, second = [params["input"][0]["text"] for params in turns]
-        self.assertIn("ВЕДИ ЖИВУЮ, ЗАХВАТЫВАЮЩУЮ БЕСЕДУ", first)
-        self.assertIn("неожиданные, но логичные связи", first)
-        self.assertIn("юмор не обязателен в каждом ходе", first)
-        self.assertIn("Не копируй мнение", first)
-        self.assertNotIn("ВЕДИ ЖИВУЮ, ЗАХВАТЫВАЮЩУЮ БЕСЕДУ", second,
+        self.assertIn("В живом режиме ищи новые ракурсы", first)
+        self.assertIn("конкретные контрпримеры", first)
+        self.assertIn("Юмор допустим, но не обязателен", first)
+        self.assertIn("Не копируй последнюю реплику", first)
+        self.assertNotIn("В живом режиме ищи новые ракурсы", second,
                          "the permanent live brief must not be repeated per turn")
 
     def test_social_focus_prompt_bounds_duo_and_brings_listener_back(self):
