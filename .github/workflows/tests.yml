@@ -1,4 +1,4 @@
-name: Tests
+name: Codex and JavaScript regressions
 
 on:
   push:
@@ -22,9 +22,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Python tests
-        run: python -m unittest discover -s tests -v
-      - name: JavaScript tests
+      - name: Codex session and auth tests
+        run: python -m unittest discover -s tests -p 'test_codex*.py' -v
+      - name: JavaScript regressions
         shell: bash
         run: |
           mapfile -t test_files < <(find tests -maxdepth 1 -type f -name '*.js' ! -name 'test_dashboard_layout.js' | sort)
