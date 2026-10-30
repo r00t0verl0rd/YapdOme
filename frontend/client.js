@@ -1131,6 +1131,27 @@ function liveFloorBid(speaker,text){
  if(!bids.length||bids[0].score<1.3||bids[0].score-bids[1].score<.5)return null;
  return bids[0].agent;
 }
+function reserveClaimSlot(){
+ if(state.claimPending){
+  if(state.claimPending.epoch!==state.epoch){
+   state.claimPending.rerun=true;
+   state.claimPending.rerunEpoch=state.epoch;
+  }
+  return null;
+ }
+ const claim={epoch:state.epoch};
+ state.claimPending=claim;
+ return claim;
+}
+function releaseClaimSlot(claim){
+ if(state.claimPending===claim)state.claimPending=null;
+ if(claim.rerun&&claim.rerunEpoch===state.epoch&&state.running&&!state.paused&&
+    !state.stopping&&!state.current){
+  stopTimer();
+  state.timer=setTimeout(()=>{state.timer=null;void claimNext();},0);
+ }
+}
+
 function retryClaim(reason){
  if(!state.running||state.paused||state.stopping||state.current)return;
  const now=Date.now();
@@ -1169,27 +1190,19 @@ async function reconcileClaimConflict(epoch,reason){
 
 async function claimNext(){
  if(!state.running||state.paused||state.current)return;
- // The claim sequence is a single critical section across epochs. A host
- // interruption invalidates the old work, but must not start a second claim
- // while that work is still unwinding through the serialized engine queue.
- if(state.claimPending){
-  if(state.claimPending.epoch!==state.epoch){
-   state.claimPending.rerun=true;
-   state.claimPending.rerunEpoch=state.epoch;
-  }
-  return;
- }
+ const claim=reserveClaimSlot();
+ if(!claim)return;
  // One-ahead handoff: a committed WAV reply has STARTED playing, so the
  // the engine may claim one new model turn while it finishes audibly.
  if(!state.pipelineReady&&(speech.playing||speech.queue.length||speech.nodes.size)){
   // A transient system notice or a recovering turn must not lose the next claim.
   stopTimer();state.timer=setTimeout(claimNext,250);return;
  }
- const epoch=state.epoch,claim={epoch};state.claimPending=claim;
+ const epoch=claim.epoch;
  try{
   if(state.donationRouting)return;
   if(state.donationQueue.length&&!state.activeDonation){
-    state.claimPending=null;void activateNextDonation();return;
+    void activateNextDonation();return;
   }
   if(state.activeDonation){
     const wanted=state.activeDonation.nextSpeaker;
@@ -1234,16 +1247,7 @@ async function claimNext(){
    else engineError(e);
   }
  }
- finally{
-  if(state.claimPending===claim)state.claimPending=null;
-  // If the host sent a newer message while this claim was pending, perform
-  // exactly one claim for the latest epoch after the old sequence has ended.
-  if(claim.rerun&&claim.rerunEpoch===state.epoch&&state.running&&!state.paused&&
-     !state.stopping&&!state.current){
-   stopTimer();
-   state.timer=setTimeout(()=>{state.timer=null;void claimNext();},0);
-  }
- }
+ finally{releaseClaimSlot(claim)}
 }
 
 function scheduleNext(){
