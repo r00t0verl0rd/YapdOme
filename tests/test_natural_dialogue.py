@@ -8,6 +8,7 @@ import backend.server.http_server as triad
 from backend.server.llm import BridgeError
 from backend.controls.host import live_memory_context
 from backend.controls.donations import donation_scene_instructions
+from backend.server.conversation import agreement_streak, recurring_motifs
 
 
 class NaturalDialogueTests(unittest.TestCase):
@@ -47,11 +48,11 @@ class NaturalDialogueTests(unittest.TestCase):
             "Вот. Ответственность нужна.",
             "Точно. Кто подписал, тот отвечает.",
             "Ага. Подпись и ответственность."))]
-        self.assertTrue(triad.agreement_streak(rows))
+        self.assertTrue(agreement_streak(rows))
         guide = triad.conversational_direction("Политика", 10, rows, mode="live")
         self.assertIn("Участники уже несколько раз согласились", guide)
         self.assertIn("Не повторяй их вывод", guide)
-        self.assertFalse(triad.agreement_streak([{"agent": 0, "text": "Почему мы так решили?"}]))
+        self.assertFalse(agreement_streak([{"agent": 0, "text": "Почему мы так решили?"}]))
 
     def test_live_stances_are_not_forced_or_pretended(self):
         brief = triad.character_style("live")
@@ -113,7 +114,7 @@ class NaturalDialogueTests(unittest.TestCase):
             "Пульт занят, банка опять тут, пивас закончился.",
         ]
         history = [{"agent": index % 3, "text": text} for index, text in enumerate(lines)]
-        motifs = triad.recurring_motifs(history)
+        motifs = recurring_motifs(history)
         self.assertIn("банк", motifs)
         self.assertIn("пивас", motifs)
         instruction = triad.conversational_direction("Сленг", 9, history, mode="live")
@@ -178,7 +179,7 @@ class NaturalDialogueTests(unittest.TestCase):
     def test_donation_confusion_is_answered_plainly(self):
         donate = {"name": "Зритель", "first": True, "covered": []}
         instruction = donation_scene_instructions(
-            donate, "Норман", "Резкий юмор", ["Глитч", "Джесси"])
+            donate, "Норман", ["Глитч", "Джесси"])
         self.assertIn("объясни происходящее буквально", instruction)
         self.assertIn("недоверенные данные", instruction)
 
