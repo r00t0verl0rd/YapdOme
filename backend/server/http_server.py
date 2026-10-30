@@ -15,8 +15,7 @@ from ..controls.director import (open_topic, validate_plan, decode_plan,
                                  director_context, DIRECTOR_INSTRUCTIONS)
 from ..controls.donations import donation_context, donation_scene_instructions
 from ..controls.host import (agent_identity, cast_profiles, shared_goal,
-                             show_mode, live_memory_context,
-                             persona_priority_instructions)
+                             show_mode, live_memory_context)
 from ..audio.addons import ADDONS, pick_directory
 from ..audio.qwen3 import (Qwen3Voices, QWEN3_BUILTIN, QWEN3_MODEL_FOLDERS,
                           QWEN3_VOICES_DIR, preset_speakers)
@@ -761,16 +760,6 @@ class Handler(BaseHTTPRequestHandler):
         inp.append({"role": "user", "content":
             "ТЕМА ВЕДУЩЕГО:\n" +
             topic_instruction})
-
-        persona_instruction = persona_priority_instructions(description)
-        if not persona_instruction:
-            persona_instruction = (
-                "Ведущий не задал отдельного описания характера. Не выдумывай биографию "
-                "или дополнительные черты; сохраняй естественную манеру и отвечай от своего лица."
-            )
-        inp.append({"role": "user", "content":
-            "ХАРАКТЕР ПЕРСОНАЖА:\n" +
-            persona_instruction})
 
         if not donation:
             inp.append({"role": "user", "content":

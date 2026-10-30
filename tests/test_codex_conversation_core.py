@@ -50,12 +50,13 @@ class ConversationCoreTests(unittest.TestCase):
         self.assertIn("одна общая беседа трёх персонажей", initial)
         self.assertIn("[[TO:Имя]]", initial)
         self.assertIn("не выдумывай реальные воспоминания", initial.lower())
+        self.assertIn("запомни этот базовый контекст на весь эфир", initial.lower())
         self.assertIn("Отвечай по-русски", meta["turn_policy"])
         self.assertNotIn("ЖИВОЙ СТУДИЙНЫЙ РАЗГОВОР", meta["turn_policy"])
         self.assertNotIn("ФОРМАТ СВОБОДНОЙ БЕСЕДЫ", meta["turn_policy"])
         self.assertNotIn("не выдумывай реальные воспоминания", meta["turn_policy"])
-        self.assertIn("ИНДИВИДУАЛЬНЫЙ ГОЛОС", meta["turn_policy"])
-        self.assertLess(len(meta["turn_policy"]), 350)
+        self.assertNotIn("ИНДИВИДУАЛЬНЫЙ ПРОФИЛЬ", meta["turn_policy"])
+        self.assertLess(len(meta["turn_policy"]), 150)
 
         # Later turns receive only changed/new events plus compact dynamic hints.
         server.session_meta = meta
@@ -73,7 +74,7 @@ class ConversationCoreTests(unittest.TestCase):
         self.assertEqual(fresh, ["event-new-0001"])
         self.assertNotIn("ФОРМАТ СВОБОДНОЙ БЕСЕДЫ", prompt)
 
-    def test_codex_reasserts_all_three_profiles_on_every_turn(self):
+    def test_codex_sends_full_profiles_once_then_only_turn_deltas(self):
         server = CodexAppServer()
         profiles = [
             {"name": "Норман", "description": "Истории, образные сравнения и самоирония."},
@@ -88,6 +89,10 @@ class ConversationCoreTests(unittest.TestCase):
             "history": [], "conversation_history": [],
         }
         first_meta = server._session_snapshot(first)
+        initial = server._initial_brief(first_meta)
+        for profile in profiles:
+            self.assertIn(profile["name"] + ": " + profile["description"], initial)
+
         server.session_meta = first_meta
         second = {
             **first, "agent_name": "Глитч", "agent": 1,
@@ -97,11 +102,36 @@ class ConversationCoreTests(unittest.TestCase):
             {"agent_name": "Глитч", "history": []},
             server._session_snapshot(second),
         )
-        for profile in profiles:
-            self.assertIn(profile["name"] + ": " + profile["description"], prompt)
         self.assertIn("СЕЙЧАС ГОВОРИТ: Глитч", prompt)
-        self.assertIn("ИНДИВИДУАЛЬНЫЙ ПРОФИЛЬ ТЕКУЩЕГО ГОВОРЯЩЕГО", prompt)
-        self.assertIn("русский мат в большинстве реплик", prompt)
+        self.assertIn("Используй именно его постоянный характер", prompt)
+        for profile in profiles:
+            self.assertNotIn(profile["description"], prompt)
+        self.assertNotIn("русский мат в большинстве реплик", prompt)
+
+    def test_codex_rehydrates_full_context_once_after_confirmed_compaction(self):
+        server = CodexAppServer()
+        profiles = [
+            {"name": "Норман", "description": "Истории и самоирония."},
+            {"name": "Глитч", "description": "Сарказм и мат."},
+            {"name": "Джесси", "description": "Точность и сухой юмор."},
+        ]
+        data = {
+            "agent_name": "Джесси", "agent": 2,
+            "description": profiles[2]["description"],
+            "agents": ["Норман", "Глитч", "Джесси"], "cast_profiles": profiles,
+            "topic": "Будущее человечества", "shared_goal": "",
+            "show_mode": "live", "language": "ru", "turns": 20,
+            "history": [], "conversation_history": [],
+        }
+        server.session_meta = server._session_snapshot(data)
+        server.needs_rehydrate = True
+        restored, _ = server._build_turn_prompt(
+            {"agent_name": "Джесси", "history": []}, server._session_snapshot(data)
+        )
+        for profile in profiles:
+            self.assertIn(profile["name"] + ": " + profile["description"], restored)
+        self.assertIn("ЗАПОМНИ ЭТОТ БАЗОВЫЙ КОНТЕКСТ", restored)
+        self.assertIn("СЕЙЧАС ГОВОРИТ: Джесси", restored)
 
     def test_social_policy_is_shared_by_codex_session_prompt(self):
         data = {

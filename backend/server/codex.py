@@ -34,6 +34,7 @@ class CodexAppServer:
         self.turn_count = 0
         self.token_usage = None
         self.compaction_disabled = False
+        self.needs_rehydrate = False
         self.account = None
         self.login_result = None
         self.error = ""
@@ -154,6 +155,7 @@ class CodexAppServer:
         self.turn_count = 0
         self.token_usage = None
         self.compaction_disabled = False
+        self.needs_rehydrate = False
 
     def _archive_current_thread(self):
         if not self.thread_id:
@@ -260,6 +262,8 @@ class CodexAppServer:
             for name, description in meta["profiles"].items()
         )
         shared = (
+            "СНАЧАЛА ПРОЧИТАЙ И ЗАПОМНИ ЭТОТ БАЗОВЫЙ КОНТЕКСТ НА ВЕСЬ ЭФИР. "
+            "Это постоянная память текущего шоу; не проси повторять её и не смешивай профили. "
             "YapdOme — одна общая беседа трёх персонажей. На каждом ходе говори только "
             "от имени названного персонажа; имена и профили постоянны, если ведущий их не изменил. "
             "Используй историю треда и не пересказывай уже сказанное. "
@@ -302,7 +306,10 @@ class CodexAppServer:
     def _build_turn_prompt(self, data, meta):
         parts = []
         previous = self.session_meta
-        if previous is None:
+        rehydrate = previous is not None and self.needs_rehydrate
+        if previous is None or rehydrate:
+            # First turn: complete stable context. After confirmed compaction:
+            # reinstall it once because the model's compressed summary is lossy.
             parts.append(self._initial_brief(meta))
         else:
             if meta["topic"] != previous["topic"]:
@@ -316,8 +323,12 @@ class CodexAppServer:
                              ". Правила предыдущего режима больше не применяются.")
             if meta["scene_mode"] != previous["scene_mode"]:
                 parts.append("РЕЖИМ СЦЕНЫ " + ("ВКЛЮЧЁН: действуй внутри заданной ведущим ситуации." if meta["scene_mode"] else "ВЫКЛЮЧЕН: не добавляй вымышленные события и действия.") )
-            if meta["voice_note"] != previous["voice_note"] and meta["voice_note"]:
-                parts.append(meta["voice_note"])
+            if meta["voice_note"] != previous["voice_note"]:
+                parts.append(
+                    meta["voice_note"] if meta["voice_note"] else
+                    "ПРЕЖНЯЯ ПРОСЬБА О ГРУБОЙ/УЛИЧНОЙ МАНЕРЕ СНЯТА. "
+                    "Вернись к обычной индивидуальной манере персонажей."
+                )
             if meta["agents"] != previous["agents"]:
                 parts.append("ИЗМЕНЁН СОСТАВ ЭФИРА: " + self._json(meta["agents"]) + ".")
             for name, description in meta["profiles"].items():
@@ -357,18 +368,9 @@ class CodexAppServer:
                 # This event is already in the persistent Codex thread (or is legacy data).
                 fresh_ids.append(event_id)
 
-        # Re-send the complete editable cast on EVERY turn. A long-lived Codex
-        # thread may compact its context; a one-time profile paragraph is not
-        # a reliable way to preserve three distinct voices indefinitely.
-        roster = "\n".join(
-            "- " + name + ": " + (description or "собственная отличимая манера речи")
-            for name, description in meta["profiles"].items()
-        )
-        if roster:
-            parts.append(
-                "ПОСТОЯННЫЕ ПРОФИЛИ ПЕРСОНАЖЕЙ — ОБЯЗАТЕЛЬНЫЙ СОСТАВ КАЖДОГО ХОДА "
-                "(повторены намеренно, не усредняй характеры):\n" + roster
-            )
+        # The full cast is sent only in the initial brief, on explicit profile
+        # edits, or once after confirmed context compaction. Ordinary turns use
+        # only the active speaker name and relevant conversation deltas.
         if meta["turn_policy"]:
             parts.append(meta["turn_policy"])
         elif previous and previous["social_instruction"]:
@@ -411,7 +413,11 @@ class CodexAppServer:
         if compass:
             parts.append(compass)
         speaker = str(data.get("agent_name") or "Агент")[:30]
-        parts.append("СЕЙЧАС ГОВОРИТ: " + speaker + ". Отвечай на текущую мысль в истории беседы.")
+        parts.append(
+            "СЕЙЧАС ГОВОРИТ: " + speaker +
+            ". Используй именно его постоянный характер и манеру из базового описания; "
+            "не перенимай стиль двух остальных. Отвечай на актуальную мысль и сохраняй нить темы."
+        )
         return "\n".join(parts), fresh_ids
 
     def _ensure_thread(self, model):
@@ -466,6 +472,9 @@ class CodexAppServer:
                 self.error = "Codex не подтвердил компактизацию; дальнейшее управление контекстом передано Codex."
             else:
                 self.token_usage = None
+                # The model's compacted summary may omit detailed personas or
+                # conversation rules. Reinstall the canonical show brief once.
+                self.needs_rehydrate = True
         except CodexError:
             # Codex still has its own context management; never block ordinary turns
             # on a manual compaction method that this CLI version may not support.
@@ -522,6 +531,7 @@ class CodexAppServer:
                 }, timeout=30)
                 # Commit the cursor only after Codex accepted this input.
                 self.session_meta = meta
+                self.needs_rehydrate = False
                 self.seen_event_ids.update(fresh_ids)
                 if len(self.seen_event_ids) > 512:
                     self.seen_event_ids = set(list(self.seen_event_ids)[-256:])

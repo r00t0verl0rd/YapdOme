@@ -23,9 +23,10 @@ def build_turn_policy(agent, agent_name, peers, topic, turns, history, mode="liv
         language_instruction(language),
     ]
     if persistent_context:
-        # Codex already has the stable policy, cast and transcript in its thread.
-        # Send only this turn's changes; never repeat the full rules on every turn.
-        parts = dynamic
+        # Codex owns a persistent thread. Stable cast, profiles, output contract
+        # and requested register are installed in the first brief (or after a
+        # confirmed compaction); ordinary turns carry only fresh deltas.
+        parts = [dynamic[0], dynamic[1], dynamic[4], dynamic[5]]
     else:
         parts = [
             character_style(mode, topic),
