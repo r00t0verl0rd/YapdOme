@@ -8,7 +8,7 @@ const vm=require('node:vm');
 
 const source=fs.readFileSync(path.join(__dirname,'..','frontend','client.js'),'utf8');
 const start=source.indexOf('function retryClaim(');
-const end=source.indexOf('\\nfunction scheduleNext()',start);
+const end=source.indexOf('function scheduleNext()',start);
 assert(start>=0&&end>start,'claim handoff functions must remain available');
 const functions=source.slice(start,end);
 
