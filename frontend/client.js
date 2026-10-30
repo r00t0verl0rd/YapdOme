@@ -10,9 +10,11 @@ function requestID(){
 }
 // Editable sample cast, not hard-coded debate positions. Existing saved characters win.
 const defs = [
-  {name:'Норман',color:'#48eafb',description:'Любит рассказывать истории из жизни, слегка хвастается и часто сам попадает в нелепое положение. Отшучивается, если его поддели; способен искренне признать ошибку.',voiceURI:''},
-  {name:'Глитч',color:'#ffb45e',description:'Быстрый на язык, замечает нелепости и любит добродушно подкалывать друзей. Иногда спорит из азарта, но умеет неожиданно поддержать собеседника.',voiceURI:''},
-  {name:'Джесси',color:'#ed68f8',description:'Остроумная, наблюдательная, прямолинейная. Не любит напускную серьёзность, задаёт неудобные вопросы и иногда выдаёт неожиданный поворот без длинных объяснений.',voiceURI:''}
+  {name:'Норман',color:'#48eafb',avatarId:'norman',description:'Любит рассказывать истории из жизни, слегка хвастается и часто сам попадает в нелепое положение. Отшучивается, если его поддели; способен искренне признать ошибку.',voiceURI:''},
+  {name:'Глитч',color:'#ffb45e',avatarId:'glitch',description:'Быстрый на язык, замечает нелепости и любит добродушно подкалывать друзей. Иногда спорит из азарта, но умеет неожиданно поддержать собеседника.',voiceURI:''},
+  {name:'Джесси',color:'#ed68f8',description:'Остроумная, наблюдательная, прямолинейная. Не любит напускную серьёзность, задаёт неудобные вопросы и иногда выдаёт неожиданный поворот без длинных объяснений.',voiceURI:'',avatarId:'jessie'},
+  {name:'Вольт',color:'#8cff6b',description:'Энергичный инженер и экспериментатор. Любит разбирать сложные вещи на простые механизмы, проверять идеи на практике и находить неожиданные технические решения.',voiceURI:'',avatarId:'volt'},
+  {name:'Луна',color:'#b69cff',description:'Спокойная и внимательная исследовательница. Замечает связи между разными темами, задаёт точные вопросы и помогает увидеть общую картину.',voiceURI:'',avatarId:'luna'}
 ];
 const SCIENCE_PHASES=['knowledge','gaps','hypothesis','math','experiment'];
 const PHASE_LABEL={knowledge:'01 · КАРТА ЗНАНИЙ',gaps:'02 · ПРОБЕЛЫ',hypothesis:'03 · ГИПОТЕЗА',math:'04 · МАТЕМАТИКА',experiment:'05 · ЭКСПЕРИМЕНТ'};
@@ -696,7 +698,7 @@ function renderCards(){
   const test=document.createElement('button');test.textContent='♫';
   test.title='Прослушать выбранный голос';test.disabled=!audioAvailable();
   test.onclick=()=>{speech.unlock();speech.stop();speech.push(i,'Привет! Я '+def.name+'. Готов к разговору.')};
-  vc.append(voiceField,test);
+  vc.append(voiceField,avatarField,test);
   const emotionSlot=document.createElement('div');emotionSlot.className='emotion-slot';
   c.append(top,name.wrap,vc,emotionSlot,description.wrap);parent.insertBefore(c,advanced||null);
  });
@@ -718,7 +720,7 @@ function populateVoices(){
  defs.forEach((d,i)=>{const sel=agentCards()[i]?.querySelector('.voice-controls select');if(sel)optionsForVoices(sel,i)});
 }
 const PREF_KEY='triad09';
-function savePrefs(){try{localStorage.setItem(PREF_KEY,JSON.stringify({agents:defs.map(d=>({name:d.name,description:d.description,voiceURI:d.voiceURI,kokoroVoice:d.kokoroVoice,kokoroRuVoice:d.kokoroRuVoice,piperVoice:d.piperVoice,sileroVoice:d.sileroVoice,openaudioVoice:d.openaudioVoice,qwen3Voice:d.qwen3Voice })),topic:$('topic').value,sharedGoal:$('sharedGoal').value,showMode:$('showMode').value,voiceEnabled:$('voiceEnabled').checked,ttsBackend:$('ttsBackend').value,rate:$('rate').value,directorEnabled:$('directorEnabled').checked,model:$('model').value,qwen3Size:qwen3Size,kokoroModel:kokoroModel}))}catch(_){}}
+function savePrefs(){try{localStorage.setItem(PREF_KEY,JSON.stringify({agents:defs.map(d=>({name:d.name,description:d.description,voiceURI:d.voiceURI,avatarId:d.avatarId,kokoroVoice:d.kokoroVoice,kokoroRuVoice:d.kokoroRuVoice,piperVoice:d.piperVoice,sileroVoice:d.sileroVoice,openaudioVoice:d.openaudioVoice,qwen3Voice:d.qwen3Voice })),topic:$('topic').value,sharedGoal:$('sharedGoal').value,showMode:$('showMode').value,voiceEnabled:$('voiceEnabled').checked,ttsBackend:$('ttsBackend').value,rate:$('rate').value,directorEnabled:$('directorEnabled').checked,model:$('model').value,qwen3Size:qwen3Size,kokoroModel:kokoroModel}))}catch(_){}}
 function restorePrefs(){
  try{
   const modern=localStorage.getItem(PREF_KEY),p=JSON.parse(modern||localStorage.getItem('triad08')||localStorage.getItem('triad07')||'{}');
@@ -732,11 +734,12 @@ function restorePrefs(){
           'Любознательный изобретатель и импровизатор. Любит неожиданные идеи, юмор и короткие эксперименты, которые проверяют смелые гипотезы.'];
         if(a.description!==obsolete[i])d.description=a.description.slice(0,900);
         else if(a.name===['Архитектор','Скептик','Экспериментатор'][i])
-          d.name=['Норман','Глитч','Джесси'][i];
+          d.name=['Норман','Глитч','Джесси','Вольт','Луна'][i];
       }
      else if(typeof a.role==='string')d.description=
        (a.role+(typeof a.goal==='string'&&a.goal.trim()?' '+a.goal:'')).slice(0,900);
      if(typeof a.voiceURI==='string')d.voiceURI=a.voiceURI;
+     if(['norman','glitch','jessie','volt','luna'].includes(a.avatarId))d.avatarId=a.avatarId;
      if(kokoroSpeakers.includes(a.kokoroVoice))d.kokoroVoice=a.kokoroVoice;
      if(kokoroRuSpeakers.some(([id])=>id===a.kokoroRuVoice))d.kokoroRuVoice=a.kokoroRuVoice;
      if(piperSpeakers.some(([id])=>id===a.piperVoice))d.piperVoice=a.piperVoice;

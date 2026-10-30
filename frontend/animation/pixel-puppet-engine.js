@@ -117,6 +117,32 @@
       hd(9,31,2);hd(39,31,2);
       if(p.cheek>.4){hd(15,29,2);hd(33,29,2)}
     }
+    else if(id==='volt'){
+      // Volt: twin antennae, angular reactor helmet and a split visor.
+      const antenna=[[18,15],[17,10],[14,7],[14,3],[17,3],[18,8],[22,11]];
+      hpath(antenna,3,false);hpath([[30,15],[31,10],[34,7],[34,3],[31,3],[30,8],[26,11]],3,false);
+      const shell=[[12,17],[17,12],[31,12],[36,17],[34,29],[29,35],[19,35],[14,29]];
+      hfill(shell,1);hpath(shell,3);hpath([[14,18],[20,14],[28,14],[34,18]],2,false);
+      hfill([[16,19],[32,19],[31,28],[27,32],[21,32],[17,28]],2);
+      for(let y=20;y<=27;y++)for(let x=17;x<=31;x++)he(x,y);
+      hl(17,18,31,18,3);hl(17,27,31,27,2);
+      drawFace('volt',r,{hd,hl,hpath,hfill,he,HX,HY,gaze},p,talk,blink,beat);
+      hl(18,34,21,37,2);hl(30,34,27,37,2);hl(21,37,27,37,3);
+      hd(11,24,3);hd(37,24,3);
+    }
+    else if(id==='luna'){
+      // Luna: rounded lunar dome, crescent side fins and orbital forehead marks.
+      const dome=[[12,24],[13,17],[17,12],[21,9],[27,9],[31,12],[35,17],[36,24],[34,31],[29,35],[19,35],[14,31]];
+      hfill(dome,1);hpath(dome,3);
+      hpath([[13,20],[9,17],[7,12],[9,8],[12,13],[14,18]],2,false);
+      hpath([[35,20],[39,17],[41,12],[39,8],[36,13],[34,18]],2,false);
+      hfill([[16,18],[32,18],[32,28],[28,33],[20,33],[16,28]],2);
+      for(let y=20;y<=27;y++)for(let x=17;x<=31;x++)he(x,y);
+      hl(17,18,31,18,3);hl(17,27,31,27,2);
+      hd(20,11,3);hd(24,8,3);hd(28,11,3);
+      drawFace('luna',r,{hd,hl,hpath,hfill,he,HX,HY,gaze},p,talk,blink,beat);
+      hd(12,29,2);hd(36,29,2);hd(14,32,3);hd(34,32,3);
+    }
     return r.a;
   }
   function drawFace(id,r,d,p,talk,blink,beat){

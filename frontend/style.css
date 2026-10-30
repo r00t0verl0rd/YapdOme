@@ -773,3 +773,11 @@ input[type=text],input[type=number],textarea,select,button,
 .connect-popover>summary,.scene-advanced>summary,.run-pill,.voice-controls button,
 .donation-fields input,.tts-progress-wrap progress{border-radius:12px!important}
 .message.live,.message.system,.message.human,.message.donation{border-radius:16px!important}
+
+/* Five independently animated character tiles. */
+.live-tiles{grid-template-columns:repeat(5,minmax(0,1fr))}
+.voice-controls{display:flex;flex-direction:column;gap:6px;min-width:0}
+.voice-controls .voice-field,.voice-controls .avatar-field{min-width:0;width:100%}
+.voice-controls .avatar-field select,.voice-controls .voice-field select{width:100%;min-width:0}
+@media(max-width:990px){.live-tiles{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:600px){.live-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}

@@ -3,7 +3,7 @@
   'use strict';
   const engine = window.YapPixelEngine;
   const STORAGE_KEY = 'YapdOme.pixel-puppet.v1';
-  const ids = ['norman', 'glitch', 'jessie'];
+  const ids = ['norman', 'glitch', 'jessie', 'volt', 'luna'];
   const labels = {neutral:'Спокойствие', joy:'Радость', laugh:'Смех', angry:'Злость', surprise:'Удивление', skeptic:'Скепсис', sad:'Грусть', smug:'Ухмылка', focus:'Фокус', confused:'Недоумение'};
   const hasMood = v => typeof v === 'string' && Object.hasOwn(labels, v);
   const validMood = v => v === 'auto' || hasMood(v);
@@ -11,13 +11,12 @@
   const $ = id => document.getElementById(id);
 
   function readSettings() {
-    const result = {fps:12, moods:['auto', 'auto', 'auto']};
+    const result = {fps:12, moods:['auto', 'auto', 'auto', 'auto', 'auto']};
     try {
       const v = JSON.parse(localStorage.getItem(STORAGE_KEY));
       if (!v || typeof v !== 'object' || Array.isArray(v)) return result;
       if ([12, 20, 30].includes(v.fps)) result.fps = v.fps;
-      if (Array.isArray(v.moods) && v.moods.length === 3)
-        result.moods = result.moods.map((m, i) => validMood(v.moods[i]) ? v.moods[i] : m);
+      if (Array.isArray(v.moods)) result.moods = result.moods.map((m, i) => validMood(v.moods[i]) ? v.moods[i] : m);
     } catch (_) { /* Private browsing or corrupt storage: keep safe defaults. */ }
     return result;
   }
@@ -28,7 +27,7 @@
     try { if (typeof speech !== 'undefined') audio = speech; } catch (_) {}
     try { if (typeof state !== 'undefined' && !state.paused) current = state.current; } catch (_) {}
     try { if (typeof defs !== 'undefined') cast = defs; } catch (_) {}
-    const speaker = Number.isInteger(audio?.audibleAgent) && audio.audibleAgent >= 0 && audio.audibleAgent < 3 ? audio.audibleAgent : null;
+    const speaker = Number.isInteger(audio?.audibleAgent) && audio.audibleAgent >= 0 && audio.audibleAgent < ids.length ? audio.audibleAgent : null;
     return {audio, current, cast, speaker};
   }
   // Bounded lexical hints, not emotion recognition from audio.
@@ -125,7 +124,8 @@
       const pose = {...a.pose, open:0, round:a.level > 0 ? a.pose.round : 0};
       const blinkPhase = (now + a.index * 700) % 4300;
       const blink = !reduced.matches && blinkPhase < 160 ? Math.sin(Math.PI * blinkPhase / 160) : 0;
-      const pixels = engine.draw(a.id, pose, {t:reduced.matches ? 0 : now / 1000, talk:a.level, blink});
+      const skin = ids.includes(ctx.cast?.[a.index]?.avatarId) ? ctx.cast[a.index].avatarId : a.id;
+      const pixels = engine.draw(skin, pose, {t:reduced.matches ? 0 : now / 1000, talk:a.level, blink});
       for (let i = 0; i < pixels.length; i++) {
         if (pixels[i] !== a.last[i]) { a.leds[i].dataset.v = String(pixels[i]); a.last[i] = pixels[i]; }
       }
@@ -168,7 +168,7 @@
       ['emotion', 'reaction'].includes(evt.type) ? ['type', 'agent', 'emotion', 'duration'] : null;
     if (!allowed || Object.keys(evt).some(k => !allowed.includes(k))) return false;
     const index = Number.isInteger(evt.agent) ? evt.agent : ids.indexOf(evt.agent);
-    if (index < 0 || index > 2 || !agents[index]) return false;
+    if (index < 0 || index >= ids.length || !agents[index]) return false;
     const duration = evt.duration === undefined ? 2000 : evt.duration;
     if (typeof duration !== 'number' || !Number.isFinite(duration) || duration < 100 || duration > 10000) return false;
     if (evt.type === 'gaze') {
@@ -184,7 +184,7 @@
     if (booted || !engine || engine.W !== 48 || engine.H !== 48) return;
     root = $('liveAvatars');
     const tiles = root ? [...root.querySelectorAll('.live-tile')] : [];
-    if (tiles.length !== 3 || tiles.some(t => !t.querySelector('.hud-portrait'))) return;
+    if (tiles.length !== ids.length || tiles.some(t => !t.querySelector('.hud-portrait'))) return;
     tiles.forEach((tile, index) => {
       const portrait = tile.querySelector('.hud-portrait');
       portrait.classList.add('pixel-portrait');
