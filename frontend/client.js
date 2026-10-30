@@ -98,10 +98,9 @@ const speech = {
  // A single sentence of audio is prepared while the previous one is audible.
  prefetchPlan(entry){
    const backend=entry.config.backend,config=entry.config,text=entry.text;
-   // Keep one bounded look-ahead for every local WAV backend. Longer replies
-   // are synthesized in endpoint-sized chunks by wavFor(), then joined once.
-   const budget=950;
-   if(!text||text.length>budget)return null;
+   // Prepare the next complete turn in the background. wavFor() splits long
+   // replies into endpoint-sized chunks and joins them before playback.
+   if(!text)return null;
    if(backend==='kokoro-ru'&&isRussian(text))
      return {url:'/api/kokoro-ru/speak',limit:450,payload:{text,
        voice:config.kokoroRuVoice||['sveta','dima','masha'][entry.agent],
@@ -1303,7 +1302,7 @@ async function issueTurn(agent,ticket){
  // One deterministic named greeting; the model must not repeat it.
  const greeting=donation&&!donation.acknowledged?'Спасибо, '+donation.donor+'! ':'';
  const baseSpeechConfig=speech.snapshot(agent);
- const pipeline=baseSpeechConfig.backend!=='browser'&&$('voiceEnabled').checked;
+ const pipeline=$('voiceEnabled').checked;
  const c={agent,ticket,turn:state.turns,epoch,requestId,item,text:greeting,generatedText:'',
           donation,socialFocus,pipeline,speechConfig:pipeline?Object.freeze({...baseSpeechConfig,wholeWav:true}):baseSpeechConfig,
           audibleText:'',heardText:'',controller:new AbortController(),
@@ -1327,10 +1326,11 @@ async function issueTurn(agent,ticket){
     const liveListening=$('showMode').value==='live'&&$('auto').checked;
     if(liveListening&&c.audioStarted){
      c.phase='speaking';maybeConsultListeners(c);
-     await speech.idle();
-     if(state.current!==c||epoch!==state.epoch)return;
     }
-    state.pipelineReady=!liveListening&&Boolean(c.audioStarted&&speech.playing);
+    // Release the model turn as soon as audio starts in every mode. The next
+    // response can then generate and synthesize behind this playback; speech
+    // itself remains serialized by the audio queue.
+    state.pipelineReady=Boolean(c.audioStarted&&speech.playing);
     if(!c.audioStarted)c.item.body.textContent=spoken;
     await endTurn(c,true,'Завершено · '+new Date().toLocaleTimeString('ru-RU'));
     return;
@@ -1642,7 +1642,7 @@ $('directorEnabled').onchange=()=>{
  savePrefs();
 };
 $('sendInterject').onclick=humanMessage;
-$('sendDonation').onclick=donationMessage;$('donationText').onkeydown=e=>{if(e.key==='Enter')donationMessage()};$('interject').onkeydown=e=>{if(e.key==='Enter')humanMessage()};
+$('sendDonation').onclick=donationMessage;$('donationText').onkeydown=e=>{if(e.key==='Enter')donationMessage()};$('interject').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();humanMessage()}};
 $('voiceEnabled').onchange=()=>{if(!$('voiceEnabled').checked)speech.stop();savePrefs()};
 $('voiceStudioButton').onclick=()=>{
  const voicePanel=$('voiceSettings'),button=$('voiceStudioButton');

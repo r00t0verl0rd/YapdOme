@@ -291,7 +291,7 @@ body{background:
 .input-row,.input-row>*{min-width:0;max-width:100%}
 .inputpanel:not(.donations) .input-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px}
 .inputpanel:not(.donations) #interject{grid-column:1 / span 2;min-width:0;width:100%;
- flex:auto;height:33px;padding:6px 9px}
+ flex:auto;height:90px;min-height:90px;max-height:150px;resize:vertical;padding:8px 10px;line-height:1.4;font-size:11px}
 .inputpanel:not(.donations) #sendInterject{grid-column:1;min-height:32px}
 
 .donation-fields{display:grid;grid-template-columns:minmax(65px,85px) minmax(0,1fr);
@@ -760,3 +760,16 @@ input[type=text],input[type=number],textarea,select{transition:border-color .18s
 .qwen3-voice-form textarea,.qwen3-voice-form input[type=text],.qwen3-voice-form input[type=file],.qwen3-voice-form select{font:inherit;width:100%;box-sizing:border-box}
 .qwen3-voice-actions{display:flex;gap:8px}
 #kokoroModelWrap{margin:0 0 10px;padding:10px;background:#0a1620;border:1px solid #2a4c60;border-radius:8px}
+
+/* Softer, friendlier corners across the studio UI. */
+:root{--friendly-radius:20px}
+.panel,.card,.live-tile,.voice-selector,.voice-engine-config,.feed,.connect-content,
+.voice-panel[open] .voice-panel-body,.scene-advanced,.tts-install,.tts-progress-wrap{
+  border-radius:var(--friendly-radius)!important
+}
+.message,.inputpanel,.donations,.topic-panel,#sharedGoal,.voice-installer,
+.qwen3-voice-form,#kokoroModelWrap{border-radius:16px!important}
+input[type=text],input[type=number],textarea,select,button,
+.connect-popover>summary,.scene-advanced>summary,.run-pill,.voice-controls button,
+.donation-fields input,.tts-progress-wrap progress{border-radius:12px!important}
+.message.live,.message.system,.message.human,.message.donation{border-radius:16px!important}
