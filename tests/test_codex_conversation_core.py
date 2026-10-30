@@ -1,6 +1,7 @@
 import unittest
 
 from backend.server.conversation import (
+    ConversationStore,
     discussion_frame,
     live_requested_voice,
     social_focus_instructions,
@@ -65,6 +66,43 @@ class ConversationCoreTests(unittest.TestCase):
         self.assertEqual(normalize_language("fr-FR"), "ru")
         self.assertEqual(language_instruction("en"), "Respond in English.")
         self.assertEqual(language_instruction("ru"), "Отвечай по-русски.")
+
+    def test_store_deduplicates_delta_and_preserves_provider(self):
+        store = ConversationStore(max_events=8)
+        event = {
+            "event_id": "evt-deepseek-0001",
+            "agent": 0,
+            "name": "Норман",
+            "provider": "deepseek",
+            "text": "Реплика из DeepSeek",
+        }
+        history, accepted = store.add_events(
+            "show-session-0001", [event], "Общая тема", "ru"
+        )
+        history, accepted_retry = store.add_events(
+            "show-session-0001", [event], "Общая тема", "ru"
+        )
+        self.assertEqual(len(history), 1)
+        self.assertEqual(history[0]["provider"], "deepseek")
+        self.assertEqual(accepted, ["evt-deepseek-0001"])
+        self.assertEqual(accepted_retry, ["evt-deepseek-0001"])
+
+    def test_store_isolates_sessions_and_clears_context_on_topic_change(self):
+        store = ConversationStore()
+        store.add_events("show-session-0002", [
+            {"event_id": "evt-old-topic-0001", "agent": 1,
+             "name": "Глитч", "text": "Старая тема"}
+        ], "Старая тема")
+        history, _ = store.add_events("show-session-0002", [
+            {"event_id": "evt-new-topic-0001", "agent": -1,
+             "name": "Ведущий", "text": "Новая тема"}
+        ], "Новая тема")
+        store.add_events("show-session-0003", [
+            {"event_id": "evt-other-session-01", "agent": 2,
+             "name": "Джесси", "text": "Другая сессия"}
+        ], "Тема B")
+        self.assertEqual([row["text"] for row in history], ["Новая тема"])
+        self.assertEqual(len(store.history("show-session-0003")), 1)
 
     def test_conversation_store_accepts_only_new_events(self):
         store = ConversationStore(max_events=4)
