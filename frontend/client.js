@@ -892,6 +892,8 @@ async function begin(){
  try{
   await syncAgentNames();
   if(epoch!==state.epoch||state.stopping)return; // a STOP during startup wins
+  if(state.provider==='codex')await api('/codex/session/reset',{});
+  if(epoch!==state.epoch||state.stopping)return;
   const s=await coreEvent('start',{max_turns:0});
   if(epoch!==state.epoch||state.stopping)return;
   applyCore(s);
@@ -1450,11 +1452,11 @@ async function humanMessage(){
   applyCore(s);
   if(newTopic!==null){
    $('topic').value=newTopic;fitTopicField();savePrefs();
-   state.history=[{agent:-1,name:'Ведущий',text:newTopic?'Новая тема: '+newTopic:'Полностью смените тему, выберите другое направление. Не возвращайтесь к прошлому обсуждению.'}];
+   state.history=[{event_id:requestID(),agent:-1,name:'Ведущий',text:newTopic?'Новая тема: '+newTopic:'Полностью смените тему, выберите другое направление. Не возвращайтесь к прошлому обсуждению.'}];
    state.journal=[];state.directorBudget=null;state.lastDonationName='';state.social.memory=[[],[],[]];updateScienceUI();
    system('Новая тема разговора: '+(newTopic||'свободная беседа'));
   }else{
-   state.history.push({agent:-1,name:'Ведущий',text});state.history=state.history.slice(-16);
+   state.history.push({event_id:requestID(),agent:-1,name:'Ведущий',text});state.history=state.history.slice(-16);
   }
   if(s.kind==='user_pause')system('Ведущий попросил притормозить. Эфир продолжается; для полной паузы есть отдельная кнопка.');
   claimNext();
@@ -1483,7 +1485,7 @@ async function reviewDonationTopic(donation){
 }
 function applyDonationTopic(donation,topic){
  $('topic').value=topic;fitTopicField();savePrefs();cancelDirector();resetSocialFocus();
- state.history=[{agent:-1,name:donation.donor,text:'Новая тема разговора от зрителя: '+topic}];
+ state.history=[{event_id:requestID(),agent:-1,name:donation.donor,text:'Новая тема разговора от зрителя: '+topic}];
  state.journal=[];state.directorBudget=null;state.lastDonationName='';state.social.memory=[[],[],[]];
  updateScienceUI();
  donation.item.meta.textContent='✓ ТЕМА ИЗМЕНЕНА · '+topic;
