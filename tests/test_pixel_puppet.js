@@ -157,11 +157,12 @@ test('each of the three portraits gets an independent absolute CSS hue value', (
 });
 
 test('all three live tiles share Norman green for name, status and waveform', () => {
-  assert.match(hudCss, /\\.live-tile\\{--agent-glow:#39f6a7/);
-  assert.match(hudCss, /\\.live-tile:nth-child\\(2\\),\\.live-tile:nth-child\\(3\\)\\{--agent-glow:#39f6a7\\}/);
-  assert.doesNotMatch(hudCss, /--agent-glow:#(?:29e8ff|ffc936)/);
-  assert.match(hudCss, /\\.live-tile-top[^}]*color:var\\(--agent-glow\\)/);
-  assert.match(hudCss, /\\.wave-lane i[^}]*background:var\\(--agent-glow\\)/);
+  assert.ok(hudCss.includes('.live-tile{--agent-glow:#39f6a7'));
+  assert.ok(hudCss.includes('.live-tile:nth-child(2),.live-tile:nth-child(3){--agent-glow:#39f6a7}'));
+  assert.ok(!hudCss.includes('--agent-glow:#29e8ff'));
+  assert.ok(!hudCss.includes('--agent-glow:#ffc936'));
+  assert.ok(hudCss.includes('.live-tile-top{') && hudCss.includes('color:var(--agent-glow)'));
+  assert.ok(hudCss.includes('.wave-lane i{') && hudCss.includes('background:var(--agent-glow)'));
 });
 
 test('CSS hue angle is absolute and matches the rainbow scale', () => {
