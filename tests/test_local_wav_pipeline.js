@@ -154,4 +154,5 @@ test('non-pipelined engine claim still waits for audio drain',async()=>{
   '\nthis.claimNext=claimNext;',ctx);
  await ctx.claimNext();
  assert.equal(rescheduled,true);
+ assert.equal(state.claimPending,null,'audio drain must not leave the claim slot reserved');
 });
