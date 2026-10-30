@@ -161,7 +161,7 @@ class ConversationStore:
                     continue
                 item = {"event_id": event_id, "agent": event.get("agent", -1),
                         "name": str(event.get("name") or "Участник")[:42], "text": text[:1200]}
-                for key in ("untrusted", "priority", "interrupted", "expiresAfter"):
+                for key in ("untrusted", "priority", "interrupted", "expiresAfter", "provider"):
                     if key in event:
                         item[key] = event[key]
                 session["events"].append(item)
