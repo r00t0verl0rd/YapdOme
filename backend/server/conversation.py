@@ -93,8 +93,17 @@ def character_profile_instruction(agent_name, description):
 
 def live_requested_voice(topic):
     """Apply an explicit host-requested register; never reduce it to a catchphrase."""
-    if re.search(r"мат|матер|гопник|гопницк|зумер|зуммер",
-                 str(topic).casefold()):
+    words = set(re.findall("[а-яё]+", str(topic).casefold()))
+    profanity_request = bool(words.intersection({
+        "мат", "матом", "матерись", "материтесь", "материться",
+        "матерный", "матерная", "матерное", "матерные", "матерно",
+        "матерными", "матерного", "матерным", "матерных",
+    }))
+    street_request = any(
+        word.startswith(("гопник", "гопницк", "зумер", "зуммер"))
+        for word in words
+    )
+    if profanity_request or street_request:
         return (
             "СТИЛЬ ВЕДУЩЕГО: нужна живая уличная разговорная манера, дерзость и русский мат. "
             "Используй естественный русский мат в большинстве реплик (обычно одно-два "

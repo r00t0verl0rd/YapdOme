@@ -103,6 +103,7 @@ class NaturalDialogueTests(unittest.TestCase):
         self.assertIn("одно-два", guide)
         self.assertIn("не повторяй одно и то же слово", guide)
         self.assertEqual(triad.live_requested_voice("поговорите о солнечной системе"), "")
+        self.assertEqual(triad.live_requested_voice("поговорите о математике"), "")
         brief = triad.character_style("live")
         self.assertIn("не своди индивидуальный голос", brief)
         self.assertNotIn("не своди индивидуальный голос", triad.character_style("science"))
