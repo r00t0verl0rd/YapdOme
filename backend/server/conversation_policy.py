@@ -23,4 +23,4 @@ def build_turn_policy(agent, agent_name, peers, topic, turns, history, mode="liv
         ". Собеседники: " + json.dumps(peers, ensure_ascii=False) + ". ",
         language_instruction(language),
     ]
-    return "\\n".join(part.strip() for part in parts if part and part.strip())
+    return "\n".join(part.strip() for part in parts if part and part.strip())
