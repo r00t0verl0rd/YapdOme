@@ -323,3 +323,32 @@ def dialogue_pace(turns, history):
     if len(recent) >= 2 and sum(len(row.split()) for row in recent[-2:]) >= 50:
         return "short"
     return "normal"
+
+
+def live_topic_guide(topic, turns, history):
+    """Periodically switch angle within operator topic, never add a new topic."""
+    rows = [x for x in history[-9:] if isinstance(x, dict)
+            and type(x.get("agent")) is int and 0 <= x["agent"] <= 2
+            and isinstance(x.get("text"), str) and x["text"].strip()]
+    if (open_topic(topic) or scene_mode(topic) or type(turns) is not int or turns < 9
+            or turns % 8 != 1 or len(rows) < 7):
+        return ""
+    if any(isinstance(x, dict) and x.get("agent") == -1 for x in history[-3:]):
+        return ""
+    axes = []
+    subject = str(topic).casefold()
+    if re.search(r"будущ|завтр", subject):
+        axes.append("будущих последствиях")
+    if re.search(r"прошл|раньше|истори", subject):
+        axes.append("том, как было раньше")
+    if re.search(r"технолог|техник|цифров|интернет", subject):
+        axes.append("неожиданной стороне технологии")
+    if re.search(r"люд|человек|общество|жизнь|проблем", subject):
+        axes.append("конкретной человеческой ситуации")
+    angle = axes[(turns // 8 - 1) % len(axes)] if axes else "другом аспекте исходной темы"
+    return ("КОМПАС РАЗГОВОРА: хватит развивать одну и ту же подтему. "
+            "Твоя очередь естественно перевести беседу к " + angle + ". "
+            "Не добавляй очередную деталь к старому регламенту или комиссии. "
+            "Не объявляй смену темы и не пересказывай историю беседы. "
+            "Начни с короткого личного взгляда, примера или неожиданного вопроса. "
+            "Оставайся в рамках ИСХОДНОЙ темы ведущего. ")
