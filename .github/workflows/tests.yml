@@ -26,10 +26,12 @@ jobs:
         run: |
           python -m unittest discover -s tests -p 'test_codex*.py' -v
           python -m unittest discover -s tests -p 'test_provider_adapters.py' -v
-      - name: Live director and anti-loop tests
+      - name: Live director, compact prompts and anti-loop tests
         run: |
           python -m unittest discover -s tests -p 'test_ai_director.py' -v
           python -m unittest discover -s tests -p 'test_director_boundaries.py' -v
+          python -m unittest discover -s tests -p 'test_natural_dialogue.py' -v
+          python -m unittest discover -s tests -p 'test_science_context.py' -v
       - name: Engine controller and social routing tests
         run: |
           python -m unittest discover -s tests -p 'test_engine_controller.py' -v
