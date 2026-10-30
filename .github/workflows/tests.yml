@@ -24,6 +24,10 @@ jobs:
           node-version: "22"
       - name: Codex session and auth tests
         run: python -m unittest discover -s tests -p 'test_codex*.py' -v
+      - name: Live director and anti-loop tests
+        run: |
+          python -m unittest discover -s tests -p 'test_ai_director.py' -v
+          python -m unittest discover -s tests -p 'test_director_boundaries.py' -v
       - name: JavaScript regressions
         shell: bash
         run: |
