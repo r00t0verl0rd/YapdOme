@@ -676,6 +676,8 @@ class Handler(BaseHTTPRequestHandler):
                 codex_data = {
                     "agent_name": agent_name,
                     "agent": agent,
+                    "language": language,
+                    "turns": turns,
                     "agents": peers,
                     "cast_profiles": cast,
                     "description": description,
@@ -689,7 +691,8 @@ class Handler(BaseHTTPRequestHandler):
                     "director_plan": proposed,
                     "donation_context": donation,
                     "post_donation_name": data.get("post_donation_name"),
-                    "history": history
+                    "history": history_delta,
+                    "conversation_history": history
                 }
                 self.send_response(200)
                 self.headers_common("text/event-stream; charset=utf-8")
