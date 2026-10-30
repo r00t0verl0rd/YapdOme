@@ -198,3 +198,128 @@ def live_requested_voice(topic):
                 "Но не вставляй одно и то же «блин» в каждую реплику. Манеры трёх "
                 "персонажей должны отличаться. Не оскорбляй уязвимые группы. ")
     return ""
+
+
+SCENE_TOPIC_PREFIXES = (
+    "разыграйте", "разыграем", "сыграйте сцену", "импровизируйте",
+    "представьте, что", "вообразите, что", "притворитесь, что",
+    "сцена:", "ситуация:", "действие происходит",
+)
+SCENE_SITUATION_PATTERN = r"\b(?:вы|мы|они|робот\w*|агент\w*|персонаж\w*|геро\w*|друзья)\b.{0,140}\b(?:оказались|попали|застряли|проснулись)\b"
+
+REPETITION_WORDS = frozenset(
+    "это этот этой такая такой потому просто потом также здесь сейчас когда чтобы если тогда "
+    "можно нужно лучше стало будет важно здесь вообще только очень меня тебя себе свои своим "
+    "свои тебе меня него наша наше вашего самый тоже уже ведь просто слово слова "
+    "брат братан братва блин нахер короче пока сразу каждый вроде любой опять".split()
+)
+_RU_ENDINGS = tuple(sorted((
+    "иями", "ями", "ами", "ого", "ему", "ому", "ыми", "ими", "ее", "ие", "ые", "ое",
+    "ая", "яя", "ый", "ий", "ой", "ым", "им", "ом", "ем", "ах", "ях", "ов", "ев",
+    "ей", "ам", "ям", "ую", "юю", "ых", "их", "а", "я", "ы", "и", "е", "о", "у", "ю",
+), key=len, reverse=True))
+
+
+def _dialogue_terms(text):
+    words = re.findall(r"[^\W\d_]{4,}", str(text).casefold().replace("ё", "е"), flags=re.UNICODE)
+    terms = set()
+    for word in words:
+        if word in REPETITION_WORDS:
+            continue
+        for ending in _RU_ENDINGS:
+            if word.endswith(ending) and len(word) - len(ending) >= 4:
+                word = word[:-len(ending)]
+                break
+        if len(word) >= 4 and word not in REPETITION_WORDS:
+            terms.add(word)
+    return terms
+
+
+def recurring_motifs(history, topic=""):
+    """Return recurring non-topic content words across recent agent turns."""
+    rows = [row for row in history[-16:] if isinstance(row, dict)
+            and 0 <= row.get("agent", -1) <= 2 and isinstance(row.get("text"), str)]
+    rows = rows[-9:]
+    topic_terms = _dialogue_terms(topic)
+    counts = {}
+    for row in rows:
+        for term in _dialogue_terms(row["text"]) - topic_terms:
+            counts[term] = counts.get(term, 0) + 1
+    recurring = [(count, term) for term, count in counts.items() if count >= 3]
+    recurring.sort(key=lambda item: (-item[0], item[1]))
+    return [term for _, term in recurring[:6]]
+
+
+def scene_mode(topic):
+    """Only an explicit host-supplied situation starts a scene in live mode."""
+    value = str(topic or "").strip().lower()
+    if open_topic(value):
+        return False
+    return (any(value.startswith(prefix) for prefix in SCENE_TOPIC_PREFIXES)
+            or re.search(SCENE_SITUATION_PATTERN, value) is not None)
+
+# ---- TRIAD SCIENCE: five-step research method ------------------------------
+# Three agent turns per step. The cycle revises tentative results.
+SCIENCE_PHASES = ("knowledge", "gaps", "hypothesis", "math", "experiment")
+SCIENCE_BRIEF = {
+    "knowledge": ("01 · КАРТА ЗНАНИЙ. Назови конкретное известное утверждение и его "
+                  "границы применимости. Отметь, что нуждается в сверке с источниками."),
+    "gaps": ("02 · ПРОБЕЛЫ И ПРОТИВОРЕЧИЯ. Ищи скрытые предпосылки, ошибки, "
+             "неизвестные величины и реальные контрпримеры."),
+    "hypothesis": ("03 · ГИПОТЕЗА. Сформулируй точную, потенциально опровержимую "
+                   "модель, конкурирующую альтернативу и условия опровержения."),
+    "math": ("04 · МАТЕМАТИЧЕСКАЯ ПРОВЕРКА. Выведи следствие с явными допущениями, "
+             "проверь размерности и предельные случаи. Не имитируй вычисления."),
+    "experiment": ("05 · ПРОВЕРЯЕМЫЙ ЭКСПЕРИМЕНТ. Предложи измерения, контроль "
+                   "и критерий, различающий две гипотезы. Укажи план воспроизведения."),
+}
+SCIENCE_ROLES = (
+    "ТЕОРЕТИК: формулируй модели, связи и исходные допущения.",
+    "КРИТИК: ищи опровержения, слабые посылки и логические ошибки, а не повод поспорить.",
+    "ЭКСПЕРИМЕНТАТОР: проектируй независимые воспроизводимые проверки и метрики.",
+)
+
+
+def science_phase(turns):
+    if type(turns) is not int or turns < 0:
+        return "knowledge"
+    return SCIENCE_PHASES[(turns // 3) % len(SCIENCE_PHASES)]
+
+
+def science_protocol(phase, agent):
+    if type(agent) is not int or agent not in range(3):
+        raise BridgeError("Неверный исследователь")
+    return (
+        "НАУЧНЫЙ РЕЖИМ / TRIAD SCIENCE. " + SCIENCE_ROLES[agent] + " " +
+        SCIENCE_BRIEF.get(phase, SCIENCE_BRIEF["knowledge"]) + " "
+        "Добавь один конкретный результат рассуждения, реагируя на участников. "
+        "Разделяй наблюдения, интерпретации и предположения. "
+        "Заметки группы НЕПРОВЕРЕНЫ, пока не проведена независимая проверка. "
+        "Без инструментов или источников не утверждай, что проведены вычисления, "
+        "симуляции или измерения; вместо этого предложи проверяемую процедуру. "
+        "Гипотезы о времени, чёрных дырах и сознании не считай научными фактами. "
+    )
+
+
+PACE_BRIEF = {
+    "micro": "МИКРОРЕАКЦИЯ: одна короткая естественная фраза, 1–8 слов. Можно начать с «Эмм», «Ну», «Типа», «Хм» — персонаж обдумывает вслух, но без искусственных пауз. Достаточно короткого отклика, без обязательного аргумента.",
+    "short": "КОРОТКО: одно предложение, до 25 слов. Сразу к сути, без вступлений; допустимо естественное «ну», «типа», «короче».",
+    "normal": "ОБЫЧНО: одно-два предложения и одна новая мысль, без перечисления пунктов.",
+}
+
+
+def dialogue_pace(turns, history):
+    """Let the preceding utterance shape the response; never pace by turn number."""
+    recent = [str(x.get("text", "")).strip() for x in history[-3:]
+              if isinstance(x, dict) and not x.get("untrusted") and x.get("text")]
+    if not recent:
+        return "normal"
+    last = recent[-1]
+    words = len(last.split())
+    if words >= 50:
+        return "micro"
+    if last.endswith("?") or last.endswith("？") or (words <= 20 and last.endswith("!")):
+        return "short"
+    if len(recent) >= 2 and sum(len(row.split()) for row in recent[-2:]) >= 50:
+        return "short"
+    return "normal"
