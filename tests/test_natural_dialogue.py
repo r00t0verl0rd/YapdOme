@@ -14,11 +14,32 @@ class NaturalDialogueTests(unittest.TestCase):
     def test_live_is_studio_conversation_not_invented_roleplay(self):
         brief = triad.character_style("live").lower()
         self.assertIn("не ролевая игра", brief)
-        self.assertIn("не добавляй новых персонажей, предметов, происшествий и действий", brief)
-        self.assertIn("не подхватывай как факт реквизит", brief)
-        self.assertIn("молча оставь её в прошлом", brief)
-        self.assertIn("Личная причуда персонажа".lower(), brief)
+        self.assertIn("не выдумывай биографию", brief)
+        self.assertIn("не описывай студию и жесты", brief)
+        self.assertIn("метафоры не превращай", brief)
+        self.assertIn("не повторяй исчерпанные мысли", brief)
+        self.assertLess(len(brief), 700)
         self.assertNotIn("сценарист бесконечной сценки", brief)
+
+    def test_static_live_policy_is_compact_and_dynamic_guidance_is_conditional(self):
+        static = triad.character_style("live") + triad.turn_protocol(
+            "Норман", ["Норман", "Глитч", "Джесси"]
+        )
+        self.assertLess(len(static), 1100)
+        self.assertIn("[[TO:Имя]]", static)
+        self.assertIn("[[PASS]]", static)
+
+        empty = triad.conversational_direction("Коты", 4, [], mode="live")
+        self.assertIn("Начни с конкретного", empty)
+        ordinary = triad.conversational_direction(
+            "Коты", 5, [{"agent": 0, "text": "Коты очень независимы."}], mode="live"
+        )
+        self.assertEqual(ordinary, "")
+
+    def test_turn_format_is_not_repeated_in_tail_policy(self):
+        protocol = triad.turn_protocol("Норман", ["Норман", "Глитч", "Джесси"])
+        self.assertEqual(protocol.count("[[PASS]]"), 1)
+        self.assertLess(len(protocol), 600)
 
     def test_agreement_streak_requires_three_genuine_agents(self):
         rows = [{"agent": i % 3, "text": line} for i, line in enumerate((
@@ -34,9 +55,9 @@ class NaturalDialogueTests(unittest.TestCase):
 
     def test_live_stances_are_not_forced_or_pretended(self):
         brief = triad.character_style("live")
-        self.assertIn("собственная точка зрения", brief)
-        self.assertIn("не спорь для статистики", brief)
-        self.assertIn("изменить позицию после сильного довода", brief)
+        self.assertIn("собственную позицию", brief)
+        self.assertIn("не соглашайся и не спорь автоматически", brief)
+        self.assertIn("изменить мнение под сильным аргументом", brief)
 
     def test_bounded_social_memory_is_attributed_and_untrusted(self):
         peers = ["Норман", "Глитч", "Джесси"]
@@ -78,8 +99,8 @@ class NaturalDialogueTests(unittest.TestCase):
         self.assertIn("не вставляй одно и то же", guide)
         self.assertEqual(triad.live_requested_voice("поговорите о солнечной системе"), "")
         brief = triad.character_style("live")
-        self.assertIn("не произноси роботизированное", brief)
-        self.assertNotIn("не произноси роботизированное", triad.character_style("science"))
+        self.assertIn("не используй сленг как обязательную присказку", brief)
+        self.assertNotIn("не используй сленг", triad.character_style("science"))
 
     def test_recurring_joke_motifs_are_named_as_loop_avoidance(self):
         lines = [
@@ -96,8 +117,9 @@ class NaturalDialogueTests(unittest.TestCase):
         self.assertIn("банк", motifs)
         self.assertIn("пивас", motifs)
         instruction = triad.conversational_direction("Сленг", 9, history, mode="live")
-        self.assertIn("ОБНАРУЖЕН ПОВТОРЯЮЩИЙСЯ МОТИВ", instruction)
-        self.assertIn("Не добавляй новых предметов взамен", instruction)
+        self.assertIn("Повторяющийся мотив исчерпан", instruction)
+        self.assertIn("не возвращайся к нему даже в отрицательной форме", instruction)
+        self.assertLess(len(instruction), 350)
         self.assertIn("банк", instruction)
         self.assertIn("пивас", instruction)
 
@@ -123,7 +145,7 @@ class NaturalDialogueTests(unittest.TestCase):
         names = ["Норман", "Глитч", "Джесси"]
         focus = {"kind": "duo", "pair": [0, 1], "listener": 2}
         brief = triad.social_focus_instructions({"social_focus": focus}, 0, names, "live")
-        self.assertIn("СЕЙЧАС НЕБОЛЬШОЙ ДИАЛОГ ВДВОЁМ", brief)
+        self.assertIn("КОРОТКИЙ ВРЕМЕННЫЙ ФОКУС", brief)
         self.assertIn("Джесси", brief)
         self.assertNotIn("СЕЙЧАС НЕБОЛЬШОЙ", triad.social_focus_instructions(
             {"social_focus": focus}, 2, names, "live"))
@@ -132,8 +154,8 @@ class NaturalDialogueTests(unittest.TestCase):
         names = ["Норман", "Глитч", "Джесси"]
         focus = {"kind": "rejoin", "pair": [0, 1], "listener": 2}
         brief = triad.social_focus_instructions({"social_focus": focus}, 2, names, "live")
-        self.assertIn("ТЫ НЕКОТОРОЕ ВРЕМЯ СЛУШАЛ", brief)
-        self.assertIn("содержательное несогласие", brief)
+        self.assertIn("ТЕПЕРЬ ВСТУПАЕТ СЛУШАВШИЙ", brief)
+        self.assertIn("самостоятельную мысль", brief)
         invite = triad.social_focus_instructions({"social_focus": {
             "kind": "invite", "pair": [0, 1], "listener": 2}}, 0, names, "live")
         self.assertIn("[[TO:Джесси]]", invite)
