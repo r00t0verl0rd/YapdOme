@@ -690,6 +690,12 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send_json(200, result)
                 except CodexError as exc:
                     return self.error(502, str(exc))
+            if path == "/codex/logout":
+                try:
+                    CODEX.logout()
+                    return self.send_json(200, {"logged_out": True})
+                except CodexError as exc:
+                    return self.error(502, str(exc))
             if path == "/provider":
                 try:
                     STATE.set_provider(data.get("provider", "chatgpt"))
