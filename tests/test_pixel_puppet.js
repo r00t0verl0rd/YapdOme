@@ -63,7 +63,7 @@ function setup({stored = null, reduced = false, storageThrows = false} = {}) {
   for (let i = 0; i < 3; i++) {
     const tile = new Element(); tile.className = 'live-tile';
     const portrait = new Element(); portrait.className = 'hud-portrait';
-    portrait.append(new Element('svg')); tile.append(portrait); root.append(tile);
+    tile.append(portrait); root.append(tile);
   }
   const cards = new Element(); cards.className = 'right-column';
   for (let i = 0; i < 3; i++) {
@@ -71,8 +71,7 @@ function setup({stored = null, reduced = false, storageThrows = false} = {}) {
     const slot = new Element(); slot.className = 'emotion-slot';
     card.append(slot); cards.append(card);
   }
-  const enabled = new Element('input');
-  const elements = {cards, liveAvatars:root, pixelPuppetEnabled:enabled};
+  const elements = {cards, liveAvatars:root};
   const document = new Element('document'); document.readyState = 'complete'; document.hidden = false;
   document.getElementById = id => elements[id] || null;
   document.querySelectorAll = selector => selector === '.right-column > article.card' ? cards.children : [];
@@ -93,7 +92,7 @@ function setup({stored = null, reduced = false, storageThrows = false} = {}) {
     const defs = [{name:'Норман'}, {name:'Глитч'}, {name:'Джесси'}];`, ctx);
   vm.runInContext(adapter, ctx);
   const speech = vm.runInContext('speech', ctx), state = vm.runInContext('state', ctx);
-  return {ctx, root, cards, document, enabled, speech, state, frames, draws, buffers, writes, media,
+  return {ctx, root, cards, document, speech, state, frames, draws, buffers, writes, media,
     api:ctx.YapdOmePixel,
     tick(ms = 100) { now += ms; const pending = [...frames.values()]; frames.clear(); for (const fn of pending) fn(now); },
     offscreen(on) { observerCallback([{isIntersecting:!on}]); },
@@ -105,18 +104,18 @@ function setup({stored = null, reduced = false, storageThrows = false} = {}) {
   };
 }
 
-test('mounts exactly 3×2304 DOM LEDs, keeps SVG, default 12fps and diff-only writes', () => {
+test('mounts exactly 3×2304 DOM LEDs, no fallback SVGs, default 12fps and diff-only writes', () => {
   const h = setup();
   assert.equal(h.root.querySelectorAll('.pixel-led').length, 6912);
-  assert.equal(h.root.querySelectorAll('svg').length, 3);
+  assert.equal(h.root.querySelectorAll('svg').length, 0);
   assert.equal(h.root.querySelectorAll('.pixel-controls').length, 0);
   assert.equal(h.cards.querySelectorAll('.pixel-mood').length, 3);
   for (const select of h.cards.querySelectorAll('.pixel-mood')) assert.equal(select.children.length, 11);
   assert.equal(h.api.getStatus().fps, 12);
   assert.equal(h.cards.querySelectorAll('.pixel-fps').length, 3);
   for (const select of h.cards.querySelectorAll('.pixel-fps')) assert.equal(select.value, '12');
-  assert.equal(h.enabled.checked, true);
-  assert.ok(h.root.classList.contains('pixel-enabled'));
+  assert.equal(h.document.getElementById('pixelPuppetEnabled'), null);
+
   const leds = h.root.querySelectorAll('.pixel-led');
   const before = leds.reduce((n, led) => n + led.writes, 0);
   h.api.sync(); h.api.boot();
@@ -187,13 +186,10 @@ test('manual mood priority; strict temporary events cannot control actual speech
   assert.equal(h.root.querySelectorAll('.pixel-grid')[0].attributes['aria-label'], 'Новое имя: Спокойствие');
 });
 
-test('disabled, hidden and offscreen stop RAF; reduced motion has no idle RAF', () => {
+test('animation stays enabled; hidden and offscreen pause rendering, reduced motion remains accessible', () => {
   const h = setup(); h.start(0, '', 'dramatic', 'browser');
-  h.enabled.checked = false; h.enabled.dispatch('change');
-  assert.equal(h.frames.size, 0); assert.equal(h.api.getStatus().agents[0].level, 0);
-  assert.equal(h.lastDraw('norman').meta.talk, 0); assert.ok(!h.root.classList.contains('pixel-enabled'));
-  assert.equal(h.root.querySelectorAll('svg').length, 3);
-  h.enabled.checked = true; h.enabled.dispatch('change'); assert.equal(h.frames.size, 1);
+  assert.equal(h.document.getElementById('pixelPuppetEnabled'), null);
+  assert.equal(h.frames.size, 1);
   h.document.hidden = true; h.document.dispatch('visibilitychange'); assert.equal(h.frames.size, 0);
   h.speech.audibleAgent = null; h.speech.audibleEntry = null; h.api.sync();
   assert.equal(h.api.getStatus().agents[0].level, 0);
@@ -207,17 +203,17 @@ test('disabled, hidden and offscreen stop RAF; reduced motion has no idle RAF', 
 
 test('isolated storage: corrupt/invalid/blocked values safe; valid settings restored and persisted', () => {
   for (const stored of ['{broken', 'null', '[]', '{"enabled":"false","fps":1000,"moods":["__proto__",null,7]}']) {
-    const h = setup({stored}); assert.equal(h.api.getStatus().enabled, true); assert.equal(h.api.getStatus().fps, 12);
+    const h = setup({stored}); assert.equal(h.api.getStatus().fps, 12);
     assert.equal(h.cards.querySelectorAll('.pixel-mood')[0].value, 'auto');
   }
   const h = setup({stored:'{"enabled":false,"fps":20,"moods":["joy","auto","focus"]}'});
-  assert.equal(h.api.getStatus().enabled, false); assert.equal(h.api.getStatus().fps, 20);
-  assert.equal(h.frames.size, 0); assert.equal(h.api.getStatus().agents[0].mood, 'joy');
+  assert.equal(h.api.getStatus().fps, 20);
+  assert.equal(h.frames.size, 1); assert.equal(h.api.getStatus().agents[0].mood, 'joy');
   const fps = h.cards.querySelectorAll('.pixel-fps');
   fps[0].value = '30'; fps[0].dispatch('change');
   assert.equal(h.writes.at(-1)[0], h.api.storageKey); assert.equal(h.writes.at(-1)[1].fps, 30);
   assert.ok(fps.every(select => select.value === '30'), 'FPS selectors stay synchronized');
   fps[0].value = '120'; fps[0].dispatch('change'); assert.equal(h.api.getStatus().fps, 30);
-  const blocked = setup({storageThrows:true}); blocked.enabled.checked = false; blocked.enabled.dispatch('change');
-  assert.equal(blocked.api.getStatus().enabled, false);
+  const blocked = setup({storageThrows:true});
+  assert.equal(blocked.api.getStatus().fps, 12);
 });

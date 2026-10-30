@@ -11,11 +11,10 @@
   const $ = id => document.getElementById(id);
 
   function readSettings() {
-    const result = {enabled:true, fps:12, moods:['auto', 'auto', 'auto']};
+    const result = {fps:12, moods:['auto', 'auto', 'auto']};
     try {
       const v = JSON.parse(localStorage.getItem(STORAGE_KEY));
       if (!v || typeof v !== 'object' || Array.isArray(v)) return result;
-      if (typeof v.enabled === 'boolean') result.enabled = v.enabled;
       if ([12, 20, 30].includes(v.fps)) result.fps = v.fps;
       if (Array.isArray(v.moods) && v.moods.length === 3)
         result.moods = result.moods.map((m, i) => validMood(v.moods[i]) ? v.moods[i] : m);
@@ -58,7 +57,7 @@
   let meter = null, samples = null;
   const agents = [];
   const reduced = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : {matches:false};
-  function running() { return booted && settings.enabled && !document.hidden && onscreen; }
+  function running() { return booted && !document.hidden && onscreen; }
   function wantsFrame() {
     return running() && (!reduced.matches || speaker !== null || agents.some(a => a.event));
   }
@@ -100,7 +99,7 @@
     const ctx = context();
     // Check actual ownership on every rendered frame as well as explicit parent sync.
     if (ctx.speaker !== speaker || (ctx.audio?.audibleEntry || null) !== entry) capture(ctx, now);
-    const amplitude = settings.enabled ? level(ctx, now) : 0;
+    const amplitude = level(ctx, now);
     for (const a of agents) {
       if (a.event && now >= a.event.until) a.event = null;
       const speaking = speaker === a.index;
@@ -121,7 +120,7 @@
           a.pose[key] += a.velocity[key] * h;
         }
       }
-      a.level = speaking && settings.enabled ? amplitude : 0;
+      a.level = speaking ? amplitude : 0;
       // Preset open/round must never hold the mouth open during silence or STOP.
       const pose = {...a.pose, open:0, round:a.level > 0 ? a.pose.round : 0};
       const blinkPhase = (now + a.index * 700) % 4300;
@@ -150,7 +149,7 @@
     for (const a of agents) {
       const slot = cards[a.index]?.querySelector('.emotion-slot');
       if (slot && a.controls.parentElement !== slot) slot.append(a.controls);
-      a.controls.hidden = !settings.enabled;
+
     }
   }
   function sync() {
@@ -158,11 +157,9 @@
     if (!booted) return;
     const now = performance.now(), ctx = context();
     if (ctx.speaker !== speaker || (ctx.audio?.audibleEntry || null) !== entry) capture(ctx, now);
-    root.classList.toggle('pixel-enabled', settings.enabled);
     mountControls();
-    // Even while disabled/hidden, discard the old speech level synchronously.
     if (!running()) for (const a of agents) { a.level = 0; a.speaking = speaker === a.index; }
-    if (running() || !settings.enabled) render(now, 0);
+    else render(now, 0);
     schedule();
   }
   function receive(evt) {
@@ -230,11 +227,6 @@
       agents.push({id:ids[index], index, grid, leds, controls, last:new Uint8Array(2304),
         pose:{...engine.EMOTIONS.neutral}, velocity:Object.fromEntries(engine.keys.map(k => [k, 0])), event:null, level:0});
     });
-    const enabled = $('pixelPuppetEnabled');
-    if (enabled) {
-      enabled.checked = settings.enabled;
-      enabled.addEventListener('change', () => { settings.enabled = !!enabled.checked; save(); sync(); });
-    }
 
     if (window.IntersectionObserver) {
       observer = new IntersectionObserver(entries => { onscreen = entries.some(e => e.isIntersecting); sync(); });
@@ -246,7 +238,7 @@
   }
   window.YapdOmePixel = {
     sync, receive, boot, mountControls, version:'triad-1.0', resolution:[48, 48], storageKey:STORAGE_KEY,
-    getStatus:() => ({enabled:settings.enabled, fps:settings.fps, speaker,
+    getStatus:() => ({fps:settings.fps, speaker,
       agents:agents.map(a => ({id:a.id, mood:a.mood, source:a.source, level:a.level, speaking:a.speaking}))})
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, {once:true});
