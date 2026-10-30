@@ -94,6 +94,20 @@ class CodexSessionTests(unittest.TestCase):
         self.assertIn("Новая тема заменяет прежнюю", prompts[2])
         self.assertIn("СЕЙЧАС ГОВОРИТ: Джесси", prompts[2])
 
+    def test_live_brief_prioritizes_spontaneity_humor_and_nonrepetition_once(self):
+        client, calls = self.make_client()
+        self.run_turn(client, self.turn_data("Глитч"))
+        self.run_turn(client, self.turn_data("Норман"))
+
+        turns = [params for method, params in calls if method == "turn/start"]
+        first, second = [params["input"][0]["text"] for params in turns]
+        self.assertIn("ВЕДИ ЖИВУЮ, ЗАХВАТЫВАЮЩУЮ БЕСЕДУ", first)
+        self.assertIn("неожиданные, но логичные связи", first)
+        self.assertIn("юмор не обязателен в каждом ходе", first)
+        self.assertIn("Не копируй мнение", first)
+        self.assertNotIn("ВЕДИ ЖИВУЮ, ЗАХВАТЫВАЮЩУЮ БЕСЕДУ", second,
+                         "the permanent live brief must not be repeated per turn")
+
     def test_compaction_only_runs_near_real_context_limit(self):
         client, calls = self.make_client()
         client.thread_id = "thread-live"
