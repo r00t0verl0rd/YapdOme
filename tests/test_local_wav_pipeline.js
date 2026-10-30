@@ -54,7 +54,7 @@ function harness(){
  };
  vm.createContext(ctx);
  vm.runInContext(between('const speech = {','function humanBytes')+'\nthis.speech=speech;',ctx);
- vm.runInContext(between('function queueWholeSpeech(c){','function maybeConsultListeners(c){')+'\nthis.queueWholeSpeech=queueWholeSpeech;',ctx);
+ vm.runInContext(between('function queueWholeSpeech(c){','async function issueTurn(agent,ticket){')+'\nthis.queueWholeSpeech=queueWholeSpeech;',ctx);
  vm.runInContext(between('async function issueTurn(agent,ticket){','async function realTurn(c){')+'\nthis.issueTurn=issueTurn;',ctx);
  return {ctx,state,sources,wavCalls,completions};
 }
@@ -125,7 +125,7 @@ test('Engine claims one next turn while full WAV is playing',async()=>{
   },applyCore(s){state.core=s},issueTurn:(agent,ticket)=>launched.push([agent,ticket]),
   engineError(err){throw err},console};
  vm.createContext(ctx);
- vm.runInContext(between('async function claimNext(){','async function interruptByListener(agent){')+
+ vm.runInContext(between('async function claimNext(){','function scheduleNext(){')+
   '\nthis.claimNext=claimNext;',ctx);
  await ctx.claimNext();
  assert.deepEqual(actions,['claim'],'engine ticket should be claimed before audio ends');
@@ -141,7 +141,7 @@ test('non-pipelined engine claim still waits for audio drain',async()=>{
   async coreEvent(){throw Error('Cannot claim while audio is playing')},
   console};
  vm.createContext(ctx);
- vm.runInContext(between('async function claimNext(){','async function interruptByListener(agent){')+
+ vm.runInContext(between('async function claimNext(){','function scheduleNext(){')+
   '\nthis.claimNext=claimNext;',ctx);
  await ctx.claimNext();
  assert.equal(rescheduled,true);

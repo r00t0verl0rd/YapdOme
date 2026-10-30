@@ -14,8 +14,7 @@ class Snapshot:
     """Плоский снимок состояния эфира (только поля)."""
 
     fields = ("status", "agent", "next_agent", "turns", "max_turns", "revision",
-              "ticket", "passes", "kind", "result", "cooldown_until", "errors",
-              "timeout_ms")
+              "ticket", "passes", "kind", "result", "errors", "timeout_ms")
 
     def __init__(self, **values):
         for field in self.fields:
@@ -48,7 +47,6 @@ def as_json(snapshot, route_reason=-1):
         "kind": E.KINDS[snapshot["kind"]],
         "accepted": snapshot["result"] == E.OK,
         "result": snapshot["result"],
-        "cooldown_until": snapshot["cooldown_until"],
         "errors": snapshot["errors"],
         "timeout_ms": snapshot["timeout_ms"],
         "route_reason": E.ROUTE_REASONS.get(route_reason, "none"),
@@ -86,7 +84,7 @@ class Engine:
         with self.lock:
             return self._state()
 
-    def event(self, action, agent=-1, ticket=0, max_turns=0, auto_interrupt=False, text=""):
+    def event(self, action, agent=-1, ticket=0, max_turns=0, text=""):
         if action not in E.ACTIONS:
             raise ValueError("Неизвестное действие ядра")
         if type(agent) is not int or agent < -1 or agent > 2:
@@ -103,7 +101,7 @@ class Engine:
             raise ValueError("Некорректный текст (недопустимый Unicode)") from None
         with self.lock:
             snapshot = self._engine.event(E.ACTIONS[action], agent, ticket,
-                                          max_turns, bool(auto_interrupt), text)
+                                          max_turns, text)
             return as_json(snapshot, self._engine.route_reason)
 
     def complete_to(self, agent, ticket, text, target_agent=-1):

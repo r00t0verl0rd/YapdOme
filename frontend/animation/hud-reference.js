@@ -60,8 +60,7 @@
       const current=s.current,own=!!(current&&current.agent===i);
       const speaking=audio?.audibleAgent===i;
       const thinking=!!(own&&!s.paused&&s.running&&!speaking);
-      const listening=!!(!speaking&&s.running&&!s.paused&&!own&&current&&current.listeners&&current.listeners.has(i));
-      const stage= speaking?'ГОВОРИТ':s.paused?'ПАУЗА':thinking?'ДУМАЕТ':listening?'СЛУШАЕТ':s.running?'ЖДЁТ':'ГОТОВ';
+      const stage= speaking?'ГОВОРИТ':s.paused?'ПАУЗА':thinking?'ДУМАЕТ':s.running?'ЖДЁТ':'ГОТОВ';
       tile.classList.toggle('is-speaking',speaking);
       const name=tile.querySelector('.tile-name'),badge=tile.querySelector('.tile-mode');
       if(name&&name.textContent!==def.name)name.textContent=def.name;

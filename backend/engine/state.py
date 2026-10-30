@@ -33,9 +33,7 @@ class StateMachine:
         self.max_turns = 0
         self.passes = 0
         self.kind = E.NORMAL
-        self.cooldown_until = 0
         self.errors = 0
-        self.pending_reply = -1
         self.revision = 0
         self.ticket = 0
         self.deadline_ms = 0
@@ -65,7 +63,6 @@ class StateMachine:
             "passes": self.passes,
             "kind": self.kind,
             "result": result,
-            "cooldown_until": self.cooldown_until,
             "errors": self.errors,
             "timeout_ms": int(timeout_ms),
         }
@@ -107,14 +104,14 @@ class StateMachine:
 
     # ----------------------------------------------------------- события ядра
 
-    def event(self, action, agent=-1, ticket=0, max_turns=0, auto_interrupt=False, text=""):
+    def event(self, action, agent=-1, ticket=0, max_turns=0, text=""):
         with self.lock:
-            return self._event(action, agent, ticket, max_turns, auto_interrupt, text)
+            return self._event(action, agent, ticket, max_turns, text)
 
     def _expired(self):
         return bool(self.deadline_ms) and now_ms() >= self.deadline_ms
 
-    def _event(self, action, agent, ticket, max_turns, auto_interrupt, text):
+    def _event(self, action, agent, ticket, max_turns, text):
         before_status = self.status
         before_speaker = self.agent
 
@@ -148,14 +145,14 @@ class StateMachine:
         previous_kind = self.kind
         if action != E.TICK:
             self.kind = E.NORMAL
-        result = self._apply(action, agent, ticket, max_turns, auto_interrupt, text)
+        result = self._apply(action, agent, ticket, max_turns, text)
         if result != E.OK:
             self.kind = previous_kind
 
         self._record_audit(action, agent, result, before_status, before_speaker)
         return self.snapshot(result)
 
-    def _apply(self, action, agent, ticket, max_turns, auto_interrupt, text):
+    def _apply(self, action, agent, ticket, max_turns, text):
         if action == E.START:
             self.status = E.RUNNING
             self.agent = -1
@@ -163,10 +160,8 @@ class StateMachine:
             self.turns = 0
             self.max_turns = max_turns if 0 <= max_turns <= 200 else 0
             self.passes = 0
-            self.cooldown_until = 0
             self.deadline_ms = 0
             self.errors = 0
-            self.pending_reply = -1
             self.route_reason = E.ROUTE_ROTATION
             self.last_turn = [-1, -1, -1]
             self.revision += 1
@@ -206,12 +201,6 @@ class StateMachine:
                 self.next_agent, reason = route_from_text(
                     self.names, self.last_turn, text, self.agent, False)
             self.route_reason = reason
-            # Прерванный спикер сохраняет право ответа, если явно не передал слово.
-            if self.pending_reply >= 0:
-                if reason == E.ROUTE_ROTATION:
-                    self.next_agent = self.pending_reply
-                    self.route_reason = E.ROUTE_PENDING
-                self.pending_reply = -1
             self.agent = -1
             self.errors = 0
             if self.kind in (E.WAIT, E.PASS):
@@ -222,8 +211,7 @@ class StateMachine:
             if self.max_turns > 0 and self.turns >= self.max_turns:
                 self.status = E.LIMIT
                 self.deadline_ms = 0
-            # Завершение хода инвалидирует его ticket: поздние события
-            # директора/слушателей не действуют на межходовое состояние.
+            # Завершение хода инвалидирует его ticket: поздние события не действуют на межходовое состояние.
             self.ticket += 1
             self.revision += 1
             return E.OK
@@ -236,7 +224,6 @@ class StateMachine:
             self.next_agent, reason = route_from_text(
                 self.names, self.last_turn, text, speaker, True)
             self.route_reason = reason
-            self.pending_reply = -1
             self.agent = -1
             self.ticket += 1
             self.revision += 1
@@ -273,42 +260,10 @@ class StateMachine:
             self.status = E.STOPPED
             self.agent = -1
             self.deadline_ms = 0
-            self.pending_reply = -1
             self.revision += 1
             self.ticket += 1
             return E.OK
 
-        if action == E.INTERRUPT:
-            if (self.status != E.RUNNING or agent < 0 or agent > 2
-                    or agent == self.agent):
-                return E.REJECT
-            if ticket != self.ticket:
-                return E.STALE
-            if self.agent < 0:
-                # Между текстовыми ходами браузер ещё может озвучивать буфер.
-                # Только явный операторский override перенаправляет этот хвост.
-                if auto_interrupt:
-                    return E.REJECT
-                self.next_agent = agent
-                self.pending_reply = -1
-                self.route_reason = E.ROUTE_OVERRIDE
-                self.revision += 1
-                self.ticket += 1
-                return E.OK
-            if self.max_turns > 0 and self.turns >= self.max_turns:
-                return E.REJECT
-            if auto_interrupt and self.turns < self.cooldown_until:
-                return E.REJECT
-            if auto_interrupt:
-                self.cooldown_until = self.turns + 2
-            self.pending_reply = self.agent
-            self.next_agent = agent
-            self.agent = -1
-            self.passes = 0
-            self.route_reason = E.ROUTE_INTERRUPT
-            self.revision += 1
-            self.ticket += 1
-            return E.OK
 
         if action == E.RESET:
             if self.status == E.IDLE:
@@ -319,9 +274,7 @@ class StateMachine:
             self.turns = 0
             self.passes = 0
             self.deadline_ms = 0
-            self.cooldown_until = 0
             self.errors = 0
-            self.pending_reply = -1
             self.route_reason = E.ROUTE_NONE
             self.last_turn = [-1, -1, -1]
             self.revision += 1
@@ -392,7 +345,6 @@ class StateMachine:
                     or agent < 0 or agent > 2):
                 return E.REJECT
             self.next_agent = agent
-            self.pending_reply = -1
             self.route_reason = E.ROUTE_DONATION
             self.passes = 0
             self.ticket += 1
@@ -412,6 +364,6 @@ class StateMachine:
         if target_agent < -1 or target_agent > 2 or target_agent == agent:
             return self.snapshot(E.INVALID)
         self.route_override = target_agent
-        snapshot = self._event(E.COMPLETE, agent, ticket, 0, 0, text)
+        snapshot = self._event(E.COMPLETE, agent, ticket, 0, text)
         self.route_override = -1
         return snapshot

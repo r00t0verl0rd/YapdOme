@@ -26,6 +26,13 @@ function updateScienceUI(){
   ' · рабочие гипотезы (не проверены)';
 }
 // The turn contract must never be spoken aloud: strip control markers from speech.
+function stripSpeakerLabels(raw){
+ const names=(defs||[]).map(agent=>agent.name).filter(Boolean)
+  .map(name=>name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'));
+ if(!names.length)return String(raw||'').trim();
+ const labels=new RegExp('(^|[\\s,;])(?:'+names.join('|')+')\\s*[:：]\\s*','giu');
+ return String(raw||'').replace(labels,'$1').replace(/\s+/g,' ').trim();
+}
 function stripDirectives(raw){
   const text=String(raw||'')
     .replace(/\[\[\s*(?:TO|RE|CLAIM)\s*:[^\]]*\]\]/gi,' ')
@@ -39,8 +46,8 @@ function stripDirectives(raw){
   // A turn made only of markers must never leave orphan punctuation to be spoken.
   return /^[.,;:!?…\-–—\s]*$/.test(text)?'':text;
 }
-const state = {archivedLines:[],connected:false,recoverable:false,provider:'chatgpt',deepseekConnected:false,running:false,paused:false,stopping:false,starting:false,epoch:0,turns:0,current:null,history:[],journal:[],timer:null,claimPending:null,core:null,donationQueue:[],activeDonation:null,donationRouting:false,lastDonationName:'',lastAudibleAt:Date.now(),lastIdleNotice:0,
-  directorPlan:null,directorRequest:null,directorRouted:false,
+const state = {archivedLines:[],connected:false,recoverable:false,provider:'chatgpt',deepseekConnected:false,codexConnected:false,running:false,paused:false,stopping:false,starting:false,epoch:0,turns:0,current:null,history:[],journal:[],timer:null,claimPending:null,core:null,donationQueue:[],activeDonation:null,donationRouting:false,lastDonationName:'',lastAudibleAt:Date.now(),lastIdleNotice:0,
+  directorPlan:null,directorRequest:null,directorRouted:false,lastClaimRetryNotice:0,
   pipelineReady:false,audibleTurn:null,
   social:{pair:null,returnContext:null,lastEnd:0,lastPair:"",memory:[[],[],[]]}};
 let voices=[];
@@ -581,8 +588,7 @@ function renderCards(){
     const c=cards[i],active=state.current?.agent===i,speaking=speech.audibleAgent===i;
     c.classList.toggle('active',speaking);
     const badge=c.querySelector('.badge');
-    badge.textContent=speaking?'● ГОВОРИТ':active?(state.current.phase==='speaking'?'◌ ГОТОВИТ ГОЛОС':'◌ ДУМАЕТ'):
-       (state.current?.listeners?.has(i)?'◌ СЛУШАЕТ':'○ НА ЛИНИИ');
+    badge.textContent=speaking?'● ГОВОРИТ':active?(state.current.phase==='speaking'?'◌ ГОТОВИТ ГОЛОС':'◌ ДУМАЕТ'):'○ НА ЛИНИИ';
 
   });return;
  }
@@ -594,7 +600,7 @@ function renderCards(){
   const c=document.createElement('article');c.className='card'+(speaking?' active':'');c.style.setProperty('--accent',def.color);
   const top=document.createElement('div');top.className='cardhead';
   const number=document.createElement('span');number.className='number';number.textContent='ENTITY / 0'+(i+1);
-  const badge=document.createElement('span');badge.className='badge';badge.textContent=speaking?'● ГОВОРИТ':current?.agent===i?(current.phase==='speaking'?'◌ ГОТОВИТ ГОЛОС':'◌ ДУМАЕТ'):(current?.listeners?.has(i)?'◌ СЛУШАЕТ':'○ НА ЛИНИИ');top.append(number,badge);
+  const badge=document.createElement('span');badge.className='badge';badge.textContent=speaking?'● ГОВОРИТ':current?.agent===i?(current.phase==='speaking'?'◌ ГОТОВИТ ГОЛОС':'◌ ДУМАЕТ'):'○ НА ЛИНИИ';top.append(number,badge);
   function textField(label,value,max,area=false){
    const wrap=document.createElement('label');wrap.className='card-field'+(label==='ИМЯ'?' name-field':area?' description-field':'');
    const title=document.createElement('span');title.textContent=label;
@@ -640,7 +646,7 @@ function populateVoices(){
  defs.forEach((d,i)=>{const sel=agentCards()[i]?.querySelector('.voice-controls select');if(sel)optionsForVoices(sel,i)});
 }
 const PREF_KEY='triad09';
-function savePrefs(){try{localStorage.setItem(PREF_KEY,JSON.stringify({agents:defs.map(d=>({name:d.name,description:d.description,voiceURI:d.voiceURI,kokoroVoice:d.kokoroVoice,kokoroRuVoice:d.kokoroRuVoice,piperVoice:d.piperVoice,sileroVoice:d.sileroVoice,openaudioVoice:d.openaudioVoice,qwen3Voice:d.qwen3Voice })),topic:$('topic').value,sharedGoal:$('sharedGoal').value,showMode:$('showMode').value,voiceEnabled:$('voiceEnabled').checked,ttsBackend:$('ttsBackend').value,rate:$('rate').value,auto:$('auto').checked,directorEnabled:$('directorEnabled').checked,model:$('model').value,qwen3Size:qwen3Size,kokoroModel:kokoroModel}))}catch(_){}}
+function savePrefs(){try{localStorage.setItem(PREF_KEY,JSON.stringify({agents:defs.map(d=>({name:d.name,description:d.description,voiceURI:d.voiceURI,kokoroVoice:d.kokoroVoice,kokoroRuVoice:d.kokoroRuVoice,piperVoice:d.piperVoice,sileroVoice:d.sileroVoice,openaudioVoice:d.openaudioVoice,qwen3Voice:d.qwen3Voice })),topic:$('topic').value,sharedGoal:$('sharedGoal').value,showMode:$('showMode').value,voiceEnabled:$('voiceEnabled').checked,ttsBackend:$('ttsBackend').value,rate:$('rate').value,directorEnabled:$('directorEnabled').checked,model:$('model').value,qwen3Size:qwen3Size,kokoroModel:kokoroModel}))}catch(_){}}
 function restorePrefs(){
  try{
   const modern=localStorage.getItem(PREF_KEY),p=JSON.parse(modern||localStorage.getItem('triad08')||localStorage.getItem('triad07')||'{}');
@@ -679,7 +685,7 @@ function restorePrefs(){
   if(typeof p.voiceEnabled==='boolean')$('voiceEnabled').checked=p.voiceEnabled;
   if(['kokoro','piper','silero','qwen3-tts','openaudio-s1-mini','browser'].includes(p.ttsBackend))$('ttsBackend').value=p.ttsBackend;
   else if(p.ttsBackend==='kokoro-ru'){$('ttsBackend').value='kokoro';kokoroModel='ru';}
-  if(typeof p.auto==='boolean')$('auto').checked=p.auto;
+
   if(typeof p.directorEnabled==='boolean')$('directorEnabled').checked=p.directorEnabled;
   if(p.rate&&Number(p.rate)>=.75&&Number(p.rate)<=1.5)$('rate').value=p.rate;
   if(['pro','lite'].includes(p.qwen3Size)){qwen3Size=p.qwen3Size;if($('qwen3Size'))$('qwen3Size').value=qwen3Size;}
@@ -687,8 +693,8 @@ function restorePrefs(){
  }catch(_){}
  $('rateValue').textContent=Number($('rate').value).toFixed(2)+'×';
 }
-async function api(path,body){
- const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});
+async function api(path,body,options={}){
+ const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{}),signal:options.signal});
  const data=await r.json().catch(()=>({error:'Сервер вернул некорректный ответ'}));if(!r.ok)throw Error(data.error||'HTTP '+r.status);return data;
 }
 async function refreshStatus(){
@@ -698,16 +704,22 @@ async function refreshStatus(){
   const data=await response.json();
   state.connected=Boolean(data.connected);
   state.deepseekConnected=Boolean(data.deepseek_connected);
+  state.codexConnected=Boolean(data.codex_connected);
   state.provider=data.provider||'chatgpt';
   state.recoverable=Boolean(data.recoverable);
   $('provider').value=state.provider;
   $('chatgptAuth').hidden=state.provider!=='chatgpt';
   $('deepseekAuth').hidden=state.provider!=='deepseek';
+  $('codexAuth').hidden=state.provider!=='codex';
+  $('codexLogin').hidden=state.codexConnected;
   $('logout').hidden=!state.connected;
   $('switchaccount').hidden=state.connected&&!state.recoverable||!state.connected&&!data.has_saved_account&&!state.recoverable;
   $('signin').textContent=state.recoverable?'Повторить вход':state.connected?'Сменить ChatGPT':'Войти через ChatGPT';
   $('deepseekDisconnect').hidden=!state.deepseekConnected;
-  if(state.provider==='deepseek'){
+  if(state.provider==='codex'){
+   if(state.codexConnected){status('CODEX CONNECTED',data.codex_account||'ChatGPT через Codex','ok');$('codexNote').textContent='Codex подключён. Используется его локальная авторизация.';await fetchModels();}
+   else{status('CODEX OFFLINE',data.codex_error||'Войди через Codex CLI');$('model').disabled=true;$('model').replaceChildren(new Option('Сначала войди в Codex',''));$('codexNote').textContent=data.codex_error||'Нажми «Войти через Codex».';}
+  }else if(state.provider==='deepseek'){
    if(state.deepseekConnected){
     status('DEEPSEEK CONNECTED','API-ключ активен', 'ok');
     $('deepseekNote').textContent=data.auth_error||'Подключено. Ключ хранится локально в accounts.json.';
@@ -736,15 +748,19 @@ async function refreshStatus(){
  }
 }
 async function fetchModels(){
- if(!(state.provider==='deepseek'?state.deepseekConnected:state.connected))return;
+ const connected=state.provider==='deepseek'?state.deepseekConnected:state.provider==='codex'?state.codexConnected:state.connected;
+ if(!connected)return;
  let saved='';try{saved=JSON.parse(localStorage.getItem(PREF_KEY)||'{}').model||''}catch(_){}const prev=$('model').value||saved,select=$('model');select.disabled=true;select.replaceChildren(new Option('Загрузка моделей…',''));
  try{const r=await fetch('/api/models',{cache:'no-store'});const data=await r.json();if(!r.ok)throw Error(data.error||'HTTP '+r.status);if(!data.models?.length)throw Error('Доступных моделей нет');select.replaceChildren();data.models.forEach(m=>select.add(new Option(m.name,m.slug)));select.value=data.models.some(m=>m.slug===prev)?prev:data.models[0].slug;select.disabled=false;savePrefs();}
  catch(err){select.replaceChildren(new Option('Модели недоступны',''));$('authnote').textContent='Ошибка каталога моделей: '+err.message;}
 }
-// The engine is the authority for turn assignment, pauses, interrupts and limits.
+// The engine is the authority for turn assignment, pauses, operator overrides and limits.
 let controlQueue=Promise.resolve();
 function coreEvent(action,fields={}){
- const task=()=>api('/api/engine',{action,...fields});
+ const task=()=>{
+  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),12000);
+  return api('/api/engine',{action,...fields},{signal:controller.signal}).finally(()=>clearTimeout(timeout));
+ };
  const p=controlQueue.then(task);controlQueue=p.catch(()=>{});return p;
 }
 function applyCore(s){
@@ -759,10 +775,7 @@ function applyCore(s){
  return true;
 }
 function stopTimer(){clearTimeout(state.timer);state.timer=null;}
-function cancelListeners(c){
- for(const obj of c.listenerRequests||[]){obj.controller.abort();api('/api/cancel',{request_id:obj.id}).catch(()=>{});}
- if(c.listeners)c.listeners.clear();c.listenerRequests=[];
-}
+
 function cancelCurrent(reason='прервано'){
  state.pipelineReady=false;
  const c=state.current,audible=state.audibleTurn;
@@ -776,7 +789,7 @@ function cancelCurrent(reason='прервано'){
  // Human STOP/PAUSE/intervention must still cancel that audible tail.
  if(!c){speech.stop();return;}
  c.controller.abort();api('/api/cancel',{request_id:c.requestId}).catch(()=>{});
- cancelListeners(c);speech.stop();c.item.el.classList.remove('live');c.item.el.classList.add('interrupted');c.item.meta.textContent=reason;
+ speech.stop();c.item.el.classList.remove('live');c.item.el.classList.add('interrupted');c.item.meta.textContent=reason;
  const heard=($('voiceEnabled').checked&&audioAvailable())?(c.heardText||''):stripDirectives(c.text);
  if(heard.trim()&&!isMarker(heard))state.history.push({agent:c.agent,name:defs[c.agent].name,text:heard+' [прервано]'});
  state.history=state.history.slice(-16);state.current=null;
@@ -824,7 +837,8 @@ async function stopDialogue(){
 function engineError(err){system('Ошибка ядра: '+String(err?.message||err).replace(/ChatGPT/gi,'LLM'));$('start').disabled=false;state.running=false;state.paused=true;stopTimer();cancelCurrent('ОШИБКА');renderCards();}
 async function begin(){
  if(state.running||state.stopping||state.starting)return;
- if(!(state.provider==='deepseek'?state.deepseekConnected:state.connected)){system('Подключись к выбранному провайдеру в панели подключения.');return;}
+ const providerConnected=state.provider==='deepseek'?state.deepseekConnected:state.provider==='codex'?state.codexConnected:state.connected;
+ if(!providerConnected){system('Подключись к выбранному провайдеру в панели подключения.');return;}
  if(!$('model').value){system('Выбери модель.');return;}
  speech.unlock();resetLocal();state.history=[];state.journal=[];state.archivedLines=[];$('feed').replaceChildren();updateScienceUI();
  const epoch=state.epoch;
@@ -1036,6 +1050,14 @@ function liveFloorBid(speaker,text){
  if(!bids.length||bids[0].score<1.3||bids[0].score-bids[1].score<.5)return null;
  return bids[0].agent;
 }
+function retryClaim(reason){
+ if(!state.running||state.paused||state.stopping||state.current)return;
+ const now=Date.now();
+ if(now-state.lastClaimRetryNotice>15000){
+  state.lastClaimRetryNotice=now;system(reason+' · повторяем передачу хода.');
+ }
+ stopTimer();state.timer=setTimeout(()=>void claimNext(),700);
+}
 async function claimNext(){
  if(!state.running||state.paused||state.current||state.claimPending?.epoch===state.epoch)return;
  // One-ahead handoff: a committed WAV reply has STARTED playing, so the
@@ -1078,37 +1100,18 @@ async function claimNext(){
   state.pipelineReady=false;
   applyCore(s);
   if(s.status==='RUNNING'&&s.agent>=0)issueTurn(s.agent,s.ticket);
+  else if(s.status==='RUNNING')retryClaim('Ядро не выдало агента');
 
- }catch(e){if(epoch===state.epoch&&!String(e.message).includes('HTTP 409'))engineError(e)}
+ }catch(e){
+  if(epoch===state.epoch){
+   if(String(e.message).includes('HTTP 409')||e.name==='AbortError')
+    retryClaim('Не удалось подтвердить передачу хода: '+e.message);
+   else engineError(e);
+  }
+ }
  finally{if(state.claimPending===claim)state.claimPending=null}
 }
-async function interruptByListener(agent){
- // A listener decision made before a donation arrived must NOT cut off its speaker.
- if(state.activeDonation||state.donationQueue.length)return;
- if(!state.running||state.paused||state.current?.agent===agent||!state.current)return;
- const ticket=state.core?.ticket,epoch=state.epoch;
- try{
-  const s=await coreEvent('interrupt',{agent,ticket,auto:true});
-  if(epoch!==state.epoch||state.stopping||!s.accepted)return;
-  // Preserve a bounded excerpt of the interrupted speech. The original
-  // turn never reached COMPLETE; without this the next LLM has no reason
-  // for its objection. The preview is NOT a verified audible transcript.
-  const interrupted=state.current;
-  if(interrupted&&!interrupted.donation){
-   const preview=stripDirectives(interrupted.heardText||
-     (interrupted.audioStarted?interrupted.audibleText.slice(0,180):interrupted.text.slice(0,180))).trim();
-   if(preview){
-    state.history.push({agent:interrupted.agent,name:defs[interrupted.agent].name,
-      text:preview.slice(0,220),interrupted:true});
-    state.history=state.history.slice(-16);
-   }
-  }
-  state.epoch++;stopTimer();cancelCurrent('ПРЕРВАНО • по решению слушателя');
-  applyCore(s);
-  system('⚡ Агент решил вмешаться: '+defs[agent].name);
-  claimNext();
- }catch(e){if(!String(e.message).includes('HTTP 409'))console.warn('Перебивание:',e.message)}
-}
+
 function scheduleNext(){
  if(!state.running||state.paused||state.stopping)return;
  stopTimer();
@@ -1128,7 +1131,7 @@ async function endTurn(c,success,msg){
   await speech.idle();
   if(state.current!==c||epoch!==state.epoch)return;
  }
- cancelListeners(c);c.item.el.classList.remove('live');
+ c.item.el.classList.remove('live');
  const value=c.text.trim(),epoch=state.epoch;
  if(!success){
   // On a donation failure, try the next distinct persona rather than burning
@@ -1181,6 +1184,7 @@ async function endTurn(c,success,msg){
      state.lastDonationName=''; // Bridge only first regular turn after donation.
    }
   }
+  let donationFinished=false;
   if(c.donation&&state.activeDonation===c.donation){
     const generated=stripDirectives(c.generatedText);
     if(generated&&!isMarker(c.generatedText)){
@@ -1194,6 +1198,7 @@ async function endTurn(c,success,msg){
           '✓ ОТВЕТ ПОЛУЧЕН · '+used+' '+(used===1?'реплика':used<5?'реплики':'реплик');
         state.lastDonationName=c.donation.donor;
         state.activeDonation=null;
+        donationFinished=true;
       }else{
         c.donation.item.meta.textContent='ОБСУЖДАЮТ · осталось '+c.donation.remaining+' реплик';
         c.donation.nextSpeaker=(c.agent+1)%3;
@@ -1213,6 +1218,7 @@ async function endTurn(c,success,msg){
   }
   if(s.status==='RUNNING'){
     if(state.donationQueue.length&&!state.activeDonation)void activateNextDonation();
+    else if(donationFinished)void claimNext();
     else{if(!state.activeDonation)requestDirector();scheduleNext();}
   }
 
@@ -1266,51 +1272,29 @@ function queueWholeSpeech(c){
  // playback lane drains, instead of hanging the whole live show forever.
  return Promise.race([started,speech.idle()]);
 }
-function maybeConsultListeners(c){
- // For WAV/PCM, the first audible phrase is known when playback starts.
- // Preview at most 220 characters while the engine ticket remains claimable.
- const sample=c.heardText||(c.pipeline&&c.audioStarted?c.audibleText.slice(0,220):'');
- if(state.activeDonation||state.donationQueue.length||!$('auto').checked||
-    $('showMode').value!=='live'||c.intentSent||
-    sample.length<(/[?？!]/.test(sample)?45:90)||
-    c.turn<state.core?.cooldown_until||!state.running||state.paused)return;
- c.intentSent=true;
- // One interested candidate per turn; avoids two extra LLM requests.
- const preferred=liveFloorBid(c.agent,sample);
- const last=state.history.at(-1)?.agent;
- const listener=preferred!==null?preferred:([0,1,2].find(i=>i!==c.agent&&i!==last)??((c.agent+1)%3));
- for(const agent of [listener]){
-  const controller=new AbortController(),id=requestID(),entry={id,controller};
-  c.listenerRequests.push(entry);c.listeners.add(agent);
-  const payload={request_id:id,agent,agent_name:defs[agent].name,description:defs[agent].description,topic:$('topic').value,show_mode:$('showMode').value,shared_goal:$('sharedGoal').value,model:$('model').value,
-                 turns:state.turns,journal:$('showMode').value==='science'?state.journal.map(({speaker,claim,phase})=>({speaker,claim,phase})):[],
-                 history:state.history.slice(-12),speaker:defs[c.agent].name,partial:sample.slice(-700)};
-  fetch('/api/intent',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:controller.signal})
-   .then(async r=>{const j=await r.json();if(!r.ok)throw Error(j.error||'Ошибка анализа');return j;})
-   .then(j=>{if(state.current===c&&!state.activeDonation&&!state.donationQueue.length&&state.running&&!state.paused&&j.decision==='interrupt')interruptByListener(agent);})
-   .catch(e=>{if(e.name!=='AbortError'&&state.current===c)console.warn('Решение слушателя:',e.message)})
-   .finally(()=>{c.listeners.delete(agent);c.listenerRequests=c.listenerRequests.filter(x=>x!==entry);if(state.current===c)renderCards()});
- }
- renderCards();
-}
+
 async function issueTurn(agent,ticket){
  if(!state.running||state.paused||state.current)return;
  const epoch=state.epoch,requestId=requestID(),item=feedItem(defs[agent].name,agent,'live');item.meta.textContent='Ожидание потока…';
  const donation=state.activeDonation;
  const socialFocus=donation||typeof socialTurnContext!=='function'?null:socialTurnContext(agent);
  if(socialFocus?.kind==='rejoin')state.social.returnContext=null;
- // One deterministic named greeting; the model must not repeat it.
- const greeting=donation&&!donation.acknowledged?'Спасибо, '+donation.donor+'! ':'';
+
  const baseSpeechConfig=speech.snapshot(agent);
  const pipeline=$('voiceEnabled').checked;
- const c={agent,ticket,turn:state.turns,epoch,requestId,item,text:greeting,generatedText:'',
+ const c={agent,ticket,turn:state.turns,epoch,requestId,item,text:'',generatedText:'',
           donation,socialFocus,pipeline,speechConfig:pipeline?Object.freeze({...baseSpeechConfig,wholeWav:true}):baseSpeechConfig,
           audibleText:'',heardText:'',controller:new AbortController(),
-          intentSent:false,listeners:new Set(),listenerRequests:[],phase:'generating',lastTokenAt:Date.now()};
+          phase:'generating',lastTokenAt:Date.now()};
  state.current=c;renderCards();
  try{
   await realTurn(c);
   if(state.current!==c)return;
+  if(typeof stripSpeakerLabels==='function'){
+   c.text=stripSpeakerLabels(c.text);
+   c.generatedText=stripSpeakerLabels(c.generatedText);
+  }
+  if(c.text)item.body.textContent=stripDirectives(c.text);
   if(c.pipeline){
    const spoken=stripDirectives(c.text);
    if(spoken&&!isMarker(c.text)){
@@ -1321,12 +1305,7 @@ async function issueTurn(agent,ticket){
     // Audio and engine controller are separate clocks. We release the engine
     // ticket *after playback begins*, not after it ends; the one-ahead bound
     // is enforced by state.current holding the next model generation.
-    // v0.18 LIVE needs an active ticket throughout TTS for genuine interrupts.
-    // Без авто-перебиваний сохраняется one-ahead WAV-конвейер.
-    const liveListening=$('showMode').value==='live'&&$('auto').checked;
-    if(liveListening&&c.audioStarted){
-     c.phase='speaking';maybeConsultListeners(c);
-    }
+
     // Release the model turn as soon as audio starts in every mode. The next
     // response can then generate and synthesize behind this playback; speech
     // itself remains serialized by the audio queue.
@@ -1383,7 +1362,7 @@ async function realTurn(c){
    // Raw model deltas stay private until the corresponding audio starts.
    if(!$('voiceEnabled').checked||!audioAvailable())c.item.body.textContent=stripDirectives(c.text);
    c.item.meta.textContent='ФОРМИРУЕТ ОТВЕТ…';
-   if(!$('voiceEnabled').checked||!audioAvailable()){c.heardText=stripDirectives(c.text);maybeConsultListeners(c);}
+
   }else if(event.type==='done')completed=true;
   else if(event.type==='error')throw Error(event.message||'Ошибка ответа OpenAI');
  };
@@ -1436,7 +1415,7 @@ async function humanMessage(){
 
 
 // Donations remain in FIFO; viewer topics need a separate AI verdict at 100+.
-const DONATION_REPLIES=5;
+const DONATION_REPLIES=3;
 async function reviewDonationTopic(donation){
  const controller=new AbortController(),request_id=requestID();
  const timeout=setTimeout(()=>controller.abort(),15000);
@@ -1532,16 +1511,11 @@ function donationMessage(){
  const total=DONATION_REPLIES;
  const item=feedItem('⚡ ДОНАТ · '+donor,null,'donation');
  item.body.textContent=value.toFixed(2)+' · '+text;
- item.meta.textContent='ПРИНЯТ · ждём окончания текущей реплики · '+(value>=100?'проверим новую тему через ИИ':'5 реплик')+' · локальный тест';
+ item.meta.textContent='ПРИНЯТ · ждём окончания текущей реплики · '+(value>=100?'проверим новую тему через ИИ':'3 реплики')+' · локальный тест';
  const donation={id:requestID(),donor,text,amount:value,remaining:total,total,item,
                  responses:[],acknowledged:false,nextSpeaker:0};
  state.donationQueue.push(donation);updateDonationBadge();
- // Cancel ONLY background listener verdicts; never generation or TTS.
- // This closes the auto-interrupt race for donors queued mid-sentence.
- if(state.current){
-   state.current.intentSent=true;
-   cancelListeners(state.current);
- }
+
  $('donationText').value='';
  // Do not cancel, mute or restart the current speaker. The normal turn
  // completion unlocks this FIFO. If already idle, claimNext performs routing.
@@ -1575,6 +1549,9 @@ setInterval(()=>{
  if(!state.running||state.core?.status==='PAUSED'||speech.playing||speech.queue.length)return;
  const now=Date.now();
  if(now-state.lastAudibleAt<45000||now-state.lastIdleNotice<45000)return;
+ if(!state.current&&!state.claimPending&&state.core?.status==='RUNNING'){
+  state.lastAudibleAt=now;void claimNext();return;
+ }
  state.lastIdleNotice=now;
  system('Слишком долгая тишина: проверяем связь. Это системное уведомление, не реплика агента.');
  if(audioAvailable()&&$('voiceEnabled').checked){
@@ -1597,6 +1574,14 @@ $('logout').onclick=async()=>{
   await refreshStatus();
   if(!r.revoked)$('authnote').textContent='Локальный выход выполнен. Отзыв удалённого токена не подтверждён.';
  }catch(err){$('authnote').textContent='Ошибка выхода: '+err.message;}
+};
+$('codexLogin').onclick=async()=>{
+ try{
+  const response=await api('/codex/login',{});
+  if(!response.url)throw Error('Codex не вернул ссылку входа');
+  window.open(response.url,'_blank','noopener');
+  $('codexNote').textContent='Заверши вход в открывшемся окне, затем подожди обновления статуса.';
+ }catch(err){$('codexNote').textContent='Ошибка входа: '+err.message;}
 };
 $('provider').onchange=async()=>{
  const p=$('provider').value;
@@ -1624,7 +1609,7 @@ $('pause').onclick=async()=>{
 };
 
 $('reloadmodels').onclick=fetchModels;
-$('model').onchange=savePrefs;
+
 const fitTopicField=()=>{
  const field=$('topic'),maxHeight=parseFloat(getComputedStyle(field).maxHeight)||132;
  field.style.height='auto';
@@ -1634,7 +1619,7 @@ const fitTopicField=()=>{
 $('topic').oninput=()=>{fitTopicField();state.social.memory=[[],[],[]];cancelDirector();resetSocialFocus();savePrefs()};
 $('sharedGoal').oninput=savePrefs;
 $('showMode').onchange=()=>{state.journal=[];state.social.memory=[[],[],[]];cancelDirector();resetSocialFocus();updateScienceUI();savePrefs();if(state.running)system('Режим изменён: применится к следующей реплике.');};
-$('auto').onchange=savePrefs;
+
 $('directorEnabled').onchange=()=>{
  if(!$('directorEnabled').checked){
    cancelDirector();$('directorStatus').textContent='ИИ-режиссёр выключен · ядро маршрутизирует диалог';
@@ -1667,7 +1652,7 @@ $('export').onclick=()=>{
  }
  const blob=new Blob([logs.join('\n\n')],{type:'text/plain;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='TRIAD-v0.2.0-'+new Date().toISOString().slice(0,10)+'.txt';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1500);
 };
-window.addEventListener('beforeunload',()=>{cancelDirector();speech.stop();if(state.current){state.current.controller.abort();cancelListeners(state.current);}});
+window.addEventListener('beforeunload',()=>{cancelDirector();speech.stop();if(state.current)state.current.controller.abort();});
 restorePrefs();fitTopicField();updateScienceUI();renderCards();$('feed').innerHTML='<div class="empty">ОЖИДАНИЕ СИГНАЛА\nПОДКЛЮЧИ CHATGPT И ЗАПУСТИ ЭФИР</div>';
 if(haveSpeech){populateVoices();window.speechSynthesis.onvoiceschanged=populateVoices;}
 refreshStatus();

@@ -14,7 +14,7 @@ from backend.engine import Engine
 from backend.engine import enums as E
 
 ACTIONS = ["start", "claim", "complete", "user", "pause", "resume", "stop",
-           "interrupt", "reset", "fail", "tick",
+           "reset", "fail", "tick",
            "recover", "director", "priority_donation", "social"]
 SAMPLES = ["", "[[PASS]]", "[[WAIT_USER]]", "Хм.", "[[TO:SELF]]", "[[TO:ANY]]",
            "Экспериментатор, ответь", "Он сказал «Экспериментатор, ответь»",
@@ -49,8 +49,7 @@ class EngineFuzz(unittest.TestCase):
                     text = SAMPLES[rng.randrange(len(SAMPLES))] if rng.random() < .6 else ""
                     before = core.state()
                     after = core.event(action, agent=agent, ticket=ticket,
-                                       max_turns=rng.choice((0, 1, 2, 24)),
-                                       auto_interrupt=rng.random() < .5, text=text)
+                                       max_turns=rng.choice((0, 1, 2, 24)), text=text)
                     if not after["accepted"]:
                         for snap in (before, after):
                             snap["result"] = 0

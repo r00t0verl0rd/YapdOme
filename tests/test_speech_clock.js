@@ -21,7 +21,7 @@ const ctx={
   stripDirectives:s=>String(s||'').trim(),isMarker:()=>false,
   requestID:()=> 'mockid',
   feedItem:()=>({body:{textContent:''},meta:{textContent:''},el:{classList:{remove(){},add(){}}}}),
-  renderCards(){}, maybeConsultListeners(){},
+  renderCards(){},
   ended:0,
 };
 ctx.endTurn=async c=>{ctx.ended++;ctx.state.current=null};
@@ -34,7 +34,7 @@ ctx.realTurn=async c=>{
 };
 vm.createContext(ctx);
 vm.runInContext(between('const speech = {','function humanBytes')+'\nthis.speech=speech;',ctx);
-vm.runInContext(between('function queueWholeSpeech(c){','function maybeConsultListeners(c){')+'\nthis.queueWholeSpeech=queueWholeSpeech;',ctx);
+vm.runInContext(between('function queueWholeSpeech(c){','async function issueTurn(agent,ticket){')+'\nthis.queueWholeSpeech=queueWholeSpeech;',ctx);
 vm.runInContext(between('async function issueTurn(agent,ticket){','async function realTurn(c){')+'\nthis.issueTurn=issueTurn;',ctx);
 (async()=>{
  const p=ctx.issueTurn(0,22);

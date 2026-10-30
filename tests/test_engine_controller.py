@@ -151,19 +151,7 @@ class EngineController(unittest.TestCase):
         self.assertEqual(d['status'],'RUNNING')
         self.assertEqual(d['passes'],3)
         self.assertTrue(self.core.event('claim')['accepted'])
-    def test_stale_completion_after_interrupt(self):
-        s=self.claim()
-        x=self.core.event('interrupt',agent=2,ticket=s['ticket'])
-        self.assertTrue(x['accepted'])
-        self.assertFalse(self.core.event('complete',agent=0,ticket=s['ticket'],text='старый ответ')['accepted'])
-        self.assertEqual(self.claim()['agent'],2)
-    def test_one_ai_interrupt_wins_and_cooldown(self):
-        s=self.claim()
-        self.assertTrue(self.core.event('interrupt',agent=1,ticket=s['ticket'],auto_interrupt=True)['accepted'])
-        self.assertFalse(self.core.event('interrupt',agent=2,ticket=s['ticket'],auto_interrupt=True)['accepted'])
-        s=self.claim()
-        self.assertFalse(self.core.event('interrupt',agent=0,ticket=s['ticket'],auto_interrupt=True)['accepted'])
-        self.assertTrue(self.core.event('complete',agent=1,ticket=s['ticket'],text='Идея!')['accepted'])
+
     def test_pause_resume_retries_same_speaker(self):
         s=self.claim()
         p=self.core.event('pause')

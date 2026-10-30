@@ -163,6 +163,7 @@ class ScienceContextTests(unittest.TestCase):
         self.assertIn("[[TO:Имя]]", rules)
         self.assertIn("[[PASS]]", rules)
         self.assertIn("КАРТА ЗНАНИЙ", rules)
+        self.assertIn("На том же уровне обязательности — ХАРАКТЕР / ПОВЕДЕНИЕ", rules)
         # Topic priority must stay above the general goal.
         self.assertLess(rules.index("ПРИОРИТЕТ 1"), rules.index("ПРИОРИТЕТ 2"))
 

@@ -26,7 +26,7 @@ function harness(backend='browser'){
   qwen3Selected:()=>nodes.ttsBackend.value==='qwen3-tts',
   openaudioSelected:()=>nodes.ttsBackend.value==='openaudio-s1-mini',
   audioAvailable:()=>true,isRussian:s=>/[а-я]/i.test(s),
-  languageFor:()=> 'Russian',isMarker:()=>false,maybeConsultListeners(){},
+  languageFor:()=> 'Russian',isMarker:()=>false,
   SpeechSynthesisUtterance:function(text){this.text=text;utterances.push(this)},
   window:{AudioContext:function(){return audio},speechSynthesis:{speak(){},cancel(){}}},
   $:id=>nodes[id]||(nodes[id]={}),
@@ -35,7 +35,7 @@ function harness(backend='browser'){
   system:s=>errors.push(s),forceRenderCards(){},updateTTSUI(){}};
  vm.createContext(context);
  vm.runInContext(section('function stripDirectives(raw){','const state =')+section('function ttsText(raw){','const kokoroState=')+section('const speech = {','function humanBytes')+'\nthis.speech=speech;',context);
- vm.runInContext(section('function queueWholeSpeech(c){','function maybeConsultListeners(c){')+'\nthis.queueWholeSpeech=queueWholeSpeech;',context);
+ vm.runInContext(section('function queueWholeSpeech(c){','async function issueTurn(agent,ticket){')+'\nthis.queueWholeSpeech=queueWholeSpeech;',context);
  return {context,speech:context.speech,audio,nodes,sources,utterances,requests,errors,timers,buffer,
   advance(time){audio.currentTime=time;const callbacks=[...timers.values()];timers.clear();callbacks.forEach(fn=>fn())}};
 }

@@ -9,7 +9,7 @@ function harness(){
   return {classes,badge,classList:{toggle(key,on){if(on)classes.add(key);else classes.delete(key)}},
    querySelector:key=>key==='.tile-name'?name:key==='.tile-mode'?badge:null};
  });
- const state={running:true,paused:false,current:{agent:0,phase:'speaking',listeners:new Set()},turns:1};
+ const state={running:true,paused:false,current:{agent:0,phase:'speaking'},turns:1};
  const speech={audibleAgent:null};
  let frames=0;
  const context={console,Date,state,speech,defs:[{name:'A'},{name:'B'},{name:'C'}],window:{},
@@ -24,7 +24,7 @@ test('HUD follows audible output rather than generation phase, without waiting f
  h.speech.audibleAgent=0;h.sync();
  assert.equal(h.tiles[0].badge.textContent,'ГОВОРИТ');
  assert.equal(h.tiles[0].classes.has('is-speaking'),true);
- h.state.current={agent:1,phase:'speaking',listeners:new Set()};h.sync();
+ h.state.current={agent:1,phase:'speaking'};h.sync();
  assert.equal(h.tiles[0].classes.has('is-speaking'),true,'previous speaker remains animated during next-turn synthesis');
  assert.equal(h.tiles[1].classes.has('is-speaking'),false);
  assert.equal(h.tiles[1].badge.textContent,'ДУМАЕТ');

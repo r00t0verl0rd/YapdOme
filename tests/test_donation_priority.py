@@ -54,7 +54,7 @@ class DonationTests(unittest.TestCase):
           "model":"test-model","topic":"Разговор об искусстве",
           "shared_goal":"содержательная беседа","turns":13,"journal":[],"history":[],
           "donation_context":{"name":"Даша","text":"А какую песню любите?",
-                              "amount":50,"remaining":5,"first":True}
+                              "amount":50,"remaining":3,"first":True}
         }
         with patch("backend.server.http_server.register_call",side_effect=RequestBoundary):
             with self.assertRaises(RequestBoundary):
@@ -99,19 +99,42 @@ class DonationTests(unittest.TestCase):
         self.assertIn("priority_donation",js)
         self.assertIn("donationQueue",js)
         self.assertIn("donation_context",js)
+        self.assertNotIn("'Спасибо, '+donation.donor",js)
+
+    def test_regular_stream_gives_persona_clear_priority(self):
+        from backend.controls.host import persona_priority_instructions
+        directive=persona_priority_instructions("Резкий скептик, говорит коротко")
+        self.assertIn("Ни один ориентир не является второстепенной справкой",directive)
+        self.assertIn("одинаково обязательны",directive)
+        self.assertIn("РАВНЫЙ ПРИОРИТЕТ С ТЕМОЙ",directive)
+        self.assertIn("требования безопасности",directive)
+        self.assertIn("используй их регулярно и естественно",directive)
+        self.assertIn("безликой вежливой манере ИИ",directive)
 
     def test_donation_scene_progresses_not_repeats_thanks(self):
         donation={"name":"Клоп","amount":50,"text":"Здарова пацаны",
                   "first":True,"remaining":1,"covered":[]}
         first=donation_scene_instructions(donation,"Лимур","Добрый шутник",
                                            ["Лимур","Кизаро","Овелито"])
-        self.assertIn("ПЕРВЫЙ ОТВЕТ",first)
-        self.assertIn("УЖЕ добавляет начало",first)
-        donation.update(first=False,remaining=1,covered=["Привет, рады видеть!"])
+        self.assertIn("ПЕРВАЯ РЕПЛИКА",first)
+        self.assertIn("Не начинай с шаблонной благодарности",first)
+        self.assertNotIn("УЖЕ добавляет начало",first)
+        self.assertIn("если это приветствие — явно поприветствуй в ответ",first)
+        self.assertIn("РАВНЫЙ ПРИОРИТЕТ С ТЕМОЙ",first)
+        self.assertIn("не отбрасывай ни один",first)
+        donation.update(first=False,remaining=2,covered=["Привет, рады видеть!"])
         second=donation_scene_instructions(donation,"Кизаро","Скептик",
                                            ["Лимур","Кизаро","Овелито"])
-        self.assertIn("РАЗВИТИЕ",second)
-        self.assertIn("НЕ повторяй имя",second)
+        self.assertIn("ВТОРАЯ РЕПЛИКА",second)
+        self.assertIn("естественно",second)
+        self.assertIn("Клоп",second)
+        self.assertIn("если это явно женское имя",second)
+        self.assertIn("не называй её «брат»",second)
+        self.assertIn("избегай гендерно окрашенных",second)
+        self.assertIn("примерно 1–3 предложения",first)
+        self.assertIn("не пиши за них",first)
+        self.assertIn("метку говорящего",first)
+        self.assertIn("РАВНЫЙ ПРИОРИТЕТ С ТЕМОЙ",second)
         self.assertNotIn("ПЕРВЫЙ ОТВЕТ",second)
 
     def test_extra_donation_history_is_bounded(self):

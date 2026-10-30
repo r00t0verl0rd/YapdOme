@@ -80,7 +80,7 @@ class State:
             return self.credentials.get("provider", "chatgpt")
 
     def set_provider(self, name):
-        if name not in ("chatgpt", "deepseek"):
+        if name not in ("chatgpt", "deepseek", "codex"):
             raise BridgeError("Неизвестный провайдер")
         with self.lock:
             self.credentials["provider"] = name

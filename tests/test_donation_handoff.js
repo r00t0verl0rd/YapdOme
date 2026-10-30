@@ -25,7 +25,6 @@ async function verify(action){
  const native=async(kind)=>{calls.push(kind);return nativePromise;};
  const helpers={
    state,
-   cancelListeners:()=>calls.push('cancel-listeners'),
    coreEvent:native,
    applyCore:s=>{state.core=s;},
    isMarker:()=>false,
@@ -54,11 +53,11 @@ async function verify(action){
  // An incoming donation cannot run the NEXT claim while the engine is still busy.
  const fields={donationAmount:{value:'50'},donor:{value:'Тест'},donationText:{value:'Привет'}};
  const donorFactory=Function('state','$','system','feedItem','requestID',
-   'DONATION_REPLIES','scheduleNext','updateDonationBadge','cancelListeners',
+   'DONATION_REPLIES','scheduleNext','updateDonationBadge',
    grab('donationMessage')+';return donationMessage');
  const donate=donorFactory(state,id=>fields[id],()=>{},
    ()=>({body:{textContent:''},meta:{textContent:''}}),
-   ()=>'donation-test',5,()=>scheduled.push('early'),()=>{},helpers.cancelListeners);
+   ()=>'donation-test',3,()=>scheduled.push('early'),()=>{});
  donate();
  assert.equal(state.donationQueue.length,1);
  assert.equal(scheduled.length,0,'donor may not schedule claim before native ACK');

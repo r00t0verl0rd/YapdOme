@@ -91,44 +91,6 @@ class DebateRouting(unittest.TestCase):
             _, kind, _ = self.route(0, text)
             self.assertEqual(kind, 'pass', text)
 
-    def test_interrupted_speaker_always_gets_the_floor_back(self):
-        # The old code compared next_agent to the rotation target, so an
-        # interrupter who addressed the third agent silently dropped the
-        # interrupted speaker's right to answer.
-        for interrupter, third in ((1, 2), (2, 1)):
-            self.core.event('start', max_turns=0)
-            first = self.core.event('claim')
-            self.assertEqual(first['agent'], 0)
-            self.core.event('interrupt', agent=interrupter, ticket=first['ticket'])
-            second = self.core.event('claim')
-            self.assertEqual(second['agent'], interrupter)
-            done = self.core.event('complete', agent=interrupter, ticket=second['ticket'],
-                                   text=NEUTRAL)
-            self.assertEqual(done['next_agent'], 0, (interrupter, third))
-            self.assertEqual(done['route_reason'], 'pending_reply')
-            self.assertEqual(self.core.event('claim')['agent'], 0)
-
-    def test_explicit_address_still_overrides_pending_reply(self):
-        self.core.event('start', max_turns=0)
-        first = self.core.event('claim')
-        self.core.event('interrupt', agent=2, ticket=first['ticket'])
-        second = self.core.event('claim')
-        done = self.core.event('complete', agent=2, ticket=second['ticket'],
-                               text='Скептик, как ты думаешь?')
-        self.assertEqual(done['next_agent'], 1)
-        self.assertEqual(done['route_reason'], 'address')
-
-    def test_interrupt_breaks_the_carousel(self):
-        # A real debate answers its challenger before moving on: A -> B -> A -> C.
-        self.core.event('start', max_turns=0)
-        first = self.core.event('claim')                      # 0
-        self.core.event('interrupt', agent=1, ticket=first['ticket'])
-        second = self.core.event('claim')                     # 1
-        self.core.event('complete', agent=1, ticket=second['ticket'], text=NEUTRAL)
-        third = self.core.event('claim')                      # back to 0
-        self.assertEqual(third['agent'], 0)
-        done = self.core.event('complete', agent=0, ticket=third['ticket'], text=NEUTRAL)
-        self.assertEqual(done['next_agent'], 2, 'the agent who waited longest should speak')
 
     def test_names_with_spaces_and_mixed_case(self):
         self.core.names(["Критик Иван", "Аналитик Мария", "Инженер Пётр"])
@@ -146,8 +108,7 @@ class DebateRouting(unittest.TestCase):
 
     def test_route_reason_is_reported_through_bridge(self):
         self.assertTrue(self.core.state()['route_reason'] in
-                        ('none', 'rotation', 'token', 'address', 'pending_reply',
-                         'override', 'interrupt'))
+                        ('none', 'rotation', 'token', 'address', 'override'))
 
 
 if __name__ == '__main__':

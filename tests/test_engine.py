@@ -106,9 +106,6 @@ class ProtocolTests(unittest.TestCase):
         self.assertTrue(raw["stream"])
         self.assertFalse(raw["store"])
         self.assertEqual(req.get_header('Authorization'), 'Bearer MOCK_TOKEN')
-        if 'единственная задача' in raw['instructions']:
-            self.assertIn('WAIT', raw['instructions'])
-            return MockUpstream('INTERRUPT')
         return MockUpstream('Привет! Я говорю.')
 
     def test_version_schema_and_semver(self):
@@ -234,10 +231,6 @@ class ProtocolTests(unittest.TestCase):
             network.assert_not_called()
         self.assertNoActiveCalls()
 
-    def test_listener_is_cancellable_during_refresh(self):
-        self.check_cancel_before_network('/api/intent', 'opt-intent-0001', {
-            'request_id': 'opt-intent-0001', 'agent': 1, 'model': 'gpt-6',
-            'agent_name': 'Скептик', 'topic': 'Тест'}, 409)
 
     def test_donation_is_cancellable_during_refresh(self):
         self.check_cancel_before_network('/api/donation-topic', 'opt-donation-0001', {
@@ -302,6 +295,8 @@ class ProtocolTests(unittest.TestCase):
             self.assertIn('ПРИОРИТЕТ 2 — ОБЩАЯ ЦЕЛЬ',body['instructions'])
             self.assertLess(body['instructions'].index('ПРИОРИТЕТ 1'),body['instructions'].index('ПРИОРИТЕТ 2'))
             self.assertIn('ПРИОРИТЕТНАЯ ТЕМА (данные ведущего):',body['input'][0]['content'])
+            self.assertIn('ХАРАКТЕР / ПОВЕДЕНИЕ (равный приоритет с темой)',body['input'][0]['content'])
+            self.assertIn('На том же уровне обязательности — ХАРАКТЕР / ПОВЕДЕНИЕ',body['instructions'])
             return MockUpstream('Предлагаю эксперимент.')
         with patch.object(triad.urllib.request,'urlopen',assert_prompt):
             code,body=self.request('POST','/api/stream',payload)
@@ -319,16 +314,6 @@ class ProtocolTests(unittest.TestCase):
         self.assertIn(b'"type": "done"', body)
         self.assertNoActiveCalls()
 
-    def test_real_ai_listener_decision(self):
-        payload = {"request_id": "random-intent-001", "agent": 2, "model": "gpt-6.1-sol",
-                   "speaker": "Архитектор", "partial": "Нам нужна структура", "topic": "Дебаты",
-                   "shared_goal": "Собрать проверяемую архитектуру",
-                   "agent_name": "Гамма", "role": "Делай эксперименты", "goal": "Проверка", "history": [{"name": "Агент", "text": "Идея"}]}
-        with patch.object(triad.urllib.request, 'urlopen', self.mock_openai):
-            code, body = self.request('POST', '/api/intent', payload)
-        self.assertEqual(code, 200)
-        self.assertEqual(json.loads(body)['decision'], 'interrupt')
-        self.assertNoActiveCalls()
 
     def test_native_engine_http_wait_and_resume(self):
         def post(action, **fields):
@@ -408,11 +393,11 @@ class ProtocolTests(unittest.TestCase):
         self.assertEqual(post('claim')[1]['agent'], 2)
         post('stop')
 
-    def test_invalid_agent_is_rejected(self):
-        payload = {"request_id": "random-intent-002", "agent": 5, "model": "gpt-6.1-sol"}
-        code, body = self.request('POST', '/api/intent', payload)
-        self.assertEqual(code, 400)
-        self.assertIn('слушатель'.encode(), body)
+    def test_natural_interrupt_endpoint_is_removed(self):
+        with patch.object(triad.urllib.request, 'urlopen') as network:
+            code, _ = self.request('POST', '/api/intent', {})
+        self.assertEqual(code, 404)
+        network.assert_not_called()
 
     def test_missing_cancel(self):
         code, body = self.request('POST', '/api/cancel', {"request_id": "unknown-request"})

@@ -57,7 +57,7 @@ class CoreSafety(unittest.TestCase):
 
     def test_rejected_callbacks_preserve_kind(self):
         done = self.route('[[PASS]]')
-        for action in ['complete', 'recover', 'fail', 'interrupt', 'director']:
+        for action in ['complete', 'recover', 'fail', 'director']:
             result = self.core.event(action, agent=0, ticket=0)
             self.assertFalse(result['accepted'])
             self.assertEqual(self.core.state(), done)

@@ -183,7 +183,9 @@ main.cyber-command-center{
  .live-tile-top{font-size:9px;padding:5px}
  .live-tile-top .tile-mode{font-size:8px}
 
- .feed .message{grid-template-columns:70px minmax(0,1fr)}
+ .feed .message{display:block}
+ .feed .message .who,.feed .message .body,.feed .message .meta{
+  display:block;grid-column:auto;grid-row:auto;max-width:100%;min-width:0}
  .feed .message .body{font-size:12px}
 }
 @media(max-width:25em){

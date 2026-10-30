@@ -39,6 +39,7 @@
           <select id="provider">
             <option value="chatgpt">ChatGPT</option>
             <option value="deepseek">DeepSeek</option>
+            <option value="codex">Codex (ChatGPT)</option>
           </select>
           <div id="chatgptAuth">
             <div class="connect-actions simple-auth">
@@ -47,6 +48,10 @@
               <button id="logout" class="quiet-action" hidden>Выйти</button>
             </div>
             <p id="authnote" class="authnote">Локальная open-source интеграция. Использование лимитов ChatGPT требует подходящего тарифа Plus/Pro и отдельного разрешения. На Free OpenAI может отклонить это разрешение; обход тарифа не поддерживается.</p>
+          </div>
+          <div id="codexAuth" hidden>
+            <div class="connect-actions"><button id="codexLogin" class="primary">Войти через Codex</button></div>
+            <p id="codexNote" class="authnote">Вход выполняется через локальный Codex CLI; YapdOme не получает и не хранит токены.</p>
           </div>
           <div id="deepseekAuth" hidden>
             <label class="field-caption" for="deepseekKey">API-КЛЮЧ DEEPSEEK</label>
@@ -94,7 +99,7 @@
     <div class="broadcast-column">
     <section class="panel live-visual" aria-label="Живая сцена с тремя агентами">
       <div class="live-visual-head">
-        <h2>АГЕНТЫ В ЭФИРЕ</h2>
+        <h2>АГЕНТЫ</h2> В ЭФИРЕ</h2>
       </div>
       <div id="liveAvatars" class="live-tiles">
         <article class="live-tile" data-agent-index="0" aria-label="Агент 1">
@@ -195,7 +200,7 @@
         <p class="field-tip mission-tip">Тема важнее общей задачи. Для интересного эфира не обязательно приходить к общему выводу.</p>
         <label class="check-line"><input id="directorEnabled" type="checkbox" checked> ИИ-режиссёр диалога <span class="hint">адаптивный план · чаще при повторах</span></label>
         <p class="field-tip" id="directorStatus">Режиссёр работает за кадром; при задержке продолжает ядро.</p>
-        <label class="check-line"><input id="auto" type="checkbox" checked> Естественные перебивания <span class="hint">один слушатель · ждёт завершения TTS · можно отключить</span></label>
+
       </div>
     </section>
     </div>
