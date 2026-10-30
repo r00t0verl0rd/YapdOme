@@ -61,7 +61,7 @@ class DirectorBoundaries(unittest.TestCase):
             for i in range(4)
         ]
         direction = conversational_direction("свободная беседа", 8, agreement)
-        self.assertIn("проверь одну его слабую предпосылку", direction)
+        self.assertIn("проверь слабую предпосылку", direction)
         self.assertIn("прямо возрази", direction)
         self.assertIn("Не спорь искусственно", direction)
 
@@ -72,7 +72,7 @@ class DirectorBoundaries(unittest.TestCase):
             {"agent": 0, "text": "С другой стороны, есть такой риск."},
         ]
         ordinary = conversational_direction("свободная беседа", 8, mixed)
-        self.assertNotIn("проверь одну его слабую предпосылку", ordinary)
+        self.assertNotIn("проверь слабую предпосылку", ordinary)
 
     def test_synthetic_loop_vs_topic_progression(self):
         # Exercise the existing detector, not a competing Python decision policy.
