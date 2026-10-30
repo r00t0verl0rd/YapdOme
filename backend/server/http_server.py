@@ -696,6 +696,11 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send_json(200, {"logged_out": True})
                 except CodexError as exc:
                     return self.error(502, str(exc))
+            if path == "/codex/session/reset":
+                try:
+                    return self.send_json(200, CODEX.reset_session())
+                except CodexError as exc:
+                    return self.error(502, str(exc))
             if path == "/provider":
                 try:
                     STATE.set_provider(data.get("provider", "chatgpt"))
@@ -1037,6 +1042,57 @@ class Handler(BaseHTTPRequestHandler):
         names_json = json.dumps(peers, ensure_ascii=False)
         donation = donation_context(data)
         proposed = None if donation else validate_plan(data.get("director_plan"))
+
+        # Codex stores the conversation in one thread. Only first-turn setup,
+        # new host input, changed settings and the current speaker are sent.
+        if _llm_provider() == "codex":
+            call = register_call(rid)
+            try:
+                if call.cancelled.is_set():
+                    return self.error(409, "Запрос отменён до начала")
+                focus = data.get("social_focus")
+                if not isinstance(focus, dict):
+                    focus = None
+                codex_data = {
+                    "agent_name": agent_name,
+                    "agents": peers,
+                    "cast_profiles": cast,
+                    "description": description,
+                    "topic": topic,
+                    "shared_goal": mission,
+                    "show_mode": mode,
+                    "social_focus": focus,
+                    "director_plan": proposed,
+                    "donation_context": donation,
+                    "post_donation_name": data.get("post_donation_name"),
+                    "history": history
+                }
+                self.send_response(200)
+                self.headers_common("text/event-stream; charset=utf-8")
+                self.send_header("Connection", "close")
+                self.end_headers()
+                chars = 0
+                def emit(kind, text=""):
+                    nonlocal chars
+                    if kind == "delta":
+                        chars += len(text)
+                        if chars > 2800:
+                            raise CodexError("Лимит длины реплики (2800 символов)")
+                        self.write_event("delta", text=text)
+                try:
+                    CODEX.generate_session(model, codex_data, call.cancelled, emit)
+                    if not call.cancelled.is_set():
+                        self.write_event("done")
+                except CodexError as exc:
+                    if not call.cancelled.is_set():
+                        self.write_event("error", message=str(exc))
+                return
+            finally:
+                call.cancel()
+                with STATE.lock:
+                    STATE.active_calls.pop(rid, None)
+                self.close_connection = True
+
         pace = proposed["pace"] if proposed else dialogue_pace(turns, history)
         if donation:
             instructions = donation_scene_instructions(
