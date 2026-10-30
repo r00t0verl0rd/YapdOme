@@ -74,7 +74,10 @@ class CodexAppServer:
             self.next_id += 1; ident = self.next_id
             waiter = {"event":threading.Event(),"response":None}
             self.pending[ident] = waiter
-        self._start_write({"method":method,"id":ident,"params":params or {}})
+        message = {"method":method,"id":ident}
+        if params is not None:
+            message["params"] = params
+        self._start_write(message)
         if not waiter["event"].wait(timeout):
             with self.lock: self.pending.pop(ident, None)
             raise CodexError("Тайм-аут Codex App Server: "+method)
@@ -108,6 +111,14 @@ class CodexAppServer:
     def login(self):
         result = self._request("account/login/start", {"type":"chatgpt","useHostedLoginSuccessPage":True,"appBrand":"codex"})
         return {"url":result.get("authUrl")}
+
+    def logout(self):
+        # Use Codex App Server's account API so its shared local credential store
+        # is cleared without manually touching auth.json or the OS keychain.
+        self._request("account/logout", timeout=10)
+        with self.lock:
+            self.account = None
+            self.error = ""
 
     def models(self):
         result = self._request("model/list", {"limit":100,"includeHidden":False})
