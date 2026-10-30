@@ -126,7 +126,7 @@ function browserHarness(){
   $:id=>dom[id]||(dom[id]={}),setTimeout,clearTimeout,
   system:s=>{throw Error('Unexpected TTS error: '+s)}};
  vm.createContext(context);
- vm.runInContext(section+'\\nthis.speech=speech;',context);
+ vm.runInContext(section+'\nthis.speech=speech;',context);
  return {speech:context.speech,spoken,cancelled};
 }
 test('browser voice queues the next utterance while current voice is still playing',async()=>{
