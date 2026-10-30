@@ -70,6 +70,10 @@ class ProviderAdapterTests(unittest.TestCase):
     def test_adapter_registry_is_provider_keyed(self):
         self.assertIsInstance(get_http_adapter("chatgpt"), OpenAIResponsesAdapter)
         self.assertIsInstance(get_http_adapter("deepseek"), DeepSeekAdapter)
+        self.assertIsInstance(
+            get_http_adapter("codex"), OpenAIResponsesAdapter,
+            "one-shot auxiliary tasks retain the existing ChatGPT HTTP fallback",
+        )
         with self.assertRaises(BridgeError):
             get_http_adapter("unknown-provider")
 
