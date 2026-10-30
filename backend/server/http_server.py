@@ -24,6 +24,7 @@ from .auth import State, LiveCall
 from .config import HOST, PORT
 from .llm import API_URL, DEEPSEEK_URL, BridgeError, json_request, sse_events
 from .codex import CODEX, CodexError
+from .conversation_policy import build_turn_policy
 from .conversation import (
     ConversationStore, discussion_frame, social_focus_instructions, live_requested_voice,
     live_topic_guide, character_style, scene_mode, science_phase, science_protocol,
