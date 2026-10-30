@@ -93,7 +93,7 @@ function languageFor(text){
 const speech = {
  queue:[],playing:false,generation:0,waiters:[],controller:null,ctx:null,nodes:new Set(),doneAudio:null,
  serial:0,metricsEnabled:false,metrics:[],startTimers:new Set(),
- activeSynthesis:0,prefetch:null,audibleAgent:null,audibleEntry:null,audioMeter:null,
+ activeSynthesis:0,prefetch:null,browserPrefetch:null,audibleAgent:null,audibleEntry:null,audioMeter:null,
  setAudibleAgent(agent){
    if(this.audibleAgent===agent)return;
    this.audibleAgent=agent;
@@ -130,26 +130,66 @@ const speech = {
    }
    return null;
  },
+ usesBrowser(entry){
+   if(entry?.audioMode==='browser')return true;
+   const backend=entry?.config?.backend;
+   return backend==='browser'||
+     (backend==='kokoro-ru'&&!isRussian(entry.text))||
+     (backend==='kokoro'&&isRussian(entry.text));
+ },
+ browserUtterance(entry){
+   const u=new SpeechSynthesisUtterance(entry.text);
+   u.lang=languageFor(entry.text)==='Russian'?'ru-RU':'en-US';
+   u.rate=entry.config.speed||1;u.pitch=1;u.volume=1;
+   const voice=entry.config.browserVoice;
+   if(voice){u.voice=voice;u.lang=voice.lang||u.lang;}
+   return u;
+ },
  maybePrefetch(){
-   if(!this.playing||this.prefetch||this.activeSynthesis||!this.ctx||!this.queue.length)return;
+   if(!this.playing||this.prefetch||this.browserPrefetch||!this.queue.length)return;
    const entry=this.queue[0],spec=this.prefetchPlan(entry);
-   if(!spec)return;
-   const gen=this.generation,controller=new AbortController();
-   const job={entry,controller,buffer:null,error:null,promise:null};
-   this.prefetch=job;this.activeSynthesis++;
-   this.metric(entry,'prefetch-started');
-   job.promise=(async()=>{
-     try{
-       const buffer=await this.wavFor(spec.url,spec.payload,spec.limit,controller,gen);
-       if(this.prefetch===job&&gen===this.generation&&!controller.signal.aborted){
-         job.buffer=buffer;this.metric(entry,'prefetch-ready',{duration:buffer.duration});
+   if(spec){
+     if(this.activeSynthesis||!this.ctx)return;
+     const gen=this.generation,controller=new AbortController();
+     const job={kind:'wav',entry,controller,buffer:null,error:null,promise:null};
+     this.prefetch=job;this.activeSynthesis++;
+     this.metric(entry,'prefetch-started',{kind:'wav'});
+     job.promise=(async()=>{
+       try{
+         const buffer=await this.wavFor(spec.url,spec.payload,spec.limit,controller,gen);
+         if(this.prefetch===job&&gen===this.generation&&!controller.signal.aborted){
+           job.buffer=buffer;this.metric(entry,'prefetch-ready',{kind:'wav',duration:buffer.duration});
+         }
+       }catch(err){job.error=err;this.metric(entry,'prefetch-failed',{kind:'wav'});}
+       finally{
+         this.activeSynthesis--;
+         if(this.prefetch!==job)this.maybePrefetch();
        }
-     }catch(err){job.error=err;this.metric(entry,'prefetch-failed');}
-     finally{
-       this.activeSynthesis--;
-       if(this.prefetch!==job)this.maybePrefetch();
+     })();
+     return;
+   }
+
+   // SpeechSynthesis has its own FIFO. Queue the next utterance while the
+   // current browser voice is audible; it starts only after the current one
+   // ends. Never mix this native queue with WebAudio.
+   if(!haveSpeech||!this.usesBrowser(entry)||!this.usesBrowser(this.audibleEntry))return;
+   const gen=this.generation,utterance=this.browserUtterance(entry);
+   const job={kind:'browser',entry,utterance,gen};
+   this.browserPrefetch=job;
+   utterance.onstart=()=>this.startEntry(entry,gen);
+   utterance.onerror=()=>{
+     if(this.browserPrefetch===job){
+       this.browserPrefetch=null;
+       this.metric(entry,'prefetch-failed',{kind:'browser'});
      }
-   })();
+   };
+   try{
+     window.speechSynthesis.speak(utterance);
+     this.metric(entry,'prefetch-queued',{kind:'browser'});
+   }catch(_){
+     if(this.browserPrefetch===job)this.browserPrefetch=null;
+     this.metric(entry,'prefetch-failed',{kind:'browser'});
+   }
  },
  async obtainWav(entry,gen,url,payload,limit,controller){
    const job=this.prefetch?.entry===entry?this.prefetch:null;
@@ -218,6 +258,7 @@ const speech = {
 
    if(entry.onStart)entry.onStart(entry.raw);
    this.setAudibleAgent(entry.agent);
+   this.maybePrefetch();
  },
  unlock(){
 
@@ -274,6 +315,7 @@ const speech = {
  stop(){
    this.generation++;
    if(this.prefetch){this.prefetch.controller.abort();this.prefetch=null;}
+   this.browserPrefetch=null;
    this.queue.length=0;this.playing=false;
    for(const timer of this.startTimers)clearTimeout(timer);this.startTimers.clear();
    if(this.controller){this.controller.abort();this.controller=null;}
@@ -314,11 +356,10 @@ const speech = {
  playBrowser(entry,gen){
    entry.audioMode='browser';
    if(!haveSpeech){this.playing=false;this.pump();return;}
-   const u=new SpeechSynthesisUtterance(entry.text);
-   u.lang=languageFor(entry.text)==='Russian'?'ru-RU':'en-US';
-   u.rate=entry.config.speed||1;u.pitch=1;u.volume=1;
-   const voice=entry.config.browserVoice;
-   if(voice){u.voice=voice;u.lang=voice.lang||u.lang}
+   const prepared=this.browserPrefetch?.entry===entry&&this.browserPrefetch.gen===gen?
+     this.browserPrefetch:null;
+   if(prepared)this.browserPrefetch=null;
+   const u=prepared?.utterance||this.browserUtterance(entry);
    let settled=false;
    const finish=played=>{if(settled)return;settled=true;clearTimeout(fallback);this.startTimers.delete(fallback);if(gen!==this.generation)return;
      if(played){this.metric(entry,'drained');if(entry.started&&entry.onFinish)entry.onFinish(entry.raw);}
@@ -336,11 +377,15 @@ const speech = {
      if(gen!==this.generation)return;
      system('Системный голос не завершил реплику. Проверь выбранный голос macOS.');
      this.metric(entry,'failed',{reason:'browser-timeout'});
+     this.browserPrefetch=null;
      try{window.speechSynthesis.cancel()}catch(_){}
      finish(false);
    },Math.max(30000,Math.min(900000,entry.text.length*260)));
    this.startTimers.add(fallback);
-   try{window.speechSynthesis.speak(u)}catch(_){finish(false)}
+   try{
+     if(!prepared)window.speechSynthesis.speak(u);
+     this.maybePrefetch();
+   }catch(_){finish(false)}
  },
  async readWav(response,controller,gen){
    // Enforce the transport budget before arrayBuffer/decode allocations. The
