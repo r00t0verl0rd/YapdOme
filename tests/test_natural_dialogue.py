@@ -50,8 +50,8 @@ class NaturalDialogueTests(unittest.TestCase):
             "Ага. Подпись и ответственность."))]
         self.assertTrue(agreement_streak(rows))
         guide = triad.conversational_direction("Политика", 10, rows, mode="live")
-        self.assertIn("Участники уже несколько раз согласились", guide)
-        self.assertIn("Не повторяй их вывод", guide)
+        self.assertIn("Несколько реплик подряд повторяют согласие", guide)
+        self.assertIn("не пересказывай общий вывод", guide)
         self.assertFalse(agreement_streak([{"agent": 0, "text": "Почему мы так решили?"}]))
 
     def test_live_stances_are_not_forced_or_pretended(self):
@@ -119,7 +119,7 @@ class NaturalDialogueTests(unittest.TestCase):
         self.assertIn("пивас", motifs)
         instruction = triad.conversational_direction("Сленг", 9, history, mode="live")
         self.assertIn("Повторяющийся мотив исчерпан", instruction)
-        self.assertIn("не возвращайся к нему даже в отрицательной форме", instruction)
+        self.assertIn("не возвращайся к нему и не заменяй синонимами", instruction)
         self.assertLess(len(instruction), 350)
         self.assertIn("банк", instruction)
         self.assertIn("пивас", instruction)
