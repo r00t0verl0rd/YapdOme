@@ -14,6 +14,7 @@ function harness({deferSecond=true}={}){
    getChannelData:()=>channel,copyToChannel(){}};
  };
  const audio={state:'running',currentTime:0,destination:{},resume:async()=>{},
+  close:async function(){this.state='closed';this.closed=true;},
   decodeAudioData:async()=>buffer(),
   createBuffer:()=>buffer(),
   createGain:()=>({gain:{value:1},connect(){},disconnect(){}}),
@@ -22,6 +23,12 @@ function harness({deferSecond=true}={}){
     start(){sources.push(item)}};
    return item;
   }};
+ const contexts=[];
+ function AudioContext(){
+  const ctx=contexts.length?{...audio,state:'running',closed:false}:audio;
+  contexts.push(ctx);
+  return ctx;
+ }
  const dom={voiceEnabled:{checked:true},rate:{value:'1'},ttsBackend:{value:'piper'},feed:{scrollTop:0,scrollHeight:10}};
  const context={Date,Promise,AbortController,Uint8Array,Float32Array,DataView,console,
   state:{lastAudibleAt:0},defs:[{name:'Норман',piperVoice:'dmitri'}],
@@ -29,7 +36,7 @@ function harness({deferSecond=true}={}){
   piperSpeakers:[['dmitri']],sileroSpeakers:[['aidar']],
   piperSelected:()=>true,sileroSelected:()=>false,kokoroSelected:()=>false,kokoroRuSelected:()=>false,
   isRussian:()=>true,languageFor:()=> 'Russian',ttsText:s=>s,
-  window:{AudioContext:function(){return audio}},
+  window:{AudioContext},
   $:id=>dom[id]||(dom[id]={}),
   setTimeout:setTimeout,clearTimeout:clearTimeout,
   fetch:(url,opts)=>{
@@ -39,7 +46,7 @@ function harness({deferSecond=true}={}){
   },system:s=>{throw Error('Unexpected TTS error: '+s)}};
  vm.createContext(context);
  vm.runInContext(section+'\nthis.speech=speech;',context);
- return {speech:context.speech,sources,calls,deferred,buffer};
+ return {speech:context.speech,sources,calls,deferred,buffer,contexts};
 }
 test('next sentence is synthesized during current audio and played once in FIFO order',async()=>{
  const h=harness(),done=[];
@@ -170,4 +177,33 @@ test('STOP cancels an already queued browser utterance and stale events stay sil
  stale.onend?.();
  assert.equal(h.speech.playing,false);
  assert.equal(h.speech.audibleAgent,null);
+});
+
+test('interrupted AudioContext is replaced on the next user-gesture unlock',()=>{
+ const h=harness();
+ h.speech.unlock();
+ const old=h.speech.ctx;
+ assert.equal(old.state,'running');
+ old.state='interrupted';
+ h.speech.unlock();
+ assert.equal(h.contexts.length,2,'interrupted context must be replaced, not merely resumed');
+ assert.notEqual(h.speech.ctx,old);
+ assert.equal(old.closed,true,'the retired context must be closed');
+ assert.equal(h.speech.ctx.state,'running');
+});
+
+test('explicit audio reset creates a fresh context and clears stale output nodes',()=>{
+ const h=harness();
+ h.speech.unlock();
+ const old=h.speech.ctx;
+ let stopped=false,disconnected=false;
+ h.speech.nodes.add({stop(){stopped=true;},disconnect(){disconnected=true;}});
+ h.speech.audioMeter={context:old};
+ const fresh=h.speech.resetAudioContext();
+ assert.notEqual(fresh,old);
+ assert.equal(stopped,true);
+ assert.equal(disconnected,true);
+ assert.equal(old.closed,true);
+ assert.equal(h.speech.audioMeter,null);
+ assert.equal(h.speech.nodes.size,0);
 });

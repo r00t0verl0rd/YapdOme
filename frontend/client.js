@@ -260,18 +260,45 @@ const speech = {
    this.setAudibleAgent(entry.agent);
    this.maybePrefetch();
  },
+ resetAudioContext(){
+   const C=window.AudioContext||window.webkitAudioContext;
+   if(!C)throw Error('Web Audio недоступен');
+   const previous=this.ctx;
+   // Sources and analyser nodes belong to their original context. Retire them
+   // before replacing a context that Safari may have left interrupted/muted.
+   for(const source of this.nodes){
+     try{source.stop()}catch(_){}
+     try{source.disconnect()}catch(_){}
+     try{source._voiceGain?.disconnect()}catch(_){}
+   }
+   this.nodes.clear();
+   this.audioMeter=null;
+   const next=new C();
+   this.ctx=next;
+   if(previous&&previous!==next&&previous.state!=='closed'){
+     try{Promise.resolve(previous.close()).catch(()=>{});}catch(_){}
+   }
+   return next;
+ },
  unlock(){
-
    const C=window.AudioContext||window.webkitAudioContext;
    if(!C)return;
-   try{if(!this.ctx)this.ctx=new C();if(this.ctx.state==='suspended')this.ctx.resume().catch(()=>{});}catch(_){}
+   try{
+     // WebKit can expose "interrupted", which is not covered by the usual
+     // suspended-only recovery. A new context is the reliable recovery path.
+     if(!this.ctx||this.ctx.state==='closed'||this.ctx.state==='interrupted')
+       this.resetAudioContext();
+     if(this.ctx&&this.ctx.state!=='running')this.ctx.resume().catch(()=>{});
+   }catch(_){}
  },
  async audioReady(){
-   // Safari/macOS may suspend the audio context again while local TTS is generating.
-   this.unlock();
-   if(!this.ctx)throw Error('Web Audio недоступен');
-   if(this.ctx.state==='suspended')await this.ctx.resume();
-   if(this.ctx.state!=='running')throw Error('Аудиовыход браузера заблокирован. Нажми «ТЕСТ ЗВУКА».');
+   const C=window.AudioContext||window.webkitAudioContext;
+   if(!C)throw Error('Web Audio недоступен');
+   if(!this.ctx||this.ctx.state==='closed'||this.ctx.state==='interrupted')
+     this.resetAudioContext();
+   if(this.ctx.state!=='running')await this.ctx.resume();
+   if(this.ctx.state!=='running')
+     throw Error('Аудиовыход браузера не восстановился. Нажми «ТЕСТ ЗВУКА» для перезапуска аудиоканала.');
  },
  audioLevel(buffer){
    // Ignore silent 20 ms windows: pauses must not make a voice louder.
@@ -1755,11 +1782,11 @@ function activateVoiceEngine(selected){
 }
 $('testAudioOutput').onclick=async()=>{
  try{
-  const C=window.AudioContext||window.webkitAudioContext;
-  if(!C)throw Error('Web Audio недоступен');
-  const ctx=speech.ctx||(speech.ctx=new C());
+  if(speech.playing)throw Error('Сначала останови текущую озвучку кнопкой STOP, затем повтори тест.');
+  // The test must not reuse the possibly muted context it is meant to diagnose.
+  const ctx=speech.resetAudioContext();
   await ctx.resume();
-  if(ctx.state!=='running')throw Error('Аудиоконтекст не запущен');
+  if(ctx.state!=='running')throw Error('Новый аудиоконтекст не запустился: '+ctx.state);
   const osc=ctx.createOscillator(),gain=ctx.createGain();
   osc.type='sine';osc.frequency.value=440;
   gain.gain.setValueAtTime(.0001,ctx.currentTime);
@@ -1768,7 +1795,7 @@ $('testAudioOutput').onclick=async()=>{
   osc.connect(gain);gain.connect(ctx.destination);
   osc.onended=()=>{osc.disconnect();gain.disconnect()};
   osc.start();osc.stop(ctx.currentTime+.36);
-  system('Аудиотест: короткий звуковой сигнал отправлен на выход. Если его не слышно, проверь звук Safari/macOS.');
+  system('Аудиотест отправлен через НОВЫЙ AudioContext ('+ctx.state+').');
  }catch(err){system('Ошибка аудиовыхода: '+err.message);}
 };
 // Voice choices live on character cards; this studio controls the TTS backend.
