@@ -12,7 +12,7 @@ const between=(a,b)=>{
 };
 const tick=async()=>{for(let i=0;i<8;i++)await new Promise(setImmediate);};
 function harness(){
- const wavCalls=[],sources=[],completions=[];
+ const wavCalls=[],sources=[],completions=[],items=[];
  function buffer(){
   const samples=new Float32Array(24000).fill(.1);
   return {duration:1,length:24000,numberOfChannels:1,sampleRate:24000,getChannelData:()=>samples};
@@ -38,7 +38,10 @@ function harness(){
   isMarker:()=>false,window:{AudioContext:function(){return audio}},
   $:id=>elements[id]||(elements[id]={}),renderCards(){},
   setTimeout,clearTimeout,
-  feedItem:()=>({body:{textContent:''},meta:{textContent:''},el:{classList:{remove(){},add(){}}}}),
+  feedItem:()=>{
+   const item={body:{textContent:''},meta:{textContent:''},el:{classList:{remove(){},add(){}}}};
+   items.push(item);return item;
+  },
   requestID:()=>String(++state.turns),requestDirector(){},queueSpeech(){},
   realTurn:async c=>{c.text=c.agent===0?'Первый готовый ответ.':'Следующий готовый ответ, созданный пока играет первый WAV. '.repeat(5);},
   endTurn:async c=>{
@@ -56,7 +59,7 @@ function harness(){
  vm.runInContext(between('const speech = {','function humanBytes')+'\nthis.speech=speech;',ctx);
  vm.runInContext(between('function queueWholeSpeech(c){','async function issueTurn(agent,ticket){')+'\nthis.queueWholeSpeech=queueWholeSpeech;',ctx);
  vm.runInContext(between('async function issueTurn(agent,ticket){','async function realTurn(c){')+'\nthis.issueTurn=issueTurn;',ctx);
- return {ctx,state,sources,wavCalls,completions};
+ return {ctx,state,sources,wavCalls,completions,items};
 }
 test('next agent synthesizes entire Piper WAV while previous WAV is audible',async()=>{
  const h=harness();
@@ -67,9 +70,11 @@ test('next agent synthesizes entire Piper WAV while previous WAV is audible',asy
  assert.equal(h.wavCalls[0].url,'/api/voice/piper/speak');
  assert.equal(h.sources.length,1);
  assert.equal(h.ctx.speech.audibleAgent,0);
+ assert.match(h.items[0].body.textContent,/Первый готовый ответ/,'the currently playing reply is visible');
  const next=h.ctx.issueTurn(1,102);
  await tick();
  assert.equal(h.wavCalls.length,2,'the next full WAV must be synthesized during playback');
+ assert.equal(h.items[1].body.textContent,'','the next transcript must remain hidden while its WAV is prepared');
  assert.equal(h.wavCalls[1].url,'/api/voice/piper/speak');
  assert.match(h.wavCalls[1].payload.text,/созданный пока играет первый WAV/);
  assert.equal(h.sources.length,1,'the next voice must not interrupt current playback');
@@ -78,6 +83,8 @@ test('next agent synthesizes entire Piper WAV while previous WAV is audible',asy
  h.sources[0].onended();
  await next;
  assert.equal(h.sources.length,2);
+ assert.match(h.items[1].body.textContent,/Следующий готовый ответ/,
+  'the next transcript appears only when its own audio starts');
  assert.equal(h.ctx.speech.audibleAgent,1);
  assert.equal(h.wavCalls.length,2,'the prepared WAV must be reused, not synthesized a second time');
  assert.equal(h.ctx.speech.prefetch,null,'the look-ahead slot must be released so the next reply can be prepared');
