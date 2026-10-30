@@ -10,9 +10,9 @@ function requestID(){
 }
 // Editable sample cast, not hard-coded debate positions. Existing saved characters win.
 const defs = [
-  {name:'Норман',color:'#48eafb',avatarId:'norman',hue:155,description:'Любит рассказывать истории из жизни, слегка хвастается и часто сам попадает в нелепое положение. Отшучивается, если его поддели; способен искренне признать ошибку.',voiceURI:''},
-  {name:'Глитч',color:'#ffb45e',avatarId:'glitch',hue:186,description:'Быстрый на язык, замечает нелепости и любит добродушно подкалывать друзей. Иногда спорит из азарта, но умеет неожиданно поддержать собеседника.',voiceURI:''},
-  {name:'Джесси',color:'#ed68f8',avatarId:'jessie',hue:44,description:'Остроумная, наблюдательная, прямолинейная. Не любит напускную серьёзность, задаёт неудобные вопросы и иногда выдаёт неожиданный поворот без длинных объяснений.',voiceURI:''}
+  {name:'Норман',color:'#48eafb',avatarId:'norman',hue:155,description:'Балагур-рассказчик: любит истории из жизни, слегка хвастается и часто сам попадает в нелепое положение. Говорит образно, с живыми сравнениями и самоиронией; если его поддели — парирует шуткой, но способен искренне признать ошибку.',voiceURI:''},
+  {name:'Глитч',color:'#ffb45e',avatarId:'glitch',hue:186,description:'Быстрый язвительный комментатор: мгновенно замечает абсурд и слабые места аргументов. Говорит коротко и резко, любит колкие подколы, сарказм и словесные дуэли; спорит азартно, но без злобы, иногда неожиданно поддерживает.',voiceURI:''},
+  {name:'Джесси',color:'#ed68f8',avatarId:'jessie',hue:44,description:'Прямая, независимая наблюдательница: задаёт неудобные вопросы и отсекает лишнее. Её стиль — точные формулировки, сухой юмор и неожиданный поворот; не копирует чужую браваду и не растекается длинно.',voiceURI:''}
 ];
 // Cosmetic character skins. This catalogue is independent from the three dialogue agents.
 const AVATAR_BASE_HUES=[155,186,44];
@@ -603,7 +603,7 @@ function updateDonationBadge(){
 const VISIBLE_FEED_LIMIT = 180;
 const ARCHIVED_FEED_LIMIT = 450;
 function transcriptLine(el){
- return el.querySelector('.who').textContent+': '+el.querySelector('.body').textContent+' ['+el.querySelector('.meta').textContent+']';
+ return el.querySelector('.who').textContent+': '+el.querySelector('.body').textContent;
 }
 function feedItem(name,agent=null,kind=''){
  const el=document.createElement('div');el.className='message '+kind;el.style.setProperty('--accent',agent===null?'#7f90a7':defs[agent].color);
@@ -755,7 +755,18 @@ function restorePrefs(){
         const obsolete=['Системный мыслитель: ясность, надёжность, простота. Соединяет идеи собеседников и находит устойчивые решения.',
           'Критичный, но доброжелательный собеседник. Проверяет аргументы, задаёт прямые вопросы, ищет слабые места и предлагает улучшения.',
           'Любознательный изобретатель и импровизатор. Любит неожиданные идеи, юмор и короткие эксперименты, которые проверяют смелые гипотезы.'];
-        if(a.description!==obsolete[i])d.description=a.description.slice(0,900);
+        const previousDefaults=[
+          'Любит рассказывать истории из жизни, слегка хвастается и часто сам попадает в нелепое положение. Отшучивается, если его поддели; способен искренне признать ошибку.',
+          'Быстрый на язык, замечает нелепости и любит добродушно подкалывать друзей. Иногда спорит из азарта, но умеет неожиданно поддержать собеседника.',
+          'Остроумная, наблюдательная, прямолинейная. Не любит напускную серьёзность, задаёт неудобные вопросы и иногда выдаёт неожиданный поворот без длинных объяснений.'
+        ];
+        const upgradedDefaults=[
+          'Балагур-рассказчик: любит истории из жизни, слегка хвастается и часто сам попадает в нелепое положение. Говорит образно, с живыми сравнениями и самоиронией; если его поддели — парирует шуткой, но способен искренне признать ошибку.',
+          'Быстрый язвительный комментатор: мгновенно замечает абсурд и слабые места аргументов. Говорит коротко и резко, любит колкие подколы, сарказм и словесные дуэли; спорит азартно, но без злобы, иногда неожиданно поддерживает.',
+          'Прямая, независимая наблюдательница: задаёт неудобные вопросы и отсекает лишнее. Её стиль — точные формулировки, сухой юмор и неожиданный поворот; не копирует чужую браваду и не растекается длинно.'
+        ];
+        if(a.description===previousDefaults[i])d.description=upgradedDefaults[i];
+        else if(a.description!==obsolete[i])d.description=a.description.slice(0,900);
         else if(a.name===['Архитектор','Скептик','Экспериментатор'][i])
           d.name=['Норман','Глитч','Джесси'][i];
       }
@@ -955,7 +966,7 @@ async function begin(){
   const s=await coreEvent('start',{max_turns:0});
   if(epoch!==state.epoch||state.stopping)return;
   applyCore(s);
-  system('Тема (приоритет): '+$('topic').value+' · Общая цель (в рамках темы): '+($('sharedGoal').value.trim()||'содержательный разговор')+' · LLM · бесконечный эфир'+(audioAvailable()&&$('voiceEnabled').checked?' · голос включён':' · без озвучивания'));savePrefs();
+  savePrefs();
   await claimNext();
  }catch(err){if(epoch===state.epoch&&!state.stopping)engineError(err)}
  finally{
@@ -1809,7 +1820,7 @@ $('deepseekDisconnect').onclick=async()=>{
  catch(err){$('deepseekNote').textContent='Ошибка: '+err.message;}
 };
 $('start').onclick=begin;
-$('stop').onclick=async()=>{if(await stopDialogue())system('Диалог остановлен ведущим.');};
+$('stop').onclick=stopDialogue;
 $('pause').onclick=async()=>{
  if(!state.running)return;
  state.epoch++;stopTimer();cancelDirector();cancelCurrent('ПАУЗА');

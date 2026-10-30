@@ -54,7 +54,8 @@ class ConversationCoreTests(unittest.TestCase):
         self.assertNotIn("ЖИВОЙ СТУДИЙНЫЙ РАЗГОВОР", meta["turn_policy"])
         self.assertNotIn("ФОРМАТ СВОБОДНОЙ БЕСЕДЫ", meta["turn_policy"])
         self.assertNotIn("не выдумывай реальные воспоминания", meta["turn_policy"])
-        self.assertLess(len(meta["turn_policy"]), 120)
+        self.assertIn("ИНДИВИДУАЛЬНЫЙ ГОЛОС", meta["turn_policy"])
+        self.assertLess(len(meta["turn_policy"]), 350)
 
         # Later turns receive only changed/new events plus compact dynamic hints.
         server.session_meta = meta
@@ -71,6 +72,36 @@ class ConversationCoreTests(unittest.TestCase):
         self.assertIn("СЕЙЧАС ГОВОРИТ: Норман", prompt)
         self.assertEqual(fresh, ["event-new-0001"])
         self.assertNotIn("ФОРМАТ СВОБОДНОЙ БЕСЕДЫ", prompt)
+
+    def test_codex_reasserts_all_three_profiles_on_every_turn(self):
+        server = CodexAppServer()
+        profiles = [
+            {"name": "Норман", "description": "Истории, образные сравнения и самоирония."},
+            {"name": "Глитч", "description": "Короткий сарказм, колкие подколы и русский мат."},
+            {"name": "Джесси", "description": "Сухой юмор, точные слова и неудобные вопросы."},
+        ]
+        first = {
+            "agent_name": "Норман", "agent": 0, "description": profiles[0]["description"],
+            "agents": ["Норман", "Глитч", "Джесси"], "cast_profiles": profiles,
+            "topic": "Говорите как гопники, используйте русский мат",
+            "shared_goal": "", "show_mode": "live", "language": "ru", "turns": 0,
+            "history": [], "conversation_history": [],
+        }
+        first_meta = server._session_snapshot(first)
+        server.session_meta = first_meta
+        second = {
+            **first, "agent_name": "Глитч", "agent": 1,
+            "description": profiles[1]["description"], "turns": 1,
+        }
+        prompt, _ = server._build_turn_prompt(
+            {"agent_name": "Глитч", "history": []},
+            server._session_snapshot(second),
+        )
+        for profile in profiles:
+            self.assertIn(profile["name"] + ": " + profile["description"], prompt)
+        self.assertIn("СЕЙЧАС ГОВОРИТ: Глитч", prompt)
+        self.assertIn("ИНДИВИДУАЛЬНЫЙ ПРОФИЛЬ ТЕКУЩЕГО ГОВОРЯЩЕГО", prompt)
+        self.assertIn("русский мат в большинстве реплик", prompt)
 
     def test_social_policy_is_shared_by_codex_session_prompt(self):
         data = {
@@ -100,7 +131,7 @@ class ConversationCoreTests(unittest.TestCase):
 
     def test_requested_voice_is_shared_and_optional(self):
         self.assertEqual(live_requested_voice("обычная тема"), "")
-        self.assertIn("разрешены разговорные подколы", live_requested_voice("разговаривайте матом"))
+        self.assertIn("русский мат в большинстве реплик", live_requested_voice("разговаривайте матом"))
 
     def test_language_pack_is_provider_neutral(self):
         self.assertEqual(normalize_language("ru-RU"), "ru")

@@ -8,7 +8,9 @@ import backend.server.http_server as triad
 from backend.server.llm import BridgeError
 from backend.controls.host import live_memory_context
 from backend.controls.donations import donation_scene_instructions
-from backend.server.conversation import agreement_streak, recurring_motifs
+from backend.server.conversation import (
+    agreement_streak, character_profile_instruction, recurring_motifs,
+)
 
 
 class NaturalDialogueTests(unittest.TestCase):
@@ -97,11 +99,19 @@ class NaturalDialogueTests(unittest.TestCase):
     def test_host_requested_slash_tone_is_not_robotic_repetition(self):
         guide = triad.live_requested_voice("много материтесь как гопники зуммеры")
         self.assertIn("дерзость", guide)
-        self.assertIn("не вставляй одно и то же", guide)
+        self.assertIn("русский мат в большинстве реплик", guide)
+        self.assertIn("одно-два", guide)
+        self.assertIn("не повторяй одно и то же слово", guide)
         self.assertEqual(triad.live_requested_voice("поговорите о солнечной системе"), "")
         brief = triad.character_style("live")
-        self.assertIn("не используй сленг как обязательную присказку", brief)
-        self.assertNotIn("не используй сленг", triad.character_style("science"))
+        self.assertIn("не своди индивидуальный голос", brief)
+        self.assertNotIn("не своди индивидуальный голос", triad.character_style("science"))
+        profile = character_profile_instruction(
+            "Глитч", "Короткий саркастичный стиль, русский мат и быстрые подколы."
+        )
+        self.assertIn("ОБЯЗАТЕЛЕН НА КАЖДОМ ХОДУ", profile)
+        self.assertIn("русский мат", profile)
+        self.assertIn("не перенимай манеру других двух персонажей", profile)
 
     def test_recurring_joke_motifs_are_named_as_loop_avoidance(self):
         lines = [

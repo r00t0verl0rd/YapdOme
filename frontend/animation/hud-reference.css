@@ -313,3 +313,17 @@ main.cyber-command-center{
 @media(prefers-reduced-motion:reduce){
   .brand-symbol *{animation:none!important;transition:none!important}
 }
+
+
+/* Clean transcript: display only speaker and spoken text, not engine bookkeeping. */
+.feed .message{
+  grid-template-columns:84px minmax(0,1fr);
+  gap:0 12px;
+}
+.feed .message .who{
+  grid-row:1;align-self:start;padding-top:1px;
+}
+.feed .message .body{
+  grid-column:2;grid-row:1;font-size:12px;line-height:1.48;
+}
+.feed .message .meta{display:none!important}
