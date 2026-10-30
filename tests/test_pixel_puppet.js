@@ -167,6 +167,19 @@ test('all three live tiles share Norman green for tabletop nameplates and wavefo
   assert.ok(hudCss.includes('.wave-lane i{') && hudCss.includes('background:var(--agent-glow)'));
 });
 
+test('YapdOme uses a custom three-node symbol and cyberpunk wordmark', () => {
+  assert.ok(indexHtml.includes('class="brand-symbol"'));
+  assert.ok(indexHtml.includes('yapdome-mark-gradient'));
+  assert.ok(indexHtml.includes('class="brand-frame"'));
+  assert.ok(indexHtml.includes('class="brand-circuit"'));
+  assert.ok(indexHtml.includes('class="brand-core-dot"'));
+  assert.ok(indexHtml.includes('class="brand-wordmark" aria-label="YapdOme"'));
+  assert.ok(indexHtml.includes('THREE MINDS'));
+  assert.ok(hudCss.includes('.brand-symbol-svg{'));
+  assert.ok(hudCss.includes('font-family:Orbitron'));
+  assert.ok(hudCss.includes('.brand-word-orbit{'));
+});
+
 test('live broadcast heading is compact, single-line, right-aligned and has a live indicator', () => {
   assert.ok(indexHtml.includes('<h2><span class="live-air-indicator" aria-hidden="true"></span>АГЕНТЫ В ЭФИРЕ</h2>'));
   assert.ok(hudCss.includes('.live-visual-head{') && hudCss.includes('justify-content:flex-end'));

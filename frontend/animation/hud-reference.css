@@ -254,3 +254,62 @@ main.cyber-command-center{
 @media(prefers-reduced-motion:reduce){
   .live-air-indicator:after{animation:none;opacity:.35}
 }
+
+
+/* YapdOme signature: three linked minds converging on one bright core. */
+.brand{align-items:center;gap:13px;min-width:0}
+.brand-symbol{
+  position:relative;display:grid;place-items:center;
+  flex:0 0 48px;width:48px;height:48px;
+  filter:drop-shadow(0 0 9px #39f6a744);
+}
+.brand-symbol-svg{display:block;width:100%;height:100%;overflow:visible}
+.brand-frame{
+  fill:#0b211b99;stroke:url(#yapdome-mark-gradient);
+  stroke-width:1.8;stroke-linejoin:round;filter:url(#yapdome-mark-glow)
+}
+.brand-circuit{
+  fill:none;stroke:url(#yapdome-mark-gradient);
+  stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round
+}
+.brand-core{
+  fill:#0a1c19;stroke:#b5ffe7;stroke-width:1.35;
+  filter:drop-shadow(0 0 3px #39f6a7)
+}
+.brand-node{fill:#0b201b;stroke:url(#yapdome-mark-gradient);stroke-width:2.2}
+.brand-core-dot{fill:#eafff8;stroke:#39f6a7;stroke-width:1.5;filter:drop-shadow(0 0 4px #39f6a7)}
+.brand-copy{display:flex;flex-direction:column;justify-content:center;gap:3px;min-width:0}
+.brand-copy .brand-wordmark{
+  display:flex;align-items:baseline;gap:0;margin:0;
+  font-family:Orbitron,"Bank Gothic","Eurostile","Avenir Next",sans-serif;
+  font-size:clamp(27px,2.35vw,35px);font-weight:900;
+  letter-spacing:.015em;line-height:.98;
+  transform:skewX(-5deg);transform-origin:left center;
+  white-space:nowrap;color:#eafff5;
+  text-shadow:0 0 12px #39f6a722
+}
+.brand-word-main{color:#eafff5}
+.brand-word-orbit{
+  position:relative;color:#39f6a7;
+  -webkit-text-stroke:.55px #b5ffe7;
+  text-shadow:0 0 7px #39f6a7,0 0 16px #39f6a766
+}
+.brand-word-tail{color:#bfeee0}
+.brand-kicker{
+  display:flex;align-items:center;gap:7px;
+  color:#75bda0;font:700 7px/1.2 Menlo,Consolas,monospace;
+  letter-spacing:.24em;white-space:nowrap
+}
+.brand-kicker i{
+  display:block;width:3px;height:3px;border-radius:50%;
+  background:#39f6a7;box-shadow:0 0 5px #39f6a7
+}
+@media(max-width:48em){
+  .brand{gap:10px}
+  .brand-symbol{flex-basis:42px;width:42px;height:42px}
+  .brand-copy .brand-wordmark{font-size:clamp(25px,6vw,30px)}
+  .brand-kicker{font-size:6px;letter-spacing:.19em}
+}
+@media(prefers-reduced-motion:reduce){
+  .brand-symbol *{animation:none!important;transition:none!important}
+}

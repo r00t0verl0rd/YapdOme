@@ -16,9 +16,31 @@
 <div class="app-shell">
   <header class="masthead">
     <div class="brand">
-      <div class="triad-mark" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="brand-symbol" aria-hidden="true">
+        <svg class="brand-symbol-svg" viewBox="0 0 64 64" focusable="false">
+          <defs>
+            <linearGradient id="yapdome-mark-gradient" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#39f6a7"/>
+              <stop offset=".52" stop-color="#38dfff"/>
+              <stop offset="1" stop-color="#a875ff"/>
+            </linearGradient>
+            <filter id="yapdome-mark-glow" x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur stdDeviation="2.2" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <path class="brand-frame" d="M32 4.5 53.5 16.8v25.4L32 58.5 10.5 42.2V16.8Z"/>
+          <path class="brand-circuit" d="M32 12.5v12.2M17 42l10.1-6.2M47 42l-10.1-6.2"/>
+          <path class="brand-core" d="m32 22.5 9 5.2v10.6l-9 5.2-9-5.2V27.7Z"/>
+          <circle class="brand-node" cx="32" cy="11.5" r="4.1"/>
+          <circle class="brand-node" cx="15" cy="43" r="4.1"/>
+          <circle class="brand-node" cx="49" cy="43" r="4.1"/>
+          <circle class="brand-core-dot" cx="32" cy="32.9" r="3.1"/>
+        </svg>
+      </div>
       <div class="brand-copy">
-        <h1>YapdOme</h1>
+        <h1 class="brand-wordmark" aria-label="YapdOme"><span class="brand-word-main" aria-hidden="true">Yapd</span><span class="brand-word-orbit" aria-hidden="true">O</span><span class="brand-word-tail" aria-hidden="true">me</span></h1>
+        <span class="brand-kicker">THREE MINDS <i></i> ONE SIGNAL</span>
       </div>
     </div>
     <div class="header-right">
