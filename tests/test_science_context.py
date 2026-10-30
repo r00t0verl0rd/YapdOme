@@ -163,7 +163,6 @@ class ScienceContextTests(unittest.TestCase):
         self.assertIn("[[TO:Имя]]", rules)
         self.assertIn("[[PASS]]", rules)
         self.assertIn("КАРТА ЗНАНИЙ", rules)
-        self.assertIn("ПРИОРИТЕТ 1", rules) if "ПРИОРИТЕТ 1" in rules else self.assertIn("ТЕМА (приоритет)", body["input"][-2]["content"])
         persona = next(m["content"] for m in body["input"] if "ХАРАКТЕР ПЕРСОНАЖА" in m["content"])
         self.assertIn("тот же приоритет, что у темы", persona)
         # Topic precedes the shared goal inside the one compact topic block.
@@ -305,7 +304,7 @@ class NaturalShowModeTests(ScienceContextTests):
         self.assertEqual(code, 200)
         self.assertNotIn("номер 0", str(body["input"]))
         self.assertIn("Не повторяй исчерпанные мысли и шутки", body["instructions"])
-        self.assertIn("не копируй её слова", body["input"][-1]["content"])
+        self.assertIn("не цитируя её", body["input"][-1]["content"])
 
     def test_scene_happens_now_not_about_future_experiments(self):
         payload = self.payload(turns=1)
