@@ -163,17 +163,23 @@ class ScienceContextTests(unittest.TestCase):
         self.assertIn("[[TO:Имя]]", rules)
         self.assertIn("[[PASS]]", rules)
         self.assertIn("КАРТА ЗНАНИЙ", rules)
-        self.assertIn("На том же уровне обязательности — ХАРАКТЕР / ПОВЕДЕНИЕ", rules)
-        # Topic priority must stay above the general goal.
-        self.assertLess(rules.index("ПРИОРИТЕТ 1"), rules.index("ПРИОРИТЕТ 2"))
+        self.assertIn("ПРИОРИТЕТ 1", rules) if "ПРИОРИТЕТ 1" in rules else self.assertIn("ТЕМА (приоритет)", body["input"][-2]["content"])
+        persona = next(m["content"] for m in body["input"] if "ХАРАКТЕР ПЕРСОНАЖА" in m["content"])
+        self.assertIn("тот же приоритет, что у темы", persona)
+        # Topic precedes the shared goal inside the one compact topic block.
+        topic = next(m["content"] for m in body["input"] if "ТЕМА ВЕДУЩЕГО" in m["content"])
+        self.assertLess(topic.index("ТЕМА (приоритет)"), topic.index("ЦЕЛЬ (только внутри темы)"))
 
     def test_final_user_message_demands_an_explicit_handoff(self):
         history = [{"agent": 0, "name": PEERS[0], "text": "Мой тезис таков."}]
         _, body = self.post(self.payload(agent=1, history=history))
         tail = body["input"][-1]
         self.assertEqual(tail["role"], "user")
-        self.assertIn("[[TO:Имя]]", tail["content"])
-        self.assertIn(PEERS[0], tail["content"])
+        self.assertIn("Ответь на последнюю реплику из истории", tail["content"])
+        self.assertIn("[[TO:Имя]]", body["instructions"])
+        self.assertNotIn("Мой тезис таков.", tail["content"])
+        all_user_content = "\\n".join(m["content"] for m in body["input"] if m["role"] == "user")
+        self.assertEqual(all_user_content.count("Мой тезис таков."), 1)
 
     def test_phases_cycle_with_the_turn_counter(self):
         for turns, expected in ((0, "КАРТА ЗНАНИЙ"), (3, "ПРОБЕЛЫ"),
@@ -236,8 +242,8 @@ class ScienceContextTests(unittest.TestCase):
         code, body = self.post(self.payload(agent=1, turns=2, history=history))
         self.assertEqual(code, 200)
         tail = body["input"][-1]["content"]
-        self.assertIn("собственная предыдущая реплика", tail)
-        self.assertIn("Если добавить нечего", tail)
+        self.assertIn("Ты уже высказался", tail)
+        self.assertIn("если добавить нечего", tail)
         self.assertIn("[[PASS]]", tail)
         self.assertNotIn("добавь довод или проверку", tail)
 
@@ -256,7 +262,7 @@ class NaturalShowModeTests(ScienceContextTests):
         payload.pop("show_mode")
         code, body = self.post(payload)
         self.assertEqual(code, 200)
-        self.assertIn("РЕЖИМ ЖИВОГО РАЗГОВОРА", body["instructions"])
+        self.assertIn("ЖИВОЙ СТУДИЙНЫЙ РАЗГОВОР", body["instructions"])
         self.assertNotIn("МАТЕМАТИЧЕСКАЯ ПРОВЕРКА", body["instructions"])
         self.assertNotIn("Этап научного метода", body["input"][0]["content"])
         self.assertFalse(any("Старый академический тезис" in m["content"] for m in body["input"]))
@@ -298,7 +304,7 @@ class NaturalShowModeTests(ScienceContextTests):
         code, body = self.post(payload)
         self.assertEqual(code, 200)
         self.assertNotIn("номер 0", str(body["input"]))
-        self.assertIn("Не начинай каждый ход", body["instructions"])
+        self.assertIn("Не повторяй исчерпанные мысли и шутки", body["instructions"])
         self.assertIn("не копируй её слова", body["input"][-1]["content"])
 
     def test_scene_happens_now_not_about_future_experiments(self):
@@ -317,7 +323,7 @@ class NaturalShowModeTests(ScienceContextTests):
         payload["topic"] = "Разговор о природе"
         code, body = self.post(payload)
         self.assertEqual(code, 200)
-        self.assertIn("РЕЖИМ ЖИВОГО РАЗГОВОРА", body["instructions"])
+        self.assertIn("ЖИВОЙ СТУДИЙНЫЙ РАЗГОВОР", body["instructions"])
         self.assertNotIn("КАРТА ЗНАНИЙ", body["instructions"])
 
     def test_pace_depends_on_context_not_turn_number(self):
