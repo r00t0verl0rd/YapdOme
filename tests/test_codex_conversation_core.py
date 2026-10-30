@@ -6,6 +6,7 @@ from backend.server.conversation import (
     social_focus_instructions,
 )
 from backend.server.codex import CodexAppServer
+from backend.server.conversation import language_instruction, normalize_language
 
 
 class ConversationCoreTests(unittest.TestCase):
@@ -55,6 +56,13 @@ class ConversationCoreTests(unittest.TestCase):
     def test_requested_voice_is_shared_and_optional(self):
         self.assertEqual(live_requested_voice("обычная тема"), "")
         self.assertIn("разрешены разговорные подколы", live_requested_voice("разговаривайте матом"))
+
+    def test_language_pack_is_provider_neutral(self):
+        self.assertEqual(normalize_language("ru-RU"), "ru")
+        self.assertEqual(normalize_language("en-US"), "en")
+        self.assertEqual(normalize_language("fr-FR"), "ru")
+        self.assertEqual(language_instruction("en"), "Respond in English.")
+        self.assertEqual(language_instruction("ru"), "Отвечай по-русски.")
 
 
 if __name__ == "__main__":
