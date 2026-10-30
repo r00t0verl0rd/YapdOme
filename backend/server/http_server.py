@@ -578,10 +578,18 @@ class Handler(BaseHTTPRequestHandler):
         peers = data.get("agents", [])
         if not isinstance(peers, list) or len(peers) != 3 or not all(isinstance(n, str) and 1 <= len(n) <= 30 for n in peers):
             raise BridgeError("Некорректный список агентов")
-        history = data.get("history", [])
-        if not isinstance(history, list):
-            raise BridgeError("Неверная история")
-        history = history[-16:]
+        conversation_id = str(data.get("conversation_id") or rid)
+        event_delta = data.get("events", [])
+        if not isinstance(event_delta, list):
+            raise BridgeError("Неверные события диалога")
+        language = normalize_language(data.get("language"))
+        try:
+            history, accepted_event_ids = CONVERSATION_CORE.add_events(
+                conversation_id, event_delta, topic, language
+            )
+        except ValueError as exc:
+            raise BridgeError(str(exc)) from exc
+        history_delta = event_delta
         journal = data.get("journal", [])
         if not isinstance(journal, list):
             raise BridgeError("Некорректный журнал тезисов")
