@@ -132,14 +132,14 @@ class NaturalDialogueTests(unittest.TestCase):
         stage = triad.character_style("live", "Разыграйте сцену в кафе").lower()
         self.assertIn("не ролевая игра", studio)
         self.assertIn("импровизация в заданной сцене", stage)
-        self.assertIn("логично развивать сцену", stage)
+        self.assertIn("добавляй только логичные детали", stage)
 
     def test_live_direction_can_shift_aspect_without_shifting_topic(self):
         history = [{"agent": i % 3, "text": "Встреча у дома была странной."}
                    for i in range(7)]
         instruction = triad.conversational_direction(
             "Мир во всём мире", 7, history, mode="live")
-        self.assertIn("другую сторону той же темы", instruction)
+        self.assertIn("другой аспект той же темы", instruction)
 
     def test_two_person_dialogue_has_third_listener(self):
         names = ["Норман", "Глитч", "Джесси"]
