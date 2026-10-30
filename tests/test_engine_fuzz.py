@@ -15,7 +15,7 @@ from backend.engine import enums as E
 
 ACTIONS = ["start", "claim", "complete", "user", "pause", "resume", "stop",
            "reset", "fail", "tick",
-           "recover", "director", "priority_donation", "social"]
+           "recover", "director", "priority_donation", "social", "social_return"]
 SAMPLES = ["", "[[PASS]]", "[[WAIT_USER]]", "Хм.", "[[TO:SELF]]", "[[TO:ANY]]",
            "Экспериментатор, ответь", "Он сказал «Экспериментатор, ответь»",
            "[[TO:я]]"]

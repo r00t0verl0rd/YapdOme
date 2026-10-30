@@ -321,6 +321,23 @@ class StateMachine:
             self.revision += 1
             return E.OK
 
+        if action == E.SOCIAL_RETURN:
+            # End a bounded two-person exchange. This may supersede a model's
+            # repeated TO marker, but never a live donation or an active speaker.
+            if (self.status != E.RUNNING or self.agent != -1
+                    or ticket != self.ticket
+                    or self.route_reason not in (
+                        E.ROUTE_ROTATION, E.ROUTE_TOKEN, E.ROUTE_ADDRESS,
+                        E.ROUTE_DIRECTOR, E.ROUTE_SOCIAL
+                    )
+                    or agent < 0 or agent > 2):
+                return E.REJECT
+            self.next_agent = agent
+            self.route_reason = E.ROUTE_SOCIAL_RETURN
+            self.ticket += 1
+            self.revision += 1
+            return E.OK
+
         if action == E.DIRECTOR:
             # Директор может улучшить только обычную ротацию между ходами.
             # Явный TO/адрес, вмешательства и pending replies выигрывают.

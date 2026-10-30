@@ -133,6 +133,24 @@ class EngineController(unittest.TestCase):
         self.assertTrue(donation['accepted'])
         self.assertEqual(self.claim()['agent'], 2)
 
+    def test_social_return_ends_pair_even_after_repeated_to_markers(self):
+        first = self.claim()
+        self.assertEqual(first['agent'], 0)
+        self.core.event('complete', agent=0, ticket=first['ticket'], text='[[TO:1]]')
+        second = self.claim()
+        self.assertEqual(second['agent'], 1)
+        done = self.core.event('complete', agent=1, ticket=second['ticket'], text='[[TO:0]]')
+        returned = self.core.event('social_return', agent=2, ticket=done['ticket'])
+        self.assertTrue(returned['accepted'])
+        self.assertEqual(returned['route_reason'], 'social_return')
+        self.assertEqual(self.claim()['agent'], 2)
+
+        self.core.event('complete', agent=2, ticket=self.core.state()['ticket'], text='Своя мысль.')
+        donor = self.core.event('priority_donation', agent=1)
+        blocked = self.core.event('social_return', agent=0, ticket=donor['ticket'])
+        self.assertFalse(blocked['accepted'])
+        self.assertEqual(self.claim()['agent'], 1)
+
     def test_addressed_agent_has_priority(self):
         s=self.claim()
         self.core.event('complete',agent=0,ticket=s['ticket'],text='Экспериментатор, предложи тест!')

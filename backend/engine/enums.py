@@ -32,14 +32,17 @@ ROUTE_OVERRIDE = 4
 ROUTE_DIRECTOR = 6
 ROUTE_DONATION = 7
 ROUTE_SOCIAL = 8
+ROUTE_SOCIAL_RETURN = 9
 ROUTE_REASONS = {-1: "none", 0: "rotation", 1: "token", 2: "address",
-                 4: "override", 6: "director", 7: "donation", 8: "social"}
+                 4: "override", 6: "director", 7: "donation", 8: "social",
+                 9: "social_return"}
 
 # Действия (публичные имена -> числовые коды)
 ACTIONS = {"start": 1, "claim": 2, "complete": 3, "user": 4, "pause": 5,
            "resume": 6, "stop": 7, "reset": 9, "fail": 10,
            "tick": 13, "recover": 14,
-           "director": 15, "priority_donation": 16, "social": 17}
+           "director": 15, "priority_donation": 16, "social": 17,
+           "social_return": 18}
 
 START = 1
 CLAIM = 2
@@ -56,6 +59,7 @@ RECOVER = 14
 DIRECTOR = 15
 PRIORITY_DONATION = 16
 SOCIAL = 17
+SOCIAL_RETURN = 18
 
 # Результат события
 OK = 0

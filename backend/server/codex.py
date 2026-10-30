@@ -344,12 +344,36 @@ class CodexAppServer:
                     f = json.loads(focus)
                     pair = f.get("pair", [])
                     listener = f.get("listener")
+                    kind = f.get("kind")
                     names = meta["agents"]
                     if isinstance(pair, list) and len(pair) == 2 and all(type(i) is int and 0 <= i < len(names) for i in pair):
                         listen_name = names[listener] if type(listener) is int and 0 <= listener < len(names) else ""
-                        parts.append("ВРЕМЕННЫЙ ФОКУС: диалог преимущественно между " +
-                                     names[pair[0]] + " и " + names[pair[1]] +
-                                     (("; " + listen_name + " пока слушает.") if listen_name else ""))
+                        pair_names = names[pair[0]] + " и " + names[pair[1]]
+                        if kind == "duo":
+                            parts.append(
+                                "КОРОТКИЙ ВРЕМЕННЫЙ ФОКУС: сейчас идёт обмен между " + pair_names +
+                                (("; " + listen_name + " пока слушает.") if listen_name else "") +
+                                " Парный обмен ограничен тремя репликами пары. Отвечай на текущий аргумент, "
+                                "не задавай новый вопрос в конце каждого хода и не затягивай цепочку уточнений. "
+                                "Не повторяй уже разобранное. По завершении обязательно передай слово слушавшему."
+                            )
+                        elif kind == "invite":
+                            parts.append(
+                                "ЗАВЕРШИ ПАРНЫЙ ОБМЕН: " + pair_names + " уже поговорили; " +
+                                listen_name + " слушал. Одной короткой репликой пригласи его вступить "
+                                "и не начинай новый круг вопросов к прежнему собеседнику. "
+                                "Заверши маркером [[TO:" + listen_name + "]]."
+                            )
+                        elif kind == "rejoin":
+                            parts.append(
+                                "ТЕПЕРЬ ВСТУПАЕТ СЛУШАВШИЙ: ты слушал " + pair_names +
+                                ". Выскажи одну самостоятельную мысль, а не пересказ; после твоего хода "
+                                "временный парный фокус снимается и снова участвуют все трое."
+                            )
+                        else:
+                            parts.append("ВРЕМЕННЫЙ ФОКУС: диалог преимущественно между " +
+                                         pair_names +
+                                         (("; " + listen_name + " пока слушает.") if listen_name else ""))
                 except (ValueError, TypeError, KeyError):
                     pass
             elif old_focus:

@@ -118,6 +118,24 @@ class CodexSessionTests(unittest.TestCase):
         self.assertNotIn("ВЕДИ ЖИВУЮ, ЗАХВАТЫВАЮЩУЮ БЕСЕДУ", second,
                          "the permanent live brief must not be repeated per turn")
 
+    def test_social_focus_prompt_bounds_duo_and_brings_listener_back(self):
+        client, calls = self.make_client()
+        data = self.turn_data("Норман")
+        data["social_focus"] = {"kind": "duo", "pair": [0, 1], "listener": 2}
+        self.run_turn(client, data)
+        prompt = [params["input"][0]["text"] for method, params in calls
+                  if method == "turn/start"][-1]
+        self.assertIn("КОРОТКИЙ ВРЕМЕННЫЙ ФОКУС", prompt)
+        self.assertIn("ограничен тремя репликами пары", prompt)
+        self.assertIn("передай слово слушавшему", prompt)
+
+        data["social_focus"] = {"kind": "rejoin", "pair": [0, 1], "listener": 2}
+        self.run_turn(client, data)
+        prompt = [params["input"][0]["text"] for method, params in calls
+                  if method == "turn/start"][-1]
+        self.assertIn("ТЕПЕРЬ ВСТУПАЕТ СЛУШАВШИЙ", prompt)
+        self.assertIn("снова участвуют все трое", prompt)
+
     def test_compaction_only_runs_near_real_context_limit(self):
         client, calls = self.make_client()
         client.thread_id = "thread-live"

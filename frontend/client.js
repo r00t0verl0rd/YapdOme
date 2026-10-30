@@ -1082,11 +1082,17 @@ function socialRouteHint(){
  if(social.lastPair===key)return null;
  const exchange=state.history.slice(-4).filter(h=>h&&pair.includes(h.agent));
  if(!exchange.some(h=>/[?？]/.test(h.text||'')))return null; // no artificial duo
- const duration=4; // bounded two-person exchange, then rejoin
+ const duration=3; // no more than three pair turns before the listener returns
  social.pair={pair,listener,until:state.turns+duration};
  social.lastPair=key;renderCards();
  const latest=state.history.slice().reverse().find(x=>Number.isInteger(x.agent)&&x.agent>=0)?.agent;
  return pair.find(i=>i!==latest);
+}
+function socialReturnTarget(){
+ if($('showMode').value!=='live'||state.activeDonation||state.donationQueue.length)return null;
+ const pending=state.social.returnContext,route=state.core;
+ if(!pending||!route||route.next_agent===pending.listener||route.route_reason==='donation')return null;
+ return pending.listener;
 }
 // Bounded, attributed conversation excerpts: quotes, not permanent beliefs.
 function rememberLiveTurn(agent,text){
@@ -1156,10 +1162,16 @@ async function claimNext(){
     }
   }else{
    const duo=typeof socialRouteHint==='function'?socialRouteHint():null;
-   if(duo!==null&&state.core?.route_reason==='rotation'){
+   const returning=typeof socialReturnTarget==='function'?socialReturnTarget():null;
+   if(returning!==null){
+    // End the duet even if the model keeps routing to one of its members.
+    const route=await coreEvent('social_return',{agent:returning,ticket:state.core.ticket});
+    if(epoch!==state.epoch||!route.accepted)return;
+    applyCore(route);
+   }else if(duo!==null&&state.core?.route_reason==='rotation'){
     const route=await coreEvent('social',{agent:duo,ticket:state.core.ticket});
     if(epoch===state.epoch&&route.accepted)applyCore(route);
-   }else if(duo===null)await applyDirectorRoute(epoch);
+   }else if(duo===null&&!state.social.returnContext)await applyDirectorRoute(epoch);
    if(epoch===state.epoch&&state.core?.route_reason==='rotation'&&typeof $==='function'&&$('showMode').value==='live'&&typeof liveFloorBid==='function'){
     const latest=state.history.slice().reverse().find(h=>Number.isInteger(h.agent)&&h.agent>=0);
     const bidder=latest?liveFloorBid(latest.agent,latest.text):null;

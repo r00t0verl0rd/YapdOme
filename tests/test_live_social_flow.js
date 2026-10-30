@@ -27,6 +27,18 @@ assert.equal(ctx.socialTurnContext(1).kind,'invite','pair member invites third i
 state.social.returnContext=null;
 state.turns+=1;
 assert.equal(ctx.socialRouteHint(),null,'cooldown prevents endless two-person shows');
+
+// A timed pair must end even when the model routes back to a previous speaker.
+state.social.pair={pair:[1,2],listener:0,until:state.turns+1};
+state.core.route_reason='token';state.core.next_agent=2;
+state.turns=state.social.pair.until;
+assert.equal(ctx.socialRouteHint(),0,'listener is selected when pair timer expires');
+assert.equal(ctx.socialReturnTarget(),0,
+ 'expiry must override a repeated explicit handoff to a pair member');
+state.core.next_agent=0;
+assert.equal(ctx.socialReturnTarget(),null,
+ 'an already correctly routed listener must not be routed twice');
+state.social.returnContext=null;
 state.social.pair={pair:[1,2],listener:0,until:100};
 state.core.route_reason='token';state.core.next_agent=0;
 assert.equal(ctx.socialRouteHint(),null,'explicit invitation to listener overrides duet');
