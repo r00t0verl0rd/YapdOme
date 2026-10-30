@@ -8,6 +8,8 @@ const engine = require('../frontend/animation/pixel-puppet-engine.js');
 const adapter = fs.readFileSync(path.join(__dirname, '../frontend/animation/pixel-puppet.js'), 'utf8');
 const pixelCss = fs.readFileSync(path.join(__dirname, '../frontend/animation/pixel-puppet.css'), 'utf8');
 const hudCss = fs.readFileSync(path.join(__dirname, '../frontend/animation/hud-reference.css'), 'utf8');
+const hudJs = fs.readFileSync(path.join(__dirname, '../frontend/animation/hud-reference.js'), 'utf8');
+const indexHtml = fs.readFileSync(path.join(__dirname, '../frontend/index.html'), 'utf8');
 
 test('real engine: 48×48 literal LEDs 0..3, five cosmetic skins and expressions', () => {
   assert.equal(engine.W, 48); assert.equal(engine.H, 48);
@@ -163,6 +165,19 @@ test('all three live tiles share Norman green for name, status and waveform', ()
   assert.ok(!hudCss.includes('--agent-glow:#ffc936'));
   assert.ok(hudCss.includes('.live-tile-top{') && hudCss.includes('color:var(--agent-glow)'));
   assert.ok(hudCss.includes('.wave-lane i{') && hudCss.includes('background:var(--agent-glow)'));
+});
+
+test('agent names are mounted on three tabletop plaques and status labels are removed', () => {
+  assert.equal((indexHtml.match(/class="table-nameplate"/g) || []).length, 3);
+  assert.match(indexHtml, /class="table-nameplate" data-agent-index="0"><span class="tile-name">Норман/);
+  assert.match(indexHtml, /class="table-nameplate" data-agent-index="1"><span class="tile-name">Глитч/);
+  assert.match(indexHtml, /class="table-nameplate" data-agent-index="2"><span class="tile-name">Джесси/);
+  assert.doesNotMatch(indexHtml, /live-tile-top|tile-mode/);
+  assert.match(hudCss, /\\.table-nameplate\\{/);
+  assert.match(hudCss, /\\.table-nameplates\\{/);
+  assert.doesNotMatch(hudCss, /live-tile-top|tile-mode/);
+  assert.doesNotMatch(hudJs, /tile-mode|ГОТОВ|ЖДЁТ|ГОВОРИТ|ДУМАЕТ/);
+  assert.match(hudJs, /nameNodes\\[i\\]/);
 });
 
 test('CSS hue angle is absolute and matches the rainbow scale', () => {

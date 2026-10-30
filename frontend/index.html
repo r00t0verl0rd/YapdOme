@@ -106,24 +106,24 @@
       </div>
       <div id="liveAvatars" class="live-tiles">
         <article class="live-tile" data-agent-index="0" aria-label="Агент 1">
-          <div class="live-tile-top"><span class="tile-name">Норман</span><span class="tile-mode">ГОТОВ</span></div>
+          
           <div class="hud-portrait" aria-hidden="true"></div>
           <div class="wave-lane" aria-hidden="true"></div>
 
         </article>
         <article class="live-tile" data-agent-index="1" aria-label="Агент 2">
-          <div class="live-tile-top"><span class="tile-name">Глитч</span><span class="tile-mode">ГОТОВ</span></div>
+          
           <div class="hud-portrait" aria-hidden="true"></div>
           <div class="wave-lane" aria-hidden="true"></div>
 
         </article>
         <article class="live-tile" data-agent-index="2" aria-label="Агент 3">
-          <div class="live-tile-top"><span class="tile-name">Джесси</span><span class="tile-mode">ГОТОВ</span></div>
+          
           <div class="hud-portrait" aria-hidden="true"></div>
           <div class="wave-lane" aria-hidden="true"></div>
 
         </article>
-      <div class="dialogue-table" aria-hidden="true">
+      <div class="dialogue-table" role="group" aria-label="Имена собеседников за столом">
         <svg viewBox="0 0 900 100" preserveAspectRatio="none" focusable="false">
           <defs>
             <linearGradient id="table-surface" x2="0" y2="1">
@@ -157,6 +157,11 @@
           </g>
           <path class="table-console" d="M419 57H481L489 63H411Z"/>
         </svg>
+        <div class="table-nameplates">
+          <div class="table-nameplate" data-agent-index="0"><span class="tile-name">Норман</span></div>
+          <div class="table-nameplate" data-agent-index="1"><span class="tile-name">Глитч</span></div>
+          <div class="table-nameplate" data-agent-index="2"><span class="tile-name">Джесси</span></div>
+        </div>
       </div>
       </div>
     </section>

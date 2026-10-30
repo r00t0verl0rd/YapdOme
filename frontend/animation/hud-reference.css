@@ -127,17 +127,12 @@ main.cyber-command-center{
 .live-tile:nth-child(1){grid-column:1}
 .live-tile:nth-child(2){grid-column:2}
 .live-tile:nth-child(3){grid-column:3}
-.live-tile-top{grid-row:1}
 .live-tile .hud-portrait{grid-row:2}
 .live-tile .wave-lane{grid-row:4}
 
-/* Shared interface accent: names, status and sound wave use Norman's green. */
+/* Shared interface accent: table nameplates and sound wave use Norman's green. */
 .live-tile:nth-child(2),.live-tile:nth-child(3){--agent-glow:#39f6a7}
 .live-tile.is-speaking .hud-portrait{filter:drop-shadow(0 0 8px color-mix(in srgb,var(--agent-glow) 25%,transparent))}
-.live-tile-top{flex-shrink:0;flex-wrap:wrap;padding:6px;display:flex;justify-content:space-between;align-items:center;gap:5px;color:var(--agent-glow);font:800 10px/1 Menlo,monospace;letter-spacing:.03em}
-.live-tile-top .tile-mode{font-size:9px;white-space:nowrap}
-.live-tile-top .tile-mode:before{content:"●";margin-right:4px}
-.is-speaking .tile-mode:before{animation:breathe .9s infinite}
 .hud-portrait{position:relative;flex:0 0 auto;height:var(--portrait-height);min-height:0;border:0;background:radial-gradient(ellipse at bottom,color-mix(in srgb,var(--agent-glow) 9%,transparent),transparent 70%);overflow:hidden}
 .hud-portrait:after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,transparent 0 3px,#0008 4px),linear-gradient(0deg,#03101365,transparent 45%);opacity:.66}
 .hud-portrait svg{height:100%;width:100%;display:block;object-fit:cover;opacity:.92;filter:drop-shadow(0 0 9px color-mix(in srgb,var(--agent-glow) 35%,transparent))}
@@ -146,8 +141,26 @@ main.cyber-command-center{
 .is-speaking .wave-lane i{opacity:1;animation:equalize var(--speed) ease-in-out infinite alternate;filter:brightness(1.35)}
 
 /* The shared tabletop overlaps the lower torsos, not the audio indicators. */
-.dialogue-table{grid-column:1 / -1;grid-row:3;align-self:stretch;min-width:0;z-index:3;margin-top:-32px;pointer-events:none}
+.dialogue-table{position:relative;grid-column:1 / -1;grid-row:3;align-self:stretch;min-width:0;z-index:3;margin-top:-32px;pointer-events:none}
 .dialogue-table svg{display:block;width:100%;height:100%;overflow:visible}
+.table-nameplates{
+  position:absolute;inset:0;z-index:4;
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  align-items:end;padding:0 3% 3px;pointer-events:none
+}
+.table-nameplate{
+  display:flex;align-items:center;justify-content:center;
+  justify-self:center;align-self:end;
+  box-sizing:border-box;width:min(90%,132px);min-width:0;height:18px;
+  padding:0 7px;border:1px solid #39f6a7;border-radius:3px;
+  background:linear-gradient(180deg,#174335f5 0%,#071c17f7 100%);
+  box-shadow:inset 0 1px 0 #a6ffd544,0 2px 5px #000a,0 0 7px #39f6a733;
+  color:#39f6a7;font:800 9px/1 Menlo,Consolas,monospace;
+  letter-spacing:.075em;text-transform:uppercase;text-shadow:0 0 5px #39f6a7;
+  white-space:nowrap;overflow:hidden;transform:perspective(100px) rotateX(-8deg)
+}
+.table-nameplate .tile-name{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+
 .table-shadow{fill:#000;opacity:.45}
 .table-fascia{fill:#0b2421;stroke:#458877;stroke-width:1}
 .table-top{fill:url(#table-surface);stroke:url(#table-edge);stroke-width:1.5;stroke-linejoin:round}
@@ -180,9 +193,7 @@ main.cyber-command-center{
  .card{grid-template-columns:minmax(0,1fr)}
  .live-visual-head{flex-wrap:wrap}
  .live-visual-head h2{font-size:12px}
- .live-tile-top{font-size:9px;padding:5px}
- .live-tile-top .tile-mode{font-size:8px}
-
+ 
  .feed .message{display:block}
  .feed .message .who,.feed .message .body,.feed .message .meta{
   display:block;grid-column:auto;grid-row:auto;max-width:100%;min-width:0}
@@ -194,7 +205,7 @@ main.cyber-command-center{
  .live-visual-head h2 span{margin-right:3px}
 
 }
-@media(prefers-reduced-motion:reduce){.live-tile .wave-lane i,.live-tile .tile-mode:before{animation:none!important}}
+@media(prefers-reduced-motion:reduce){.live-tile .wave-lane i{animation:none!important}}
 
 /* Keep the HUD clean: cards use one quiet outline, not stacked neon rules. */
 .masthead:before,.masthead:after,.live-visual:after,

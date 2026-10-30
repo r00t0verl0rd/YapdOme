@@ -5,7 +5,7 @@
 (function(){
   const $ = id => document.getElementById(id);
   let booted=false,startAt=Date.now();
-  const nodes=[];
+  const nodes=[],nameNodes=[];
   function getDefs(){try{return typeof defs!=='undefined'&&Array.isArray(defs)?defs:[];}catch(_){return []}}
   function getState(){try{return typeof state!=='undefined'?state:null;}catch(_){return null}}
   function getSpeech(){try{return typeof speech!=='undefined'?speech:null;}catch(_){return null}}
@@ -36,6 +36,7 @@
         lane.replaceChildren(f);
       }
       nodes[i]=tile;
+      nameNodes[i]=root.querySelector('.table-nameplate[data-agent-index="'+i+'"] .tile-name');
     });
     booted=true;
     const cards=document.querySelector('.right-column');
@@ -57,14 +58,10 @@
     if(!cast.length||!s)return;
     for(let i=0;i<3;i++){
       const tile=nodes[i],def=cast[i];if(!tile||!def)continue;
-      const current=s.current,own=!!(current&&current.agent===i);
       const speaking=audio?.audibleAgent===i;
-      const thinking=!!(own&&!s.paused&&s.running&&!speaking);
-      const stage= speaking?'ГОВОРИТ':s.paused?'ПАУЗА':thinking?'ДУМАЕТ':s.running?'ЖДЁТ':'ГОТОВ';
       tile.classList.toggle('is-speaking',speaking);
-      const name=tile.querySelector('.tile-name'),badge=tile.querySelector('.tile-mode');
+      const name=nameNodes[i];
       if(name&&name.textContent!==def.name)name.textContent=def.name;
-      if(badge&&badge.textContent!==stage)badge.textContent=stage;
 
     }
     const turn=$('hudTurns');if(turn)turn.textContent=String(s.turns||0).padStart(4,'0');
