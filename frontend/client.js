@@ -10,9 +10,9 @@ function requestID(){
 }
 // Editable sample cast, not hard-coded debate positions. Existing saved characters win.
 const defs = [
-  {name:'Норман',color:'#48eafb',avatarId:'norman',description:'Любит рассказывать истории из жизни, слегка хвастается и часто сам попадает в нелепое положение. Отшучивается, если его поддели; способен искренне признать ошибку.',voiceURI:''},
-  {name:'Глитч',color:'#ffb45e',avatarId:'glitch',description:'Быстрый на язык, замечает нелепости и любит добродушно подкалывать друзей. Иногда спорит из азарта, но умеет неожиданно поддержать собеседника.',voiceURI:''},
-  {name:'Джесси',color:'#ed68f8',avatarId:'jessie',description:'Остроумная, наблюдательная, прямолинейная. Не любит напускную серьёзность, задаёт неудобные вопросы и иногда выдаёт неожиданный поворот без длинных объяснений.',voiceURI:''}
+  {name:'Норман',color:'#48eafb',avatarId:'norman',hue:0,description:'Любит рассказывать истории из жизни, слегка хвастается и часто сам попадает в нелепое положение. Отшучивается, если его поддели; способен искренне признать ошибку.',voiceURI:''},
+  {name:'Глитч',color:'#ffb45e',avatarId:'glitch',hue:0,description:'Быстрый на язык, замечает нелепости и любит добродушно подкалывать друзей. Иногда спорит из азарта, но умеет неожиданно поддержать собеседника.',voiceURI:''},
+  {name:'Джесси',color:'#ed68f8',avatarId:'jessie',hue:0,description:'Остроумная, наблюдательная, прямолинейная. Не любит напускную серьёзность, задаёт неудобные вопросы и иногда выдаёт неожиданный поворот без длинных объяснений.',voiceURI:''}
 ];
 // Cosmetic character skins. This catalogue is independent from the three dialogue agents.
 const AVATAR_SKINS=[
@@ -703,10 +703,24 @@ function renderCards(){
   avatarSelect.value=AVATAR_SKINS.some(skin=>skin.id===def.avatarId)?def.avatarId:'norman';
   avatarSelect.onchange=()=>{if(!AVATAR_SKINS.some(skin=>skin.id===avatarSelect.value))return;def.avatarId=avatarSelect.value;savePrefs();window.YapdOmePixel?.sync();};
   avatarField.append(avatarLabel,avatarSelect);
+  const hueField=document.createElement('label');hueField.className='card-field hue-field';
+  const hueLabel=document.createElement('span');hueLabel.textContent='ОТТЕНОК · '+def.hue+'°';
+  const hueSlider=document.createElement('input');hueSlider.type='range';hueSlider.className='avatar-hue-slider';
+  hueSlider.min='0';hueSlider.max='360';hueSlider.step='1';hueSlider.value=String(def.hue);
+  hueSlider.setAttribute('aria-label','Оттенок персонажа: '+def.name);
+  hueSlider.title='Оттенок персонажа: '+def.hue+'°';
+  hueSlider.oninput=()=>{
+    const value=Number(hueSlider.value);if(!Number.isFinite(value))return;
+    def.hue=Math.max(0,Math.min(360,Math.round(value)));
+    hueLabel.textContent='ОТТЕНОК · '+def.hue+'°';hueSlider.title='Оттенок персонажа: '+def.hue+'°';
+    window.YapdOmePixel?.setHue(i,def.hue);
+  };
+  hueSlider.onchange=savePrefs;
+  hueField.append(hueLabel,hueSlider);
   const test=document.createElement('button');test.textContent='♫';
   test.title='Прослушать выбранный голос';test.disabled=!audioAvailable();
   test.onclick=()=>{speech.unlock();speech.stop();speech.push(i,'Привет! Я '+def.name+'. Готов к разговору.')};
-  vc.append(voiceField,avatarField,test);
+  vc.append(voiceField,avatarField,hueField,test);
   const emotionSlot=document.createElement('div');emotionSlot.className='emotion-slot';
   c.append(top,name.wrap,vc,emotionSlot,description.wrap);parent.insertBefore(c,advanced||null);
  });
@@ -728,7 +742,7 @@ function populateVoices(){
  defs.forEach((d,i)=>{const sel=agentCards()[i]?.querySelector('.voice-controls select');if(sel)optionsForVoices(sel,i)});
 }
 const PREF_KEY='triad09';
-function savePrefs(){try{localStorage.setItem(PREF_KEY,JSON.stringify({agents:defs.map(d=>({name:d.name,description:d.description,voiceURI:d.voiceURI,avatarId:d.avatarId,kokoroVoice:d.kokoroVoice,kokoroRuVoice:d.kokoroRuVoice,piperVoice:d.piperVoice,sileroVoice:d.sileroVoice,openaudioVoice:d.openaudioVoice,qwen3Voice:d.qwen3Voice })),topic:$('topic').value,sharedGoal:$('sharedGoal').value,showMode:$('showMode').value,voiceEnabled:$('voiceEnabled').checked,ttsBackend:$('ttsBackend').value,rate:$('rate').value,directorEnabled:$('directorEnabled').checked,model:$('model').value,qwen3Size:qwen3Size,kokoroModel:kokoroModel}))}catch(_){}}
+function savePrefs(){try{localStorage.setItem(PREF_KEY,JSON.stringify({agents:defs.map(d=>({name:d.name,description:d.description,voiceURI:d.voiceURI,avatarId:d.avatarId,hue:d.hue,kokoroVoice:d.kokoroVoice,kokoroRuVoice:d.kokoroRuVoice,piperVoice:d.piperVoice,sileroVoice:d.sileroVoice,openaudioVoice:d.openaudioVoice,qwen3Voice:d.qwen3Voice })),topic:$('topic').value,sharedGoal:$('sharedGoal').value,showMode:$('showMode').value,voiceEnabled:$('voiceEnabled').checked,ttsBackend:$('ttsBackend').value,rate:$('rate').value,directorEnabled:$('directorEnabled').checked,model:$('model').value,qwen3Size:qwen3Size,kokoroModel:kokoroModel}))}catch(_){}}
 function restorePrefs(){
  try{
   const modern=localStorage.getItem(PREF_KEY),p=JSON.parse(modern||localStorage.getItem('triad08')||localStorage.getItem('triad07')||'{}');
@@ -748,6 +762,7 @@ function restorePrefs(){
        (a.role+(typeof a.goal==='string'&&a.goal.trim()?' '+a.goal:'')).slice(0,900);
      if(typeof a.voiceURI==='string')d.voiceURI=a.voiceURI;
      if(AVATAR_SKINS.some(skin=>skin.id===a.avatarId))d.avatarId=a.avatarId;
+     if(typeof a.hue==='number'&&Number.isFinite(a.hue)&&a.hue>=0&&a.hue<=360)d.hue=Math.round(a.hue);
      if(kokoroSpeakers.includes(a.kokoroVoice))d.kokoroVoice=a.kokoroVoice;
      if(kokoroRuSpeakers.some(([id])=>id===a.kokoroRuVoice))d.kokoroRuVoice=a.kokoroRuVoice;
      if(piperSpeakers.some(([id])=>id===a.piperVoice))d.piperVoice=a.piperVoice;

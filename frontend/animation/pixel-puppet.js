@@ -126,6 +126,12 @@
       const pose = {...a.pose, open:0, round:a.level > 0 ? a.pose.round : 0};
       const blinkPhase = (now + a.index * 700) % 4300;
       const blink = !reduced.matches && blinkPhase < 160 ? Math.sin(Math.PI * blinkPhase / 160) : 0;
+      const hueValue = ctx.cast?.[a.index]?.hue;
+      const hue = typeof hueValue === 'number' && Number.isFinite(hueValue) ? clamp(Math.round(hueValue), 0, 360) : 0;
+      if (a.hue !== hue) {
+        a.hue = hue;
+        a.grid.style.setProperty('--avatar-hue', `${hue}deg`);
+      }
       const skin = avatarIds.includes(ctx.cast?.[a.index]?.avatarId) ? ctx.cast[a.index].avatarId : a.id;
       const pixels = engine.draw(skin, pose, {t:reduced.matches ? 0 : now / 1000, talk:a.level, blink});
       for (let i = 0; i < pixels.length; i++) {
@@ -153,6 +159,14 @@
       if (slot && a.controls.parentElement !== slot) slot.append(a.controls);
 
     }
+  }
+  function setHue(index, value) {
+    if (!Number.isInteger(index) || index < 0 || index > 2 || !agents[index] ||
+        typeof value !== 'number' || !Number.isFinite(value)) return false;
+    const hue = clamp(Math.round(value), 0, 360);
+    agents[index].hue = hue;
+    agents[index].grid.style.setProperty('--avatar-hue', `${hue}deg`);
+    return true;
   }
   function sync() {
     if (!booted) boot();
@@ -226,7 +240,7 @@
         save(); sync();
       });
       fpsLabel.append(fpsSelect); controls.append(fpsLabel);
-      agents.push({id:ids[index], index, grid, leds, controls, last:new Uint8Array(2304),
+      agents.push({id:ids[index], index, grid, leds, controls, hue:null, last:new Uint8Array(2304),
         pose:{...engine.EMOTIONS.neutral}, velocity:Object.fromEntries(engine.keys.map(k => [k, 0])), event:null, level:0});
     });
 
@@ -239,9 +253,9 @@
     booted = true; sync();
   }
   window.YapdOmePixel = {
-    sync, receive, boot, mountControls, version:'triad-1.0', resolution:[48, 48], storageKey:STORAGE_KEY,
+    sync, receive, boot, mountControls, setHue, version:'triad-1.0', resolution:[48, 48], storageKey:STORAGE_KEY,
     getStatus:() => ({fps:settings.fps, speaker,
-      agents:agents.map(a => ({id:a.id, mood:a.mood, source:a.source, level:a.level, speaking:a.speaking}))})
+      agents:agents.map(a => ({id:a.id, mood:a.mood, source:a.source, level:a.level, speaking:a.speaking, hue:a.hue??0}))})
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, {once:true});
   else boot();
