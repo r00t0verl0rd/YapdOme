@@ -15,6 +15,13 @@ class CodexSessionTests(unittest.TestCase):
                 return {"thread": {"id": "thread-live"}}
             if method == "thread/archive":
                 return {}
+            if method == "thread/compact/start":
+                for listener in list(client.listeners):
+                    listener({
+                        "method": "item/completed",
+                        "params": {"threadId": "thread-live", "item": {"type": "contextCompaction"}}
+                    })
+                return {}
             if method == "turn/start":
                 for listener in list(client.listeners):
                     listener({
@@ -86,6 +93,25 @@ class CodexSessionTests(unittest.TestCase):
         self.assertNotIn("ТЕМА ЭТОГО ЭФИРА", prompts[1])
         self.assertIn("Новая тема заменяет прежнюю", prompts[2])
         self.assertIn("СЕЙЧАС ГОВОРИТ: Джесси", prompts[2])
+
+    def test_compaction_only_runs_near_real_context_limit(self):
+        client, calls = self.make_client()
+        client.thread_id = "thread-live"
+        client.token_usage = {
+            "modelContextWindow": 1000,
+            "last": {"totalTokens": 749},
+            "total": {"totalTokens": 5000},
+        }
+
+        client._compact_if_needed()
+        self.assertNotIn("thread/compact/start", [method for method, _ in calls])
+
+        client.token_usage["last"]["totalTokens"] = 750
+        client._compact_if_needed()
+        self.assertEqual(
+            [method for method, _ in calls].count("thread/compact/start"), 1
+        )
+        self.assertIsNone(client.token_usage, "fresh usage arrives after compaction")
 
     def test_new_show_archives_previous_thread_and_resets_context(self):
         client, calls = self.make_client()
