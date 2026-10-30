@@ -1339,7 +1339,9 @@ async function issueTurn(agent,ticket){
    c.text=stripSpeakerLabels(c.text);
    c.generatedText=stripSpeakerLabels(c.generatedText);
   }
-  if(c.text)item.body.textContent=stripDirectives(c.text);
+  // Keep generated text private while this turn waits behind another voice.
+  // The only reveal point in the WAV pipeline is queueWholeSpeech's onStart.
+  if(c.text&&!c.pipeline)item.body.textContent=stripDirectives(c.text);
   if(c.pipeline){
    const spoken=stripDirectives(c.text);
    if(spoken&&!isMarker(c.text)){
