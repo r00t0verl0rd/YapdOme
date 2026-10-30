@@ -46,7 +46,7 @@ function stripDirectives(raw){
   // A turn made only of markers must never leave orphan punctuation to be spoken.
   return /^[.,;:!?…\-–—\s]*$/.test(text)?'':text;
 }
-const state = {archivedLines:[],connected:false,recoverable:false,provider:'chatgpt',deepseekConnected:false,codexConnected:false,running:false,paused:false,stopping:false,starting:false,epoch:0,turns:0,current:null,history:[],journal:[],timer:null,claimPending:null,core:null,donationQueue:[],activeDonation:null,donationRouting:false,lastDonationName:'',lastAudibleAt:Date.now(),lastIdleNotice:0,
+const state = {archivedLines:[],connected:false,recoverable:false,provider:'chatgpt',deepseekConnected:false,codexConnected:false,running:false,paused:false,stopping:false,starting:false,epoch:0,turns:0,current:null,history:[],journal:[],conversationId:'',sentConversationEvents:new Set(),language:'ru',timer:null,claimPending:null,core:null,donationQueue:[],activeDonation:null,donationRouting:false,lastDonationName:'',lastAudibleAt:Date.now(),lastIdleNotice:0,
   directorPlan:null,directorRequest:null,directorRouted:false,lastClaimRetryNotice:0,
   pipelineReady:false,audibleTurn:null,
   social:{pair:null,returnContext:null,lastEnd:0,lastPair:"",memory:[[],[],[]]}};
@@ -872,7 +872,7 @@ function isMarker(s){
   return t==='PASS'||t==='WAITUSER'||t==='WAIT_USER';
 }
 function resetLocal(reason='остановлено'){
- state.epoch++;stopTimer();cancelDirector();cancelCurrent(reason);speech.stop();state.running=false;
+ state.epoch++;state.conversationId='';state.sentConversationEvents=new Set();stopTimer();cancelDirector();cancelCurrent(reason);speech.stop();state.running=false;
  state.activeDonation=null;state.donationQueue=[];state.donationRouting=false;state.lastDonationName='';
  state.social.memory=[[],[],[]];state.social.lastPair='';resetSocialFocus();
  updateDonationBadge();
@@ -913,7 +913,7 @@ async function begin(){
  const providerConnected=state.provider==='deepseek'?state.deepseekConnected:state.provider==='codex'?state.codexConnected:state.connected;
  if(!providerConnected){system('Подключись к выбранному провайдеру в панели подключения.');return;}
  if(!$('model').value){system('Выбери модель.');return;}
- speech.unlock();resetLocal();state.history=[];state.journal=[];state.archivedLines=[];$('feed').replaceChildren();updateScienceUI();
+ speech.unlock();resetLocal();state.conversationId=requestID();state.sentConversationEvents=new Set();state.history=[];state.journal=[];state.archivedLines=[];$('feed').replaceChildren();updateScienceUI();
  const epoch=state.epoch;
  state.starting=true;$('start').disabled=true;
  try{
@@ -1429,10 +1429,21 @@ async function issueTurn(agent,ticket){
  }
 }
 async function realTurn(c){
- // `agent` on every history entry lets the server rebuild a REAL dialogue:
- // this agent's own turns become assistant messages, peers become user turns.
+ // The browser keeps the local transcript for rendering, but sends only unseen events.
+ const pendingEvents=state.history.filter(event=>{
+  if(!event.event_id)event.event_id=requestID();
+  return (!event.untrusted || event.expiresAfter>=state.turns) &&
+         !state.sentConversationEvents.has(event.event_id);
+ });
  const response=await fetch('/api/stream',{method:'POST',headers:{'Content-Type':'application/json'},signal:c.controller.signal,
-  body:JSON.stringify({request_id:c.requestId,agent:c.agent,agent_name:defs[c.agent].name,description:defs[c.agent].description,agents:defs.map(d=>d.name),cast_profiles:defs.map(d=>({name:d.name,description:d.description})),model:$('model').value,topic:$('topic').value,show_mode:$('showMode').value,shared_goal:$('sharedGoal').value,social_focus:c.socialFocus,social_memory:state.provider==='codex'?null:liveMemoryPayload(),turns:state.turns,history:state.provider==='codex'?state.history.filter(h=>h.agent===-1&&!h.untrusted).slice(-16):state.history.filter(h=>!h.untrusted || h.expiresAfter>=state.turns).slice(-12),journal:state.provider==='codex'?[]:$('showMode').value==='science'?state.journal.map(({speaker,claim,phase})=>({speaker,claim,phase})):[],
+  body:JSON.stringify({request_id:c.requestId,conversation_id:state.conversationId,
+  events:pendingEvents,language:state.language||'ru',agent:c.agent,agent_name:defs[c.agent].name,
+  description:defs[c.agent].description,agents:defs.map(d=>d.name),
+  cast_profiles:defs.map(d=>({name:d.name,description:d.description})),
+  model:$('model').value,topic:$('topic').value,show_mode:$('showMode').value,
+  shared_goal:$('sharedGoal').value,social_focus:c.socialFocus,
+  social_memory:state.provider==='codex'?null:liveMemoryPayload(),turns:state.turns,
+  journal:state.provider==='codex'?[]:$('showMode').value==='science'?state.journal.map(({speaker,claim,phase})=>({speaker,claim,phase})):[],
   director_plan:!state.activeDonation&&!c.socialFocus&&state.directorPlan&&$('directorEnabled').checked&&state.directorPlan.topic===$('topic').value&&state.turns<=state.directorPlan.at+4?state.directorPlan:null,
   donation_context:c.donation&&!c.donation.topicChanged?{name:c.donation.donor,amount:c.donation.amount,
       text:c.donation.text,first:!c.donation.acknowledged,remaining:c.donation.remaining,
@@ -1464,6 +1475,9 @@ async function realTurn(c){
   }
   if(!completed){buf+=dec.decode();if(buf.trim())parsePacket(buf)}
   if(!completed)throw Error('Ответ прерван до response.completed');
+  // IDs are marked only after a complete successful turn. Retrying an interrupted
+  // request is safe because ConversationStore deduplicates events by event_id.
+  for(const event of pendingEvents)state.sentConversationEvents.add(event.event_id);
  }finally{try{await reader.cancel()}catch(_){}}
 }
 function hostTopicChange(text){
