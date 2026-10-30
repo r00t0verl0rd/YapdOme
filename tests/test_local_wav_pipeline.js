@@ -132,7 +132,8 @@ test('Engine claims one next turn while full WAV is playing',async()=>{
   },applyCore(s){state.core=s},issueTurn:(agent,ticket)=>launched.push([agent,ticket]),
   engineError(err){throw err},console};
  vm.createContext(ctx);
- vm.runInContext(between('async function claimNext(){','function scheduleNext(){')+
+ const slotHelpers=between('function reserveClaimSlot(){','function retryClaim(');
+ vm.runInContext(slotHelpers+';'+between('async function claimNext(){','function scheduleNext(){')+
   '\nthis.claimNext=claimNext;',ctx);
  await ctx.claimNext();
  assert.deepEqual(actions,['claim'],'engine ticket should be claimed before audio ends');
@@ -148,7 +149,8 @@ test('non-pipelined engine claim still waits for audio drain',async()=>{
   async coreEvent(){throw Error('Cannot claim while audio is playing')},
   console};
  vm.createContext(ctx);
- vm.runInContext(between('async function claimNext(){','function scheduleNext(){')+
+ const slotHelpers=between('function reserveClaimSlot(){','function retryClaim(');
+ vm.runInContext(slotHelpers+';'+between('async function claimNext(){','function scheduleNext(){')+
   '\nthis.claimNext=claimNext;',ctx);
  await ctx.claimNext();
  assert.equal(rescheduled,true);
