@@ -203,8 +203,11 @@ class CodexAppServer:
             for item in cast:
                 if isinstance(item, dict) and isinstance(item.get("name"), str):
                     profiles[item["name"]] = str(item.get("description") or "")[:900]
-        if current_name and current_name not in profiles:
-            profiles[current_name] = str(current_description or "")[:900]
+        if current_name and current_description:
+            # The active turn's validated description is the canonical profile.
+            profiles[current_name] = str(current_description)[:900]
+        elif current_name and current_name not in profiles:
+            profiles[current_name] = ""
         return profiles
 
     def _session_snapshot(self, data):
@@ -232,6 +235,7 @@ class CodexAppServer:
             language=language,
             donation=isinstance(data.get("donation_context"), dict),
             persistent_context=True,
+            persona_description=profiles.get(name, ""),
         )
         return {
             "topic": topic,
@@ -260,7 +264,8 @@ class CodexAppServer:
             "от имени названного персонажа; имена и профили постоянны, если ведущий их не изменил. "
             "Используй историю треда и не пересказывай уже сказанное. "
             "Тема ведущего важнее общей цели; цель влияет только на ракурс. "
-            "Профиль определяет голос и позицию, но не подменяет тему. "
+            "Профиль — обязательная спецификация голоса, ритма, юмора и позиции каждого персонажа; "
+            "не заменяй все три голоса одной нейтральной манерой. "
             "Сохраняй самостоятельное мнение: искренне соглашайся или возражай; меняй мнение под сильным аргументом, не спорь для галочки. "
             "Не копируй последнюю реплику, метафору или исчерпанную шутку. "
             "Не выдумывай реальные воспоминания, факты, события, действия, предметы или новых участников. "
@@ -352,6 +357,18 @@ class CodexAppServer:
                 # This event is already in the persistent Codex thread (or is legacy data).
                 fresh_ids.append(event_id)
 
+        # Re-send the complete editable cast on EVERY turn. A long-lived Codex
+        # thread may compact its context; a one-time profile paragraph is not
+        # a reliable way to preserve three distinct voices indefinitely.
+        roster = "\\n".join(
+            "- " + name + ": " + (description or "собственная отличимая манера речи")
+            for name, description in meta["profiles"].items()
+        )
+        if roster:
+            parts.append(
+                "ПОСТОЯННЫЕ ПРОФИЛИ ПЕРСОНАЖЕЙ — ОБЯЗАТЕЛЬНЫЙ СОСТАВ КАЖДОГО ХОДА "
+                "(повторены намеренно, не усредняй характеры):\\n" + roster
+            )
         if meta["turn_policy"]:
             parts.append(meta["turn_policy"])
         elif previous and previous["social_instruction"]:

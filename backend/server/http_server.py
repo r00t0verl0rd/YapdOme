@@ -677,6 +677,7 @@ class Handler(BaseHTTPRequestHandler):
             planned=proposed is not None,
             language=language,
             donation=bool(donation),
+            persona_description=description,
         )
         if donation:
             instructions += donation_scene_instructions(donation, agent_name, peers)
@@ -688,7 +689,7 @@ class Handler(BaseHTTPRequestHandler):
             prior_words = live_memory_context(data, peers)
             if prior_words:
                 inp.append({"role": "user", "content": prior_words})
-        if not donation and mode == "live" and cast:
+        if mode == "live" and cast:
             peers_only = [{"name": item["name"], "description": item["description"]}
                           for item in cast if item["name"] != agent_name]
             if peers_only:
