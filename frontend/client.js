@@ -757,12 +757,13 @@ async function refreshStatus(){
   $('deepseekAuth').hidden=state.provider!=='deepseek';
   $('codexAuth').hidden=state.provider!=='codex';
   $('codexLogin').hidden=state.codexConnected;
+  $('codexLogout').hidden=!state.codexConnected;
   $('logout').hidden=!state.connected;
   $('switchaccount').hidden=state.connected&&!state.recoverable||!state.connected&&!data.has_saved_account&&!state.recoverable;
   $('signin').textContent=state.recoverable?'Повторить вход':state.connected?'Сменить ChatGPT':'Войти через ChatGPT';
   $('deepseekDisconnect').hidden=!state.deepseekConnected;
   if(state.provider==='codex'){
-   if(state.codexConnected){status('CODEX CONNECTED',data.codex_account||'ChatGPT через Codex','ok');$('codexNote').textContent='Codex подключён. Используется его локальная авторизация.';await fetchModels();}
+   if(state.codexConnected){status('CODEX CONNECTED',data.codex_account||'ChatGPT через Codex','ok');$('codexNote').textContent='Для смены аккаунта нажми «Выйти из Codex». Это также завершит общий локальный сеанс Codex CLI и IDE-расширения на этом устройстве.';await fetchModels();}
    else{status('CODEX OFFLINE',data.codex_error||'Войди через Codex CLI');$('model').disabled=true;$('model').replaceChildren(new Option('Сначала войди в Codex',''));$('codexNote').textContent=data.codex_error||'Нажми «Войти через Codex».';}
   }else if(state.provider==='deepseek'){
    if(state.deepseekConnected){
@@ -1629,6 +1630,17 @@ $('codexLogin').onclick=async()=>{
   window.open(response.url,'_blank','noopener');
   $('codexNote').textContent='Заверши вход в открывшемся окне, затем подожди обновления статуса.';
  }catch(err){$('codexNote').textContent='Ошибка входа: '+err.message;}
+};
+$('codexLogout').onclick=async()=>{
+ if(!window.confirm('Выйти из общего локального сеанса Codex? Это также отключит Codex CLI и IDE-расширение на этом устройстве до следующего входа.'))return;
+ const button=$('codexLogout');button.disabled=true;
+ try{
+  await stopDialogue();
+  await api('/codex/logout',{});
+  await refreshStatus();
+  $('codexNote').textContent='Выход выполнен. Нажми «Войти через Codex» и авторизуйся под другим аккаунтом.';
+ }catch(err){$('codexNote').textContent='Ошибка выхода: '+err.message;}
+ finally{button.disabled=false;}
 };
 $('provider').onchange=async()=>{
  const p=$('provider').value;
