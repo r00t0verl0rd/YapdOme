@@ -131,8 +131,8 @@ main.cyber-command-center{
 .live-tile .hud-portrait{grid-row:2}
 .live-tile .wave-lane{grid-row:4}
 
-.live-tile:nth-child(2){--agent-glow:#29e8ff}
-.live-tile:nth-child(3){--agent-glow:#ffc936}
+/* Shared interface accent: names, status and sound wave use Norman's green. */
+.live-tile:nth-child(2),.live-tile:nth-child(3){--agent-glow:#39f6a7}
 .live-tile.is-speaking .hud-portrait{filter:drop-shadow(0 0 8px color-mix(in srgb,var(--agent-glow) 25%,transparent))}
 .live-tile-top{flex-shrink:0;flex-wrap:wrap;padding:6px;display:flex;justify-content:space-between;align-items:center;gap:5px;color:var(--agent-glow);font:800 10px/1 Menlo,monospace;letter-spacing:.03em}
 .live-tile-top .tile-mode{font-size:9px;white-space:nowrap}

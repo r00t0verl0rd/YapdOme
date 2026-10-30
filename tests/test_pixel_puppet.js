@@ -7,6 +7,7 @@ const vm = require('node:vm');
 const engine = require('../frontend/animation/pixel-puppet-engine.js');
 const adapter = fs.readFileSync(path.join(__dirname, '../frontend/animation/pixel-puppet.js'), 'utf8');
 const pixelCss = fs.readFileSync(path.join(__dirname, '../frontend/animation/pixel-puppet.css'), 'utf8');
+const hudCss = fs.readFileSync(path.join(__dirname, '../frontend/animation/hud-reference.css'), 'utf8');
 
 test('real engine: 48×48 literal LEDs 0..3, five cosmetic skins and expressions', () => {
   assert.equal(engine.W, 48); assert.equal(engine.H, 48);
@@ -153,6 +154,14 @@ test('each of the three portraits gets an independent absolute CSS hue value', (
   vm.runInContext('defs[0].hue=72', h.ctx);
   h.api.sync();
   assert.equal(grids[0].style.getPropertyValue('--avatar-hue'), '72');
+});
+
+test('all three live tiles share Norman green for name, status and waveform', () => {
+  assert.match(hudCss, /\\.live-tile\\{--agent-glow:#39f6a7/);
+  assert.match(hudCss, /\\.live-tile:nth-child\\(2\\),\\.live-tile:nth-child\\(3\\)\\{--agent-glow:#39f6a7\\}/);
+  assert.doesNotMatch(hudCss, /--agent-glow:#(?:29e8ff|ffc936)/);
+  assert.match(hudCss, /\\.live-tile-top[^}]*color:var\\(--agent-glow\\)/);
+  assert.match(hudCss, /\\.wave-lane i[^}]*background:var\\(--agent-glow\\)/);
 });
 
 test('CSS hue angle is absolute and matches the rainbow scale', () => {
