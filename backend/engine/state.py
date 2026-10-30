@@ -14,7 +14,7 @@ from . import enums as E
 from .routing import (lower_text, output_kind, user_kind, route_from_text,
                       default_target)
 
-DEFAULT_NAMES = ("норман", "глитч", "джесси", "вольт", "луна")
+DEFAULT_NAMES = ("архитектор", "скептик", "экспериментатор")
 
 
 def now_ms():
