@@ -177,7 +177,7 @@ test('agent names are mounted on three tabletop plaques and status labels are re
   assert.ok(hudCss.includes('.table-nameplates{'));
   assert.doesNotMatch(hudCss, /live-tile-top|tile-mode/);
   assert.doesNotMatch(hudJs, /tile-mode|ГОТОВ|ЖДЁТ|ГОВОРИТ|ДУМАЕТ/);
-  assert.match(hudJs, /nameNodes\\[i\\]/);
+  assert.ok(hudJs.includes('nameNodes[i]'));
 });
 
 test('CSS hue angle is absolute and matches the rainbow scale', () => {

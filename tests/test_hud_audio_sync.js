@@ -13,7 +13,7 @@ function harness(){
  const root={
   querySelectorAll:()=>tiles,
   querySelector:selector=>{
-   const match=selector.match(/data-agent-index="(\\d+)"/);
+   const match=selector.match(/data-agent-index="([0-2])"/);
    return match?names[Number(match[1])]||null:null;
   }
  };
@@ -40,7 +40,6 @@ test('HUD keeps names on table plaques and only toggles speaking visuals',()=>{
  assert.ok(h.tiles.every(tile=>!tile.classes.has('is-speaking')));
  h.speech.audibleAgent=1;h.sync();
  assert.equal(h.tiles[1].classes.has('is-speaking'),true);
- h.contextNames?.();
  assert.equal(h.frames(),0);
 });
 test('HUD immediately forwards playback and thinking changes to the optional pixel module',()=>{
