@@ -286,17 +286,25 @@ class ProtocolTests(unittest.TestCase):
                  "topic":"Сознание","show_mode":"debate","shared_goal":"Найти проверяемый критерий сознания","history":[]}
         def assert_prompt(req, **kw):
             body=json.loads(req.data)
-            self.assertIn('Ты \"Мудрец\"',body['instructions'])
-            self.assertIn('Философ',body['instructions'])
-            self.assertIn('Выяснить истину',body['instructions'])
+            self.assertIn('Ты "Мудрец"',body['instructions'])
             self.assertIn('Физик',body['instructions'])
-            self.assertIn('Найти проверяемый критерий сознания',body['instructions'])
-            self.assertIn('ПРИОРИТЕТ 1 — НАУЧНЫЙ ВОПРОС',body['instructions'])
-            self.assertIn('ПРИОРИТЕТ 2 — ОБЩАЯ ЦЕЛЬ',body['instructions'])
-            self.assertLess(body['instructions'].index('ПРИОРИТЕТ 1'),body['instructions'].index('ПРИОРИТЕТ 2'))
-            self.assertIn('ПРИОРИТЕТНАЯ ТЕМА (данные ведущего):',body['input'][0]['content'])
-            self.assertIn('ХАРАКТЕР / ПОВЕДЕНИЕ (равный приоритет с темой)',body['input'][0]['content'])
-            self.assertIn('На том же уровне обязательности — ХАРАКТЕР / ПОВЕДЕНИЕ',body['instructions'])
+            self.assertNotIn('Философ',body['instructions'])
+            self.assertNotIn('ПРИОРИТЕТ 1 — НАУЧНЫЙ ВОПРОС',body['instructions'])
+            topic_message = next(
+                item['content'] for item in body['input']
+                if item['content'].startswith('ИНСТРУКЦИЯ 1/2 — ТЕМА / СЦЕНА')
+            )
+            persona_message = next(
+                item['content'] for item in body['input']
+                if item['content'].startswith('ИНСТРУКЦИЯ 2/2 — ХАРАКТЕР / ПОВЕДЕНИЕ')
+            )
+            self.assertIn('ПРИОРИТЕТ 1 — НАУЧНЫЙ ВОПРОС',topic_message)
+            self.assertIn('ПРИОРИТЕТ 2 — ОБЩАЯ ЦЕЛЬ',topic_message)
+            self.assertLess(topic_message.index('ПРИОРИТЕТ 1'),topic_message.index('ПРИОРИТЕТ 2'))
+            self.assertIn('Сознание',topic_message)
+            self.assertIn('Философ',persona_message)
+            self.assertIn('Выяснить истину',persona_message)
+            self.assertNotIn('Сознание',persona_message)
             return MockUpstream('Предлагаю эксперимент.')
         with patch.object(triad.urllib.request,'urlopen',assert_prompt):
             code,body=self.request('POST','/api/stream',payload)
