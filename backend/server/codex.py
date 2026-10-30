@@ -4,7 +4,11 @@ import shutil
 import subprocess
 import threading
 
-from .conversation import discussion_frame, social_focus_instructions, language_instruction, normalize_language
+from .conversation import (
+    discussion_frame, social_focus_instructions, language_instruction, normalize_language,
+    character_style, live_requested_voice, science_phase, science_protocol,
+    dialogue_pace, turn_protocol, conversational_direction,
+)
 
 
 class CodexError(RuntimeError):
@@ -220,8 +224,26 @@ class CodexAppServer:
         if type(agent_index) is not int or agent_index not in range(3):
             agent_index = agents.index(name) if name in agents else -1
         plan = data.get("director_plan")
+        language = normalize_language(data.get("language"))
+        history = data.get("conversation_history")
+        if not isinstance(history, list):
+            history = []
+        turns = data.get("turns", 0)
+        pace = dialogue_pace(turns, history)
+        policy = [
+            character_style(mode, topic),
+            turn_protocol(name, agents, pace, mode == "science"),
+            conversational_direction(topic, turns, history, pace, planned=plan is not None, mode=mode),
+        ]
+        if mode == "live":
+            policy.append(live_requested_voice(topic))
+        if mode == "science":
+            policy.append(science_protocol(science_phase(turns), agent_index))
         return {
             "topic": topic,
+            "language": language,
+            "language_instruction": language_instruction(language),
+            "turn_policy": " ".join(part for part in policy if part),
             "topic_instruction": discussion_frame(topic, goal, mode),
             "goal": goal,
             "mode": mode,
@@ -382,10 +404,13 @@ class CodexAppServer:
         if isinstance(post_donation, str) and post_donation.strip():
             parts.append("Донатный эпизод завершён. Возобнови основной разговор; не возвращайся к благодарностям.")
 
+        turn_policy = meta["turn_policy"]
+        if turn_policy:
+            parts.append(turn_policy)
         compass = str(data.get("compass") or "").strip()
         if compass:
             parts.append(compass)
-        speaker = str(data.get("agent_name") or "Агент")[:30]
+        speaker = str(data.get("agent_name") or "Агент")[:30
         parts.append("СЕЙЧАС ГОВОРИТ: " + speaker + ". Отвечай на текущую мысль в истории беседы.")
         return "\n".join(parts), fresh_ids
 
