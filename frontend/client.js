@@ -1171,7 +1171,7 @@ async function claimNext(){
    }else if(duo!==null&&state.core?.route_reason==='rotation'){
     const route=await coreEvent('social',{agent:duo,ticket:state.core.ticket});
     if(epoch===state.epoch&&route.accepted)applyCore(route);
-   }else if(duo===null&&!state.social.returnContext)await applyDirectorRoute(epoch);
+   }else if(duo===null&&!state.social?.returnContext)await applyDirectorRoute(epoch);
    if(epoch===state.epoch&&state.core?.route_reason==='rotation'&&typeof $==='function'&&$('showMode').value==='live'&&typeof liveFloorBid==='function'){
     const latest=state.history.slice().reverse().find(h=>Number.isInteger(h.agent)&&h.agent>=0);
     const bidder=latest?liveFloorBid(latest.agent,latest.text):null;
