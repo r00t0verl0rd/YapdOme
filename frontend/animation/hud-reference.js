@@ -1,6 +1,6 @@
 'use strict';
 /* YapdOme reference HUD — presentation only.
-   The C core, authorization, turn routing, donation queue and TTS remain
+   The engine, authorization, turn routing, donation queue and TTS remain
    exclusively owned by the existing client.js. */
 (function(){
   const $ = id => document.getElementById(id);
@@ -44,9 +44,10 @@
       nodes[i]=tile;
     });
     booted=true;
-    const cards=$('cards'),run=$('runstate'),audio=$('audioLane');
+    const cards=document.querySelector('.right-column');
     if(cards)new MutationObserver(()=>queueSync()).observe(cards,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['class']});
-    for(const element of [run,audio,$('connection')])if(element)new MutationObserver(()=>queueSync()).observe(element,{childList:true,characterData:true,subtree:true});
+    const connection=$('connection');
+    if(connection)new MutationObserver(()=>queueSync()).observe(connection,{childList:true,characterData:true,subtree:true});
     clockTimer=setInterval(()=>{const t=$('hudUptime');if(t)t.textContent=stamp(Math.floor((Date.now()-startAt)/1000));sync();},1000);
     sync();
   }

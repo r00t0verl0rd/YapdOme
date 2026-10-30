@@ -43,12 +43,12 @@ const { chromium } = require('playwright');
       }
       await page.locator('#pixelPuppetEnabled').setChecked(true);
       assert.equal(await page.locator('.live-tile .pixel-controls').count(), 0);
-      assert.equal(await page.locator('#cards .pixel-controls').count(), 3);
-      await page.locator('#cards .pixel-mood').first().selectOption('joy');
+      assert.equal(await page.locator('.right-column > .card .pixel-controls').count(), 3);
+      await page.locator('.right-column > .card .pixel-mood').first().selectOption('joy');
       await page.evaluate(() => forceRenderCards());
-      assert.equal(await page.locator('#cards .pixel-mood').first().inputValue(), 'joy');
-      assert.equal(await page.locator('#cards .pixel-controls').count(), 3);
-      await page.locator('#cards .pixel-mood').first().selectOption('auto');
+      assert.equal(await page.locator('.right-column > .card .pixel-mood').first().inputValue(), 'joy');
+      assert.equal(await page.locator('.right-column > .card .pixel-controls').count(), 3);
+      await page.locator('.right-column > .card .pixel-mood').first().selectOption('auto');
       await page.locator('#voiceStudioButton').click();
       await page.waitForFunction(() => document.querySelector('#voiceSettings').open);
       assert.ok(await page.locator('#ttsBackend').isVisible(), 'Voice settings must remain accessible');

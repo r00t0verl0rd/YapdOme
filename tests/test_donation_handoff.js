@@ -1,5 +1,5 @@
 'use strict';
-// Reproduces the narrow interval after TTS finishes but before native COMPLETE.
+// Reproduces the narrow interval after TTS finishes but before core completion.
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
@@ -49,9 +49,9 @@ async function verify(action){
  state.current=c;
  const done=endTurn(c,action==='complete','Завершено');
  await Promise.resolve();
- assert.equal(state.current,c,'native acknowledgement must retain the turn lock');
- assert.equal(calls.includes(action),true,'native '+action+' must be requested');
- // An incoming donation cannot run the NEXT claim while native C is still busy.
+ assert.equal(state.current,c,'engine acknowledgement must retain the turn lock');
+ assert.equal(calls.includes(action),true,'engine '+action+' must be requested');
+ // An incoming donation cannot run the NEXT claim while the engine is still busy.
  const fields={donationAmount:{value:'50'},donor:{value:'Тест'},donationText:{value:'Привет'}};
  const donorFactory=Function('state','$','system','feedItem','requestID',
    'DONATION_REPLIES','scheduleNext','updateDonationBadge','cancelListeners',
@@ -72,5 +72,5 @@ async function verify(action){
 (async()=>{
  await verify('complete');
  await verify('recover');
- console.log('Donation handoff OK: native complete/recover gate + FIFO');
+ console.log('Donation handoff OK: engine complete/recover gate + FIFO');
 })().catch(err=>{console.error(err);process.exitCode=1;});

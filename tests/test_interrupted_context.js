@@ -4,7 +4,7 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const src=fs.readFileSync(path.join(__dirname,'../frontend/client.js'),'utf8');
-const a=src.indexOf('async function interruptWith(agent,reason){'),
+const a=src.indexOf('async function interruptByListener(agent){'),
       b=src.indexOf('function scheduleNext(){',a);
 assert(a>=0&&b>a);
 function harness(accepted=true){
@@ -24,7 +24,7 @@ function harness(accepted=true){
 }
 test('accepted AI interruption retains only limited attributed excerpt',async()=>{
  const x=harness();
- await x.ctx.interruptWith(1,'ai');
+ await x.ctx.interruptByListener(1);
  assert.equal(x.state.history.length,1);
  assert.equal(x.state.history[0].agent,0);
  assert.equal(x.state.history[0].interrupted,true);
@@ -35,14 +35,14 @@ test('accepted AI interruption retains only limited attributed excerpt',async()=
  assert.equal(x.launched(),1);
 });
 test('stale native interruption leaves transcript and session untouched',async()=>{
- const x=harness(false);await x.ctx.interruptWith(1,'ai');
+ const x=harness(false);await x.ctx.interruptByListener(1);
  assert.equal(x.state.history.length,0);
  assert.equal(x.state.epoch,4);
  assert.equal(x.launched(),0);
 });
 test('priority donation blocks speculative AI interruption',async()=>{
  const x=harness();x.state.donationQueue.push({});
- await x.ctx.interruptWith(1,'ai');
+ await x.ctx.interruptByListener(1);
  assert.equal(x.state.history.length,0);
  assert.equal(x.launched(),0);
 });

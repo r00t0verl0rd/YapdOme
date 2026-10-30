@@ -405,7 +405,7 @@ def conversational_direction(topic, turns, history, pace="normal", planned=False
 
 
 def turn_protocol(agent_name, peers, pace="normal", science=False):
-    """Native C still decides who speaks next; response format may vary."""
+    """The engine decides who speaks next; response format may vary."""
     others = [n for n in peers if n != agent_name] or list(peers)
     return (
         ("ФОРМАТ НАУЧНОГО ОБСУЖДЕНИЯ. " if science else "ФОРМАТ СВОБОДНОЙ БЕСЕДЫ. ") +

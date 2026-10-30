@@ -65,15 +65,17 @@ function setup({stored = null, reduced = false, storageThrows = false} = {}) {
     const portrait = new Element(); portrait.className = 'hud-portrait';
     portrait.append(new Element('svg')); tile.append(portrait); root.append(tile);
   }
-  const cards = new Element();
+  const cards = new Element(); cards.className = 'right-column';
   for (let i = 0; i < 3; i++) {
-    const card = new Element(), slot = new Element(); slot.className = 'emotion-slot';
+    const card = new Element('article'); card.className = 'card';
+    const slot = new Element(); slot.className = 'emotion-slot';
     card.append(slot); cards.append(card);
   }
-  const enabled = new Element('input'), fps = new Element('select');
-  const elements = {cards, liveAvatars:root, pixelPuppetEnabled:enabled, pixelPuppetFps:fps};
+  const enabled = new Element('input');
+  const elements = {cards, liveAvatars:root, pixelPuppetEnabled:enabled};
   const document = new Element('document'); document.readyState = 'complete'; document.hidden = false;
   document.getElementById = id => elements[id] || null;
+  document.querySelectorAll = selector => selector === '.right-column > article.card' ? cards.children : [];
   document.createElement = tag => new Element(tag);
   document.createDocumentFragment = () => new Element('fragment');
   const media = new Element(); media.matches = reduced;
@@ -91,7 +93,7 @@ function setup({stored = null, reduced = false, storageThrows = false} = {}) {
     const defs = [{name:'Норман'}, {name:'Глитч'}, {name:'Джесси'}];`, ctx);
   vm.runInContext(adapter, ctx);
   const speech = vm.runInContext('speech', ctx), state = vm.runInContext('state', ctx);
-  return {ctx, root, cards, document, enabled, fps, speech, state, frames, draws, buffers, writes, media,
+  return {ctx, root, cards, document, enabled, speech, state, frames, draws, buffers, writes, media,
     api:ctx.YapdOmePixel,
     tick(ms = 100) { now += ms; const pending = [...frames.values()]; frames.clear(); for (const fn of pending) fn(now); },
     offscreen(on) { observerCallback([{isIntersecting:!on}]); },
@@ -111,7 +113,9 @@ test('mounts exactly 3×2304 DOM LEDs, keeps SVG, default 12fps and diff-only wr
   assert.equal(h.cards.querySelectorAll('.pixel-mood').length, 3);
   for (const select of h.cards.querySelectorAll('.pixel-mood')) assert.equal(select.children.length, 11);
   assert.equal(h.api.getStatus().fps, 12);
-  assert.equal(h.fps.value, '12'); assert.equal(h.enabled.checked, true);
+  assert.equal(h.cards.querySelectorAll('.pixel-fps').length, 3);
+  for (const select of h.cards.querySelectorAll('.pixel-fps')) assert.equal(select.value, '12');
+  assert.equal(h.enabled.checked, true);
   assert.ok(h.root.classList.contains('pixel-enabled'));
   const leds = h.root.querySelectorAll('.pixel-led');
   const before = leds.reduce((n, led) => n + led.writes, 0);
@@ -149,7 +153,7 @@ test('browser envelope starts only with actual speech; qwen snapshot and bounded
   h.api.sync(); assert.equal(h.api.getStatus().agents[0].level, 0);
   h.start(1, 'Ура!', 'calm', 'browser');
   assert.ok(h.api.getStatus().agents[1].level > 0);
-  assert.match(h.cards.querySelectorAll('.pixel-status')[1].textContent, /имитация/);
+
   assert.equal(h.api.getStatus().agents[1].mood, 'neutral');
   h.speech.audibleEntry.config.qwenEmotion = 'dramatic'; h.api.sync();
   assert.equal(h.api.getStatus().agents[1].mood, 'neutral', 'config snapshotted on actual start');
@@ -180,7 +184,7 @@ test('manual mood priority; strict temporary events cannot control actual speech
   assert.equal(h.speech.audibleAgent, 0); assert.equal(h.api.getStatus().speaker, 0);
   assert.equal(h.api.getStatus().agents[2].level, 0);
   vm.runInContext("defs[0].name = 'Новое имя'", h.ctx); h.api.sync();
-  assert.match(h.cards.querySelectorAll('.pixel-status')[0].textContent, /Новое имя/);
+  assert.equal(h.root.querySelectorAll('.pixel-grid')[0].attributes['aria-label'], 'Новое имя: Спокойствие');
 });
 
 test('disabled, hidden and offscreen stop RAF; reduced motion has no idle RAF', () => {
@@ -209,9 +213,11 @@ test('isolated storage: corrupt/invalid/blocked values safe; valid settings rest
   const h = setup({stored:'{"enabled":false,"fps":20,"moods":["joy","auto","focus"]}'});
   assert.equal(h.api.getStatus().enabled, false); assert.equal(h.api.getStatus().fps, 20);
   assert.equal(h.frames.size, 0); assert.equal(h.api.getStatus().agents[0].mood, 'joy');
-  h.fps.value = '30'; h.fps.dispatch('change');
+  const fps = h.cards.querySelectorAll('.pixel-fps');
+  fps[0].value = '30'; fps[0].dispatch('change');
   assert.equal(h.writes.at(-1)[0], h.api.storageKey); assert.equal(h.writes.at(-1)[1].fps, 30);
-  h.fps.value = '120'; h.fps.dispatch('change'); assert.equal(h.api.getStatus().fps, 30);
+  assert.ok(fps.every(select => select.value === '30'), 'FPS selectors stay synchronized');
+  fps[0].value = '120'; fps[0].dispatch('change'); assert.equal(h.api.getStatus().fps, 30);
   const blocked = setup({storageThrows:true}); blocked.enabled.checked = false; blocked.enabled.dispatch('change');
   assert.equal(blocked.api.getStatus().enabled, false);
 });

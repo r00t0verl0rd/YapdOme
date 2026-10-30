@@ -98,7 +98,7 @@ test('GTA donation from the log stays queued until the fifth greeting reply fini
  let drain;h.context.speech.idle=()=>new Promise(resolve=>{drain=resolve;});
  const pending=h.context.endTurn(turn,true,'Готово');
  await flush();
- assert.equal(h.routes.length,0,'native COMPLETE must not precede the audible tail');
+ assert.equal(h.routes.length,0,'engine completion must not precede the audible tail');
  assert.match(first.item.meta.textContent,/ОЗВУЧИВАЕТСЯ ПОСЛЕДНЯЯ/);
  assert.match(gta.item.meta.textContent,/В ОЧЕРЕДИ · № 1/);
  assert.match(gta.item.meta.textContent,/здарова.*осталось ответов: 1/);

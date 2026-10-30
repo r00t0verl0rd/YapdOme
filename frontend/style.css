@@ -162,13 +162,7 @@ input[type="number"]:focus{outline:1px solid var(--pink);border-color:var(--pink
 .voice-layout{grid-template-columns:1fr;gap:7px}
 .voice-selector,.voice-engine-config{padding:10px}
 .voice-panel .panel-overline{display:none}
-.agents-block{min-width:0;margin:0}
-.block-head{margin:0 0 7px;align-items:center;gap:5px}
-.block-head h2{font-size:12px;margin:2px 0}
-.block-head p{display:none}
-.block-head .eyebrow{font-size:8px}
-.cards{display:grid;grid-template-columns:1fr;gap:7px}
-.card,.cards .card:last-child{grid-column:auto;padding:10px 11px;min-width:0;overflow:hidden}
+.card{grid-column:auto;padding:10px 11px;min-width:0;overflow:hidden}
 .cardhead{margin-bottom:5px}.card .number,.card .badge{font-size:9px}
 .card-field{margin-bottom:6px}
 .card-field>span{font-size:8px;letter-spacing:.075em;margin-bottom:3px}
@@ -227,7 +221,7 @@ footer{margin-top:7px;padding:5px 2px;font-size:8px}
  .transport .btn-start{min-width:0}
 }
 
-/* v0.2.0 / SPECTRUM CYBERNETIC HUD. */
+/* v0.2.0 / SPECTRUM CYBERNETIC HUD.
    Three focus zones, zero external fonts/frameworks, GPU transform animations.
    Overflow is constrained at every nested grid/flex boundary. */
 :root{
@@ -281,17 +275,10 @@ body{background:
 .transport button{min-width:0;max-width:100%;flex:1 1 0;padding:8px 3px;
  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:9px}
 .transport .btn-start{flex:1.55 1 0}
-.run-pill{min-width:0;max-width:100%;font-size:9px;flex:1 1 100%;overflow:hidden}
-#runstate{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
 .scene-advanced{border:1px solid #3247678a;margin-top:7px;background:#070e1bac;
  min-width:0;position:relative}
-.scene-advanced>summary{display:flex;align-items:center;justify-content:space-between;
- cursor:pointer;list-style:none;padding:8px 9px;color:#93bbdc;
- font:750 9px ui-monospace,SFMono-Regular,monospace;letter-spacing:.04em;gap:5px}
-.scene-advanced>summary::-webkit-details-marker{display:none}
-.scene-advanced>summary:hover{color:#e5efff;background:#11213a66}
-.scene-advanced .fold-arrow{font-size:15px;line-height:.6;transition:transform .2s}
-.scene-advanced[open] .fold-arrow{transform:rotate(180deg)}
+
 .scene-advanced-body{padding:9px;border-top:1px solid #31496a8f;
  max-height:36dvh;overflow:auto}
 .scene-advanced-body .mission-label{margin-top:3px}
@@ -306,7 +293,7 @@ body{background:
 .inputpanel:not(.donations) #interject{grid-column:1 / span 2;min-width:0;width:100%;
  flex:auto;height:33px;padding:6px 9px}
 .inputpanel:not(.donations) #sendInterject{grid-column:1;min-height:32px}
-.inputpanel:not(.donations) #mic{grid-column:2;min-height:32px}
+
 .donation-fields{display:grid;grid-template-columns:minmax(65px,85px) minmax(0,1fr);
  align-items:end;gap:6px}
 .donation-fields label{min-width:0;width:100%;max-width:none}
@@ -320,11 +307,7 @@ body{background:
  background:linear-gradient(95deg,#7b245a,#5c246f,#2e518f);border-color:#e460b8a0}
 .donation-fields #sendDonation:hover{box-shadow:0 0 16px #cf52d750}
 .donations .field-tip{font-size:9px;overflow-wrap:anywhere}
-.agents-block{margin:0;min-width:0;max-width:100%;align-self:start}
-.block-head{padding:1px 4px;margin-bottom:7px;min-width:0}
-.block-head .eyebrow{font-size:9px}
-.block-head h2{font-size:14px}
-.cards{grid-template-columns:minmax(0,1fr);gap:7px}
+
 .card{padding:10px 10px 7px}
 .card:before{height:2px}
 .card.active{border-color:var(--accent);
@@ -350,10 +333,7 @@ body{background:
  flex:1 1 0;padding:5px 3px;font-size:10px;text-overflow:ellipsis;
  overflow:hidden;height:31px}
 .voice-controls button{flex:0 0 auto;max-width:34px;min-width:26px;padding:5px}
-.card .foot{margin-top:3px;gap:5px}
-.card .foot .muted{font-size:8px;overflow-wrap:anywhere}
-.card .foot button{flex-shrink:0;max-width:50%;white-space:nowrap;
- text-overflow:ellipsis;overflow:hidden;padding:5px 8px}
+
 .stream{position:sticky;top:7px;height:calc(100dvh - 90px);min-height:360px;
  padding:9px;min-width:0;max-width:100%;overflow:hidden}
 .streamhead{display:flex;min-width:0;gap:6px;margin:0 0 8px}
@@ -453,20 +433,12 @@ input[type="number"]{font:inherit;font-size:12px;background:#080e1e;
   outline:none;padding:6px 8px;min-width:0;max-width:100%}
 input[type="number"]:focus{border-color:#49d7ef;box-shadow:0 0 0 2px #49d7ef24}
 input,textarea,select{max-width:100%}
-.panel,.agents-block,.cards,.card,.card-field,.voice-controls,.inputpanel,
-.stage-bottom,.donation-fields,.donation-fields label{min-width:0}
-.stage-bottom{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:stretch}
-.stage-bottom .transport{grid-column:1 / -1;min-width:0}
-.stage-bottom .run-pill{grid-column:1;min-width:0;min-height:28px;
-  padding:6px 9px;margin:0;justify-content:flex-start}
-.audio-pill{grid-column:2;display:flex;align-items:center;justify-content:center;
-  min-width:0;max-width:100%;padding:6px 9px;border:1px solid #36577a;
-  background:linear-gradient(120deg,#0a1830,#101323);color:#83ddff;
-  font:750 9px/1.2 ui-monospace,SFMono-Regular,monospace;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.panel,.card,.card-field,.voice-controls,.inputpanel,.stage-bottom,.donation-fields,.donation-fields label{min-width:0}
+.stage-bottom{display:grid;align-items:stretch}
+.stage-bottom .transport{min-width:0}
+
 #topic{height:34px}
-.inputpanel:not(.donations) .input-row #sendInterject,
-.inputpanel:not(.donations) .input-row #mic{min-height:30px}
+.inputpanel:not(.donations) .input-row #sendInterject{min-height:30px}
 .donation-fields input{border-radius:0}
 .donation-fields .donation-name,.donation-fields .donation-text{
   max-width:100%;min-width:0}
@@ -558,12 +530,7 @@ main.cyber-command-center>.stream{
 .donation-fields{grid-template-columns:minmax(72px,.55fr) minmax(0,1fr);gap:7px}
 .donation-fields .donation-text,.donation-fields #sendDonation{grid-column:1 / -1}
 .donation-fields label span{color:#d9a8ca}
-.agents-block{padding:0 2px}
-.block-head{padding:7px 10px;margin-bottom:8px;border-bottom:1px solid #bcff5230}
-.block-head .eyebrow{color:#9dbb71}
-.block-head h2{font-size:15px;letter-spacing:.12em;color:#e9ffc3}
-.block-head p{display:block;color:#9aafbd}
-.cards{grid-template-columns:minmax(0,1fr);gap:9px}
+
 .card{border-left:2px solid color-mix(in srgb,var(--accent) 65%,transparent);padding:12px 12px 9px;
  background:linear-gradient(150deg,#0e1723,#090e17)}
 .card.active{background:linear-gradient(115deg,color-mix(in srgb,var(--accent) 15%,#0a111b),#0b1019);
@@ -571,8 +538,7 @@ main.cyber-command-center>.stream{
 .card input[type=text],.card textarea{background:#070d15;border-color:#2b4054;color:#e7f3fc}
 .card .badge{color:#a8bdce}
 .card.active .badge{color:var(--accent)}
-.card .foot{border-top:1px solid #263a4d;padding-top:7px}
-.card .foot button{min-height:34px;border-color:color-mix(in srgb,var(--accent) 50%,#223244)}
+
 .stream:before{background:linear-gradient(90deg,transparent,var(--cyber-cyan),#477dff,var(--cyber-pink),transparent)}
 .streamhead{padding:2px 2px 10px;border-bottom:1px solid #48f1ff35}
 .streamhead .eyebrow{color:#55b9c5}
@@ -628,12 +594,14 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 }
 
 /* Stable sizing for the two most-used setup forms. */
-.stage-panel #topic{display:block;width:100%;min-width:0;min-height:64px;max-height:132px;
+.topic-layout{display:block;margin:0}
+.topic-layout .section-title{margin:0 0 6px;text-align:left}
+.topic-panel #topic{display:block;width:100%;min-width:0;min-height:64px;max-height:132px;
  height:auto;box-sizing:border-box;resize:none;overflow-x:hidden;overflow-y:hidden;
  padding:11px 12px;font-family:inherit;font-size:14px;font-weight:500;line-height:1.45;
  white-space:pre-wrap;overflow-wrap:anywhere;
  background:linear-gradient(135deg,#07111b,#0a121e);border:1px solid #315466}
-.stage-panel #topic:focus{border-color:#48f1ff;box-shadow:0 0 0 3px #48f1ff20}
+.topic-panel #topic:focus{border-color:#48f1ff;box-shadow:0 0 0 3px #48f1ff20}
 .donations .donation-fields{display:grid;width:100%;min-width:0;
  grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:end;gap:8px}
 .donations .donation-fields .donation-amount,
@@ -650,7 +618,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 .donations .donation-fields #sendDonation{width:100%;min-height:44px;margin-top:2px}
 .donations .field-tip{max-width:62ch;line-height:1.45}
 @media(max-width:680px){
- .stage-panel #topic{min-height:68px;max-height:144px;font-size:16px;padding:12px}
+ .topic-panel #topic{min-height:68px;max-height:144px;font-size:16px;padding:12px}
  .donations .donation-fields{grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:8px}
  .donations .donation-fields label span{font-size:10px}
  .donations .donation-fields input{height:46px;min-height:46px;font-size:16px}
@@ -678,8 +646,7 @@ summary:focus-visible{outline:3px solid #79eaff;outline-offset:2px;box-shadow:0 
  .shortcut-hint{display:block;margin:3px 0 0;font-size:10px}
  .panel .input-row input,.panel .donation-fields input{min-height:44px;font-size:16px}
  .panel .input-row button{min-height:44px;font-size:12px}
- .inputpanel:not(.donations) .input-row #sendInterject,
- .inputpanel:not(.donations) .input-row #mic{min-height:44px}
+ .inputpanel:not(.donations) .input-row #sendInterject{min-height:44px}
  .panel .donation-fields #sendDonation{min-height:46px;font-size:12px}
  .stage-bottom .transport button{min-height:44px;font-size:11px}
  .card input[type=text],.card textarea{font-size:13px}
@@ -696,9 +663,28 @@ summary:focus-visible{outline:3px solid #79eaff;outline-offset:2px;box-shadow:0 
 .show-mode-row select:focus-visible{outline:2px solid #7edcff;outline-offset:2px}
 @media(max-width:430px){.show-mode-row{align-items:stretch;flex-direction:column;gap:5px}.show-mode-row .section-title{white-space:normal}}
 
-/* v0.2.0 — плавная раскладка кокпита и голосовая студия. */
-
-main.cyber-command-center>.agents-block{overflow:visible}
+/* Компактные карточки агентов как отдельные элементы правой колонки. */
+.right-column>.card{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr) minmax(0,.9fr);grid-template-rows:auto auto auto;gap:8px 10px;padding:12px}
+.right-column>.card .cardhead{grid-column:1/-1;grid-row:1;margin:0}
+.right-column>.card .name-field,.right-column>.card .voice-field{min-width:0;margin:0}
+.right-column>.card .description-field{grid-column:1/-1;grid-row:3}
+.right-column>.card .description-field textarea{height:90px;min-height:90px;max-height:150px}
+.right-column>.card .voice-controls{display:contents}
+.right-column>.card .voice-controls .voice-field{grid-column:2;grid-row:2}
+.right-column>.card .voice-field select{display:block;width:100%;min-width:0;max-width:100%;height:32px;flex:none;padding:4px 18px 4px 6px;font-size:10px}
+.right-column>.card .voice-controls>button{display:none}
+.right-column>.card .name-field{grid-column:1;grid-row:2}
+.right-column>.card .emotion-slot{grid-column:3;grid-row:2;min-width:0;align-self:stretch}
+.right-column>.card .emotion-slot .pixel-controls{display:block;width:100%;min-width:0;max-width:100%;padding:0;margin:0}
+.right-column>.card .emotion-slot .pixel-label{display:flex;flex-direction:column;gap:4px;width:100%;min-width:0;margin:0}
+.right-column>.card .emotion-slot .pixel-mood,.right-column>.card .emotion-slot .pixel-fps{display:block;box-sizing:border-box;width:100%;min-width:0;max-width:100%;height:32px;padding:4px 18px 4px 6px;font-size:10px}
+.stage-panel .host-message{padding:0;margin:10px 0 0}
+.stage-panel .host-message .panel-overline{margin-bottom:7px}
+.scene-advanced{padding:14px}
+.scene-advanced-body{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+.scene-advanced-body .mission-tip,.scene-advanced-body #directorStatus{margin:0}
+.scene-advanced-body .check-line{margin:0}
+@media(max-width:680px){.right-column>.card{grid-template-columns:minmax(0,1fr) minmax(0,1.1fr) minmax(0,.9fr);gap:6px;padding:9px}.right-column>.card .name-field{grid-column:1;grid-row:2}.right-column>.card .voice-controls .voice-field{grid-column:2;grid-row:2}.right-column>.card .emotion-slot{grid-column:3;grid-row:2}.right-column>.card .description-field{grid-column:1/-1}}
 
 .voice-panel{display:none;z-index:2;transition:border-color .2s,box-shadow .2s}
 .voice-panel[open]{display:block;position:fixed;inset:auto;top:0;left:0;width:0;height:0;overflow:visible;pointer-events:none;z-index:60;border:0!important;background:transparent!important;box-shadow:none!important}
@@ -737,12 +723,12 @@ input[type=text],input[type=number],textarea,select{transition:border-color .18s
 }
 @media(max-width:990px) and (min-width:681px){
 
-  main.cyber-command-center>.agents-block{overflow:visible}
+  .right-column>.agents-block{overflow:visible}
   .voice-panel[open] .voice-layout{grid-template-columns:minmax(0,1fr)}
 }
 @media(max-width:680px){
 
-  main.cyber-command-center>.agents-block{overflow:visible}
+  .right-column>.agents-block{overflow:visible}
   .voice-panel[open] .voice-panel-body{
     inset:8px;width:auto;max-width:none;transform:none;padding:12px;
     border-color:#51dff0;animation:studio-enter-mobile .18s ease-out both

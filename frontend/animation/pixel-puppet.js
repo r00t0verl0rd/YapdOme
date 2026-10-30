@@ -9,7 +9,7 @@
   const validMood = v => v === 'auto' || hasMood(v);
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
   const $ = id => document.getElementById(id);
-  const text = (node, value) => { if (node.textContent !== value) node.textContent = value; };
+
   function readSettings() {
     const result = {enabled:true, fps:12, moods:['auto', 'auto', 'auto']};
     try {
@@ -132,10 +132,7 @@
       }
       const name = String(ctx.cast?.[a.index]?.name || a.id);
       a.grid.setAttribute('aria-label', `${name}: ${labels[chosen.mood]}`);
-      const mode = !settings.enabled ? 'ВЫКЛ' : speaking ? (entry?.audioMode === 'browser' ? 'ГОВОРИТ · имитация' : 'ГОВОРИТ · RMS') : thinking ? 'ДУМАЕТ' : speaker !== null ? 'СЛУШАЕТ' : 'ГОТОВ';
-      const status = `${name} · ${mode} · ${labels[chosen.mood]} · ${chosen.source}`;
-      text(a.status, status);
-      a.status.title = status;
+
       a.mood = chosen.mood; a.source = chosen.source; a.speaking = speaking;
     }
   }
@@ -148,10 +145,10 @@
     meter = null; samples = null;
   }
   function mountControls() {
-    const cards = $('cards');
-    if (!cards) return;
+    const cards = [...document.querySelectorAll('.right-column > article.card')];
+    if (!cards.length) return;
     for (const a of agents) {
-      const slot = cards.children[a.index]?.querySelector('.emotion-slot');
+      const slot = cards[a.index]?.querySelector('.emotion-slot');
       if (slot && a.controls.parentElement !== slot) slot.append(a.controls);
       a.controls.hidden = !settings.enabled;
     }
@@ -212,23 +209,33 @@
         if (!validMood(select.value)) return;
         settings.moods[index] = select.value; save(); sync();
       });
-      const status = document.createElement('span'); status.className = 'pixel-status';
-      label.append(select); controls.append(label, status);
-      agents.push({id:ids[index], index, grid, leds, status, controls, last:new Uint8Array(2304),
+      label.append(select); controls.append(label);
+      const fpsLabel = document.createElement('label'); fpsLabel.className = 'pixel-label'; fpsLabel.textContent = 'Кадры ';
+      const fpsSelect = document.createElement('select'); fpsSelect.className = 'pixel-fps';
+      fpsSelect.setAttribute('aria-label', `Частота анимации ${ids[index]}`);
+      for (const [value, text] of [[12, '12 FPS · экономно'], [20, '20 FPS'], [30, '30 FPS']]) {
+        const option = document.createElement('option'); option.value = String(value); option.textContent = text; fpsSelect.append(option);
+      }
+      fpsSelect.value = String(settings.fps);
+      fpsSelect.addEventListener('change', () => {
+        const value = Number(fpsSelect.value); if (![12, 20, 30].includes(value)) return;
+        settings.fps = value;
+        for (const agent of agents) {
+          const select = agent.controls.querySelector('.pixel-fps');
+          if (select) select.value = String(value);
+        }
+        save(); sync();
+      });
+      fpsLabel.append(fpsSelect); controls.append(fpsLabel);
+      agents.push({id:ids[index], index, grid, leds, controls, last:new Uint8Array(2304),
         pose:{...engine.EMOTIONS.neutral}, velocity:Object.fromEntries(engine.keys.map(k => [k, 0])), event:null, level:0});
     });
-    const enabled = $('pixelPuppetEnabled'), fps = $('pixelPuppetFps');
+    const enabled = $('pixelPuppetEnabled');
     if (enabled) {
       enabled.checked = settings.enabled;
       enabled.addEventListener('change', () => { settings.enabled = !!enabled.checked; save(); sync(); });
     }
-    if (fps) {
-      fps.value = String(settings.fps);
-      fps.addEventListener('change', () => {
-        const value = Number(fps.value); if (![12, 20, 30].includes(value)) return;
-        settings.fps = value; save(); sync();
-      });
-    }
+
     if (window.IntersectionObserver) {
       observer = new IntersectionObserver(entries => { onscreen = entries.some(e => e.isIntersecting); sync(); });
       observer.observe(root);

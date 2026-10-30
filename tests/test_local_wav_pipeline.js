@@ -25,8 +25,7 @@ function harness(){
     start(){sources.push(node)}};
    return node;
   }};
- const elements={voiceEnabled:{checked:true},rate:{value:'1'},audioLane:{textContent:''},
-  feed:{scrollTop:0,scrollHeight:100}};
+ const elements={voiceEnabled:{checked:true},rate:{value:'1'},feed:{scrollTop:0,scrollHeight:100}};
  const state={epoch:1,running:true,paused:false,current:null,turns:1,lastAudibleAt:0,
   pipelineReady:false};
  const defs=[{name:'Норман',piperVoice:'dmitri',voiceURI:''},
@@ -74,7 +73,7 @@ test('next agent synthesizes entire Piper WAV while previous WAV is audible',asy
  assert.equal(h.wavCalls[1].url,'/api/voice/piper/speak');
  assert.match(h.wavCalls[1].payload.text,/созданный пока играет первый WAV/);
  assert.equal(h.sources.length,1,'the next voice must not interrupt current playback');
- assert.equal(h.completions.length,1,'next C ticket remains active until WAV starts');
+ assert.equal(h.completions.length,1,'next engine ticket remains active until WAV starts');
  assert.equal(h.ctx.speech.audibleAgent,0,'preparing the next reply cannot switch the audible avatar');
  h.sources[0].onended();
  await next;
@@ -114,7 +113,7 @@ test('STOP discards the next ready Piper WAV without playing it',async()=>{
  assert.equal(h.ctx.speech.audibleAgent,null);
 });
 
-test('C core claims one next turn while full WAV is playing',async()=>{
+test('Engine claims one next turn while full WAV is playing',async()=>{
  const state={epoch:4,running:true,paused:false,current:null,stopping:false,
   pipelineReady:true,claimPending:null,donationQueue:[],activeDonation:null,
   donationRouting:false,core:{status:'RUNNING',route_reason:'rotation'}};
@@ -126,14 +125,14 @@ test('C core claims one next turn while full WAV is playing',async()=>{
   },applyCore(s){state.core=s},issueTurn:(agent,ticket)=>launched.push([agent,ticket]),
   engineError(err){throw err},console};
  vm.createContext(ctx);
- vm.runInContext(between('async function claimNext(){','async function interruptWith(agent,reason){')+
+ vm.runInContext(between('async function claimNext(){','async function interruptByListener(agent){')+
   '\nthis.claimNext=claimNext;',ctx);
  await ctx.claimNext();
- assert.deepEqual(actions,['claim'],'C ticket should be claimed before audio ends');
+ assert.deepEqual(actions,['claim'],'engine ticket should be claimed before audio ends');
  assert.deepEqual(launched,[[1,42]]);
  assert.equal(state.pipelineReady,false,'only one speculative turn may be claimed');
 });
-test('non-pipelined native claim still waits for audio drain',async()=>{
+test('non-pipelined engine claim still waits for audio drain',async()=>{
  const state={epoch:4,running:true,paused:false,current:null,
   pipelineReady:false,claimPending:null};
  const speech={playing:true,queue:[],nodes:new Set()};
@@ -142,7 +141,7 @@ test('non-pipelined native claim still waits for audio drain',async()=>{
   async coreEvent(){throw Error('Cannot claim while audio is playing')},
   console};
  vm.createContext(ctx);
- vm.runInContext(between('async function claimNext(){','async function interruptWith(agent,reason){')+
+ vm.runInContext(between('async function claimNext(){','async function interruptByListener(agent){')+
   '\nthis.claimNext=claimNext;',ctx);
  await ctx.claimNext();
  assert.equal(rescheduled,true);

@@ -18,9 +18,7 @@
     <div class="brand">
       <div class="triad-mark" aria-hidden="true"><i></i><i></i><i></i></div>
       <div class="brand-copy">
-        <div class="eyebrow">LIVE MULTI-AGENT INTELLIGENCE <span class="slash">/</span> NATIVE C</div>
-        <h1>YapdOme<span class="neon-point">.</span> <small>TRIAD / LIVE</small></h1>
-        <p>Три разума. Один разговор. Непрерывный эфир.</p>
+        <h1>YapdOme</h1>
       </div>
     </div>
     <div class="header-right">
@@ -71,55 +69,23 @@
 
   <main class="cyber-command-center">
     <div class="control-column">
-    <section class="panel stage-panel" aria-label="Управление дискуссией">
-      <div class="panel-overline"><span class="signal-dot"></span> LIVE CONTROL <span class="panel-index">01 // CORE</span></div>
-      <label class="section-title" for="topic">СЦЕНА / ТЕМА РАЗГОВОРА</label>
-      <textarea id="topic" rows="2" maxlength="700" aria-label="Тема разговора" placeholder="О чём сегодня разговаривают агенты?">Почему друзья спорят из-за пустяков и как потом мирятся?</textarea>
-      <div class="show-mode-row">
-        <label class="section-title" for="showMode">РЕЖИМ ЭФИРА</label>
-        <select id="showMode" aria-label="Режим общения персонажей">
-          <option value="live" selected>Живой разговор</option>
-          <option value="science">Научный режим · TRIAD SCIENCE</option>
-        </select>
-        <p class="field-tip" id="scienceInfo" hidden aria-live="polite">TRIAD SCIENCE · теоретик / критик / экспериментатор · пять шагов научного метода · выводы требуют проверки</p>
-      </div>
-      <details class="scene-advanced" id="sceneAdvanced">
-        <summary><span>⚙ ДОПОЛНИТЕЛЬНО</span><span class="fold-arrow">⌄</span></summary>
-        <div class="scene-advanced-body">
-      <label class="section-title mission-label" for="sharedGoal">ОБЩАЯ ЗАДАЧА ПЕРСОНАЖЕЙ</label>
-      <textarea id="sharedGoal" maxlength="900" rows="2" placeholder="Например: заинтересовать зрителей и не повторять одни и те же шутки."></textarea>
-      <p class="field-tip mission-tip">Тема важнее общей задачи. Для интересного эфира не обязательно приходить к общему выводу.</p>
-      <label class="check-line"><input id="directorEnabled" type="checkbox" checked> ИИ-режиссёр диалога <span class="hint">адаптивный план · чаще при повторах</span></label>
-      <p class="field-tip" id="directorStatus">Режиссёр работает за кадром; при задержке продолжает C-ядро.</p>
-      <label class="check-line"><input id="auto" type="checkbox" checked> Естественные перебивания <span class="hint">один слушатель · ждёт завершения TTS · можно отключить</span></label>
-        </div>
-      </details>
-      <div class="stage-bottom">
-        <div class="transport">
-          <button id="start" class="primary btn-start">▶ &nbsp; ЗАПУСТИТЬ ЭФИР</button>
-          <button id="pause" class="btn-pause">Ⅱ &nbsp; ПАУЗА</button>
-          <button id="stop" class="btn-stop">■ &nbsp; СТОП</button>
-        </div>
-        <div class="run-pill"><span class="pulse-dot"></span><span id="runstate">ГОТОВ К ЭФИРУ</span><span class="infinity" title="Бесконечный эфир">∞</span></div>
-        <div id="audioLane" class="audio-pill" role="status" aria-live="off">◌ АУДИО СВОБОДНО</div>
+    <section class="panel topic-panel" aria-label="Тема разговора">
+      <div class="topic-layout">
+        <label class="section-title" for="topic">СЦЕНА / ТЕМА РАЗГОВОРА</label>
+        <textarea id="topic" rows="2" maxlength="700" aria-label="Тема разговора" placeholder="О чём сегодня разговаривают агенты?">Почему друзья спорят из-за пустяков и как потом мирятся?</textarea>
       </div>
     </section>
-    <section class="panel inputpanel" aria-label="Реплика ведущего">
-      <div class="panel-overline"><span class="signal-dot warm"></span> ВЕДУЩИЙ / СООБЩЕНИЕ <span class="panel-index">02</span></div>
-      <label class="section-title" for="interject">ВСТУПИТЬ В РАЗГОВОР <span class="shortcut-hint">Enter ↵ отправить</span></label>
-      <div class="input-row"><input id="interject" type="text" maxlength="600" placeholder="Скажи что-нибудь трём агентам…"><button id="sendInterject" class="primary">↗ СКАЗАТЬ АГЕНТАМ</button><button id="mic" title="Нажми для начала и окончания речи">🎙 ГОВОРИТЬ</button></div>
-      <p class="field-tip">Реплика ведущего направляет дискуссию. Полная пауза включается только кнопкой «ПАУЗА».</p>
-    </section>
+
     <section class="panel inputpanel donations" aria-label="Донат зрителя">
       <div class="panel-overline"><span class="signal-dot pink"></span> ЗРИТЕЛИ / ОЧЕРЕДЬ ДОНАТОВ <span class="panel-index">03</span></div>
-      <label class="section-title" for="donationText">ДОНАТ ЗРИТЕЛЯ <span class="soft">· ЛОКАЛЬНЫЙ ТЕСТ</span><span class="shortcut-hint">Enter ↵ в очередь</span></label>
+
       <div class="input-row donation-fields">
         <label class="donation-amount"><span>СУММА</span><input id="donationAmount" type="number" min="0" max="1000000" step="0.01" value="5" inputmode="decimal" aria-label="Сумма доната"></label>
         <label class="donation-name"><span>ИМЯ</span><input id="donor" type="text" maxlength="32" value="Зритель" aria-label="Имя отправителя доната" placeholder="Имя" class="donorname"></label>
         <label class="donation-text"><span>СООБЩЕНИЕ</span><input id="donationText" type="text" maxlength="600" placeholder="Сообщение зрителя…" aria-label="Текст доната"></label>
         <button id="sendDonation" class="primary">⚡ В ЭФИР</button>
       </div>
-      <p class="field-tip">Сначала завершаем текущую реплику · затем отвечаем зрителю. Меньше 100 — 5 реплик по сообщению. От 100 — смена темы после проверки ИИ; если тема не прошла проверку — 5 реплик. Платёж тестовый.</p>
+
     </section>
     </div>
 
@@ -131,35 +97,31 @@
         <h2><span>///</span> ЖИВОЙ ДИАЛОГ — АГЕНТЫ В ЭФИРЕ</h2>
         <div class="pixel-toolbar" aria-label="Модуль анимации персонажей">
           <label><input id="pixelPuppetEnabled" type="checkbox" checked> Pixel Puppet</label>
-          <label>Кадры <select id="pixelPuppetFps" aria-label="Частота анимации пиксельных персонажей">
-            <option value="12" selected>12 FPS · экономно</option>
-            <option value="20">20 FPS</option><option value="30">30 FPS</option>
-          </select></label>
         </div>
       </div>
       <div id="liveAvatars" class="live-tiles">
         <article class="live-tile" data-agent-index="0" aria-label="Агент 1">
-          <div class="live-tile-top"><span>● AGENT 01</span><span class="tile-mode">ГОТОВ</span></div>
+          <div class="live-tile-top"><span class="tile-name">Норман</span><span class="tile-mode">ГОТОВ</span></div>
           <div class="hud-portrait" aria-hidden="true"></div>
           <div class="wave-lane" aria-hidden="true"></div>
-          <div class="live-tile-foot"><strong class="tile-name">Норман</strong><span>▂▄▆█</span></div>
+
         </article>
         <article class="live-tile" data-agent-index="1" aria-label="Агент 2">
-          <div class="live-tile-top"><span>● AGENT 02</span><span class="tile-mode">ГОТОВ</span></div>
+          <div class="live-tile-top"><span class="tile-name">Глитч</span><span class="tile-mode">ГОТОВ</span></div>
           <div class="hud-portrait" aria-hidden="true"></div>
           <div class="wave-lane" aria-hidden="true"></div>
-          <div class="live-tile-foot"><strong class="tile-name">Глитч</strong><span>▂▄▆█</span></div>
+
         </article>
         <article class="live-tile" data-agent-index="2" aria-label="Агент 3">
-          <div class="live-tile-top"><span>● AGENT 03</span><span class="tile-mode">ГОТОВ</span></div>
+          <div class="live-tile-top"><span class="tile-name">Джесси</span><span class="tile-mode">ГОТОВ</span></div>
           <div class="hud-portrait" aria-hidden="true"></div>
           <div class="wave-lane" aria-hidden="true"></div>
-          <div class="live-tile-foot"><strong class="tile-name">Джесси</strong><span>▂▄▆█</span></div>
+
         </article>
       <div class="dialogue-table" aria-hidden="true">
         <svg viewBox="0 0 900 100" preserveAspectRatio="none" focusable="false">
           <defs>
-            <lin</defs>earGradient id="table-surface" x2="0" y2="1">
+            <linearGradient id="table-surface" x2="0" y2="1">
               <stop stop-color="#32665b"/>
               <stop offset="1" stop-color="#102c29"/>
             </linearGradient>
@@ -194,24 +156,52 @@
       </div>
     </section>
     <section class="panel stream" aria-label="Живой диалог">
+      <div id="feed" class="feed" aria-live="off"></div>
       <div class="streamhead">
-        <div><div class="eyebrow">SIGNAL / LIVE TRANSCRIPT</div><h2>ЖИВОЙ ДИАЛОГ <span class="live-glyph">///</span></h2></div>
+        <div><h2>ЖИВОЙ ДИАЛОГ <span class="live-glyph">///</span></h2></div>
         <div class="stream-actions"><span id="queueStatus" class="queue-status" role="status" aria-live="polite">◌ ОЧЕРЕДЬ ПУСТА</span><button id="export" title="Экспортировать TXT">⇩ TXT</button></div>
       </div>
-      <div id="feed" class="feed" aria-live="off"></div>
     </section>
     </div>
 
-    <section class="agents-block" aria-label="Персонажи">
-      <div class="block-head"><div><span class="eyebrow">PERSONAS / LIVE CONFIGURATION</span><h2>АГЕНТЫ <span class="soft">/ 03</span></h2></div><p>Настройки применятся к следующим репликам.</p></div>
-      <div id="cards" class="cards"></div>
+    <div class="right-column">
+    <section class="panel stage-panel" aria-label="Управление дискуссией">
+
+      <div class="show-mode-row">
+        <label class="section-title" for="showMode">РЕЖИМ ЭФИРА</label>
+        <select id="showMode" aria-label="Режим общения персонажей">
+          <option value="live" selected>Живой разговор</option>
+          <option value="science">Научный режим · TRIAD SCIENCE</option>
+        </select>
+        <p class="field-tip" id="scienceInfo" hidden aria-live="polite">TRIAD SCIENCE · теоретик / критик / экспериментатор · пять шагов научного метода · выводы требуют проверки</p>
+      </div>
+      <div class="inputpanel host-message" aria-label="Реплика ведущего">
+        <div class="panel-overline"><span class="signal-dot warm"></span> ВЕДУЩИЙ / СООБЩЕНИЕ <span class="panel-index">02</span></div>
+        <div class="input-row"><input id="interject" type="text" maxlength="600" aria-label="Реплика ведущего" placeholder="Скажи что-нибудь трём агентам…"><button id="sendInterject" class="primary">↗ СКАЗАТЬ АГЕНТАМ</button></div>
+        <p class="field-tip">Реплика ведущего направляет дискуссию. Полная пауза включается только кнопкой «ПАУЗА».</p>
+      </div>
+      <div class="stage-bottom">
+        <div class="transport">
+          <button id="start" class="primary btn-start">▶ &nbsp; ЗАПУСТИТЬ ЭФИР</button>
+          <button id="pause" class="btn-pause">Ⅱ &nbsp; ПАУЗА</button>
+          <button id="stop" class="btn-stop">■ &nbsp; СТОП</button>
+        </div>
+
+      </div>
     </section>
 
+    <section class="panel scene-advanced" aria-label="Дополнительные настройки эфира">
 
-
-
-
-
+      <div class="scene-advanced-body">
+        <label class="section-title mission-label" for="sharedGoal">ОБЩАЯ ЗАДАЧА ПЕРСОНАЖЕЙ</label>
+        <textarea id="sharedGoal" maxlength="900" rows="2" placeholder="Например: заинтересовать зрителей и не повторять одни и те же шутки."></textarea>
+        <p class="field-tip mission-tip">Тема важнее общей задачи. Для интересного эфира не обязательно приходить к общему выводу.</p>
+        <label class="check-line"><input id="directorEnabled" type="checkbox" checked> ИИ-режиссёр диалога <span class="hint">адаптивный план · чаще при повторах</span></label>
+        <p class="field-tip" id="directorStatus">Режиссёр работает за кадром; при задержке продолжает ядро.</p>
+        <label class="check-line"><input id="auto" type="checkbox" checked> Естественные перебивания <span class="hint">один слушатель · ждёт завершения TTS · можно отключить</span></label>
+      </div>
+    </section>
+    </div>
   </main>
   <details class="panel voice-panel" id="voiceSettings" aria-label="Голосовой движок и настройки">
       <summary class="voice-collapse-toggle"><span>♪ VOICE STUDIO / НАСТРОЙКИ ГОЛОСА</span><span class="fold-arrow">▾</span></summary>
@@ -460,7 +450,7 @@
       </div>
       </div>
     </details>
-  <footer><span>TRIAD / NATIVE C11 + PYTHON BRIDGE + CHATGPT</span><span>LOCALHOST 127.0.0.1 <span class="bullet">●</span> ALWAYS ON AIR</span></footer>
+  <footer><span>LOCALHOST 127.0.0.1 <span class="bullet">●</span> ALWAYS ON AIR</span></footer>
 </div>
 <script defer src="/client.js"></script>
 <script defer src="/hud-reference.js"></script>

@@ -103,5 +103,6 @@ test('every TTS exposes an independent per-character voice choice',()=>{
    assert.ok(choices.some(o=>o.value===select.value),mode+' default must exist');
   }
  }
- assert.match(code,/c\.append\(top,name\.wrap,description\.wrap,vc,foot\)/);
+ assert.match(code,/c\.append\(top,name\.wrap,vc,emotionSlot,description\.wrap\)/);
+ assert.match(code,/parent\.insertBefore\(c,advanced\|\|null\)/);
 });

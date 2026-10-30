@@ -13,7 +13,7 @@ function harness(){
  const speech={audibleAgent:null};
  let frames=0;
  const context={console,Date,state,speech,defs:[{name:'A'},{name:'B'},{name:'C'}],window:{},
-  document:{readyState:'complete',getElementById:id=>id==='liveAvatars'?{querySelectorAll:()=>tiles}:null},
+  document:{readyState:'complete',getElementById:id=>id==='liveAvatars'?{querySelectorAll:()=>tiles}:null,querySelector:selector=>selector==='.right-column'?{}:null},
   setInterval(){},requestAnimationFrame(){frames++},MutationObserver:class{observe(){}}};
  vm.createContext(context);vm.runInContext(source,context);
  return {tiles,state,speech,window:context.window,sync:context.window.YapdOmeHud.sync,frames:()=>frames};

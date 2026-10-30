@@ -53,7 +53,7 @@ vm.runInContext(between('async function issueTurn(agent,ticket){','async functio
  utterances[0].onend();
  assert.equal(utterances.length,1,'the complete turn is one utterance, not sentence fragments');
  await p;
- assert.equal(ctx.ended,1,'native turn commits only after all audio');
+ assert.equal(ctx.ended,1,'the turn commits only after all audio');
  assert.equal(ctx.state.current,null);
- console.log('Speech-clock regression OK: hidden stream, first start, complete utterance, native commit after end');
+ console.log('Speech-clock regression OK: hidden stream, first start, complete utterance, commit after end');
 })().catch(e=>{console.error(e);process.exitCode=1});

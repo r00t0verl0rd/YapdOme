@@ -45,8 +45,7 @@ const state = {archivedLines:[],connected:false,recoverable:false,provider:'chat
   social:{pair:null,returnContext:null,lastEnd:0,lastPair:"",memory:[[],[],[]]}};
 let voices=[];
 const haveSpeech = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
-const SpeechInput = window.SpeechRecognition || window.webkitSpeechRecognition;
-let micRecognition=null;
+
 // Only the audible layer is normalized. Keep original transcript and agent context untouched.
 // Text streaming sometimes contains literal \" and escaped newlines; the speech engine
 // can read the backslash aloud as "бэк слеш". Remove these before synthesizing.
@@ -210,7 +209,7 @@ const speech = {
    this.audibleEntry=entry;
    entry.started=true;state.lastAudibleAt=Date.now();this.metric(entry,'started');
       if(entry.startTimer){clearTimeout(entry.startTimer);this.startTimers.delete(entry.startTimer);entry.startTimer=null;}
-   const lane=$('audioLane');if(lane)lane.textContent='♪ ОЗВУЧИВАЕТ · '+entry.config.name;
+
    if(entry.onStart)entry.onStart(entry.raw);
    this.setAudibleAgent(entry.agent);
  },
@@ -280,7 +279,6 @@ const speech = {
    this.settle();
  },
  settle(){if(!this.playing&&!this.queue.length){
-   const lane=$('audioLane');if(lane)lane.textContent='◌ АУДИО СВОБОДНО';
    const w=this.waiters.splice(0);w.forEach(resolve=>resolve());
  }},
  push(agent,words,onStart=null,onFinish=null,config=this.snapshot(agent)){
@@ -502,7 +500,7 @@ function installDuration(seconds){
  return n>=60?Math.floor(n/60)+' мин '+(n%60)+' с':n+' с';
 }
 function status(head,desc='',cls=''){$('connection').textContent=head;$('detail').textContent=desc;$('indicator').className='led '+cls;}
-function runStatus(text){$('runstate').textContent=text;}
+
 function updateDonationBadge(){
  const waiting=state.donationQueue.length,active=state.activeDonation;
  for(const [index,donation] of state.donationQueue.entries()){
@@ -574,27 +572,32 @@ function optionsForVoices(sel,index){
  for(const v of voices)sel.add(new Option((v.lang||'?')+' · '+v.name,v.voiceURI));
  sel.value=voices.some(v=>v.voiceURI===current)?current:'';
 }
-function forceRenderCards(){$('cards').replaceChildren();renderCards()}
+function agentCards(){return [...document.querySelectorAll('.right-column > article.card')]}
+function forceRenderCards(){agentCards().forEach(card=>card.remove());renderCards()}
 
 function renderCards(){
- if($('cards').children.length===defs.length){
+ const cards=agentCards();
+ if(cards.length===defs.length){
   defs.forEach((def,i)=>{
-    const c=$('cards').children[i],active=state.current?.agent===i,speaking=speech.audibleAgent===i;
+    const c=cards[i],active=state.current?.agent===i,speaking=speech.audibleAgent===i;
     c.classList.toggle('active',speaking);
     const badge=c.querySelector('.badge');
     badge.textContent=speaking?'● ГОВОРИТ':active?(state.current.phase==='speaking'?'◌ ГОТОВИТ ГОЛОС':'◌ ДУМАЕТ'):
        (state.current?.listeners?.has(i)?'◌ СЛУШАЕТ':'○ НА ЛИНИИ');
-    c.querySelector('.interrupt-btn').disabled=!state.running||state.paused||active;
+
   });return;
  }
- $('cards').replaceChildren();defs.forEach((def,i)=>{
+ cards.forEach(card=>card.remove());
+ const parent=document.querySelector('.right-column'),advanced=parent?.querySelector(':scope > .scene-advanced');
+ if(!parent)return;
+ defs.forEach((def,i)=>{
   const current=state.current,speaking=speech.audibleAgent===i;
   const c=document.createElement('article');c.className='card'+(speaking?' active':'');c.style.setProperty('--accent',def.color);
   const top=document.createElement('div');top.className='cardhead';
   const number=document.createElement('span');number.className='number';number.textContent='ENTITY / 0'+(i+1);
   const badge=document.createElement('span');badge.className='badge';badge.textContent=speaking?'● ГОВОРИТ':current?.agent===i?(current.phase==='speaking'?'◌ ГОТОВИТ ГОЛОС':'◌ ДУМАЕТ'):(current?.listeners?.has(i)?'◌ СЛУШАЕТ':'○ НА ЛИНИИ');top.append(number,badge);
   function textField(label,value,max,area=false){
-   const wrap=document.createElement('label');wrap.className='card-field';
+   const wrap=document.createElement('label');wrap.className='card-field'+(label==='ИМЯ'?' name-field':area?' description-field':'');
    const title=document.createElement('span');title.textContent=label;
    const input=document.createElement(area?'textarea':'input');
    if(!area)input.type='text';input.maxLength=max;input.value=value;
@@ -612,17 +615,13 @@ function renderCards(){
   };
   const description=textField('ХАРАКТЕР / ПОВЕДЕНИЕ',def.description,900,true);
   description.input.oninput=()=>{def.description=description.input.value;savePrefs()};
-  const vc=document.createElement('div');vc.className='voice-controls';const select=document.createElement('select');select.setAttribute('aria-label','Голос: '+def.name);optionsForVoices(select,i);select.onchange=()=>setAgentVoice(i,select.value);
+  const vc=document.createElement('div');vc.className='voice-controls';const voiceField=document.createElement('label');voiceField.className='card-field voice-field';const voiceLabel=document.createElement('span');voiceLabel.textContent='ГОЛОС';const select=document.createElement('select');select.setAttribute('aria-label','Голос: '+def.name);optionsForVoices(select,i);select.onchange=()=>setAgentVoice(i,select.value);voiceField.append(voiceLabel,select);
   const test=document.createElement('button');test.textContent='♫';
   test.title='Прослушать выбранный голос';test.disabled=!audioAvailable();
   test.onclick=()=>{speech.unlock();speech.stop();speech.push(i,'Привет! Я '+def.name+'. Готов к разговору.')};
-  vc.prepend(select);vc.append(test);
-  const foot=document.createElement('div');foot.className='foot';
+  vc.append(voiceField,test);
   const emotionSlot=document.createElement('div');emotionSlot.className='emotion-slot';
-  const btn=document.createElement('button');btn.className='interrupt-btn';btn.textContent='⚡ ПЕРЕБИТЬ';
-  btn.disabled=!state.running||state.paused||current?.agent===i;btn.onclick=()=>interruptWith(i,'manual');
-  foot.append(emotionSlot,btn);
-  c.append(top,name.wrap,description.wrap,vc,foot);$('cards').append(c);
+  c.append(top,name.wrap,vc,emotionSlot,description.wrap);parent.insertBefore(c,advanced||null);
  });
  window.YapdOmePixel?.mountControls();
 }
@@ -639,7 +638,7 @@ function populateVoices(){
  const russian=voices.filter(v=>/^ru/i.test(v.lang));
  defs.forEach((d,i)=>{if(!d.voiceURI&&russian[i])d.voiceURI=russian[i].voiceURI;});
  renderCards();
- defs.forEach((d,i)=>{const sel=$('cards').children[i]?.querySelector('.voice-controls select');if(sel)optionsForVoices(sel,i)});
+ defs.forEach((d,i)=>{const sel=agentCards()[i]?.querySelector('.voice-controls select');if(sel)optionsForVoices(sel,i)});
 }
 const PREF_KEY='triad09';
 function savePrefs(){try{localStorage.setItem(PREF_KEY,JSON.stringify({agents:defs.map(d=>({name:d.name,description:d.description,voiceURI:d.voiceURI,kokoroVoice:d.kokoroVoice,kokoroRuVoice:d.kokoroRuVoice,piperVoice:d.piperVoice,sileroVoice:d.sileroVoice,openaudioVoice:d.openaudioVoice,qwen3Voice:d.qwen3Voice })),topic:$('topic').value,sharedGoal:$('sharedGoal').value,showMode:$('showMode').value,voiceEnabled:$('voiceEnabled').checked,ttsBackend:$('ttsBackend').value,rate:$('rate').value,auto:$('auto').checked,directorEnabled:$('directorEnabled').checked,model:$('model').value,qwen3Size:qwen3Size,kokoroModel:kokoroModel}))}catch(_){}}
@@ -743,7 +742,7 @@ async function fetchModels(){
  try{const r=await fetch('/api/models',{cache:'no-store'});const data=await r.json();if(!r.ok)throw Error(data.error||'HTTP '+r.status);if(!data.models?.length)throw Error('Доступных моделей нет');select.replaceChildren();data.models.forEach(m=>select.add(new Option(m.name,m.slug)));select.value=data.models.some(m=>m.slug===prev)?prev:data.models[0].slug;select.disabled=false;savePrefs();}
  catch(err){select.replaceChildren(new Option('Модели недоступны',''));$('authnote').textContent='Ошибка каталога моделей: '+err.message;}
 }
-// Native C is the authority for turn assignment, pauses, interrupts and limits.
+// The engine is the authority for turn assignment, pauses, interrupts and limits.
 let controlQueue=Promise.resolve();
 function coreEvent(action,fields={}){
  const task=()=>api('/api/engine',{action,...fields});
@@ -757,12 +756,7 @@ function applyCore(s){
  $('start').disabled=state.running||state.stopping||state.starting;
  state.paused=s.status==='PAUSED'||s.status==='WAIT_USER';
  $('pause').textContent=s.status==='PAUSED'?'▶ ПРОДОЛЖИТЬ':'Ⅱ ПАУЗА';
- const labels={IDLE:'ГОТОВ К ЭФИРУ',RUNNING:`В ЭФИРЕ · ХОД ${s.turns}`, 
-  PAUSED:'ПАУЗА ВЕДУЩЕГО',WAIT_USER:'НЕБОЛЬШАЯ ПАУЗА',STOPPED:'ОСТАНОВЛЕНО',
-  LIMIT:'ЛИМИТ ХОДОВ',ERROR:'ОШИБКА'};
- // Debate phase is meaningful only if the host explicitly selected debates.
- const phase=$('showMode').value==='science'?(PHASE_LABEL[currentPhase(s.turns)]||''):'';
- runStatus((labels[s.status]||s.status)+(s.status==='RUNNING'&&phase?' · '+phase:''));updateScienceUI();renderCards();
+ updateScienceUI();renderCards();
  return true;
 }
 function stopTimer(){clearTimeout(state.timer);state.timer=null;}
@@ -807,25 +801,20 @@ async function stopDialogue(){
  if(state.stopping)return;
  state.stopping=true;
  resetLocal('ОСТАНОВЛЕНО ВЕДУЩИМ');
- if(micRecognition){
-  const mic=micRecognition;micRecognition=null;
-  mic.onend=null;
-  try{mic.abort()}catch(_){}
-  $('mic').textContent='🎙 ГОВОРИТЬ';
- }
+
  $('start').disabled=true;
  $('stop').disabled=true;
- runStatus('ОСТАНОВКА…');
+
  try{
   const s=await coreEvent('stop');
   // Idempotent stop can be rejected by C only if it was already STOPPED or IDLE.
   if(!['IDLE','STOPPED'].includes(s.status))throw Error('Ядро не подтвердило остановку: '+s.status);
   applyCore(s);
-  runStatus('ОСТАНОВЛЕНО');
+
   return true;
  }catch(err){
-  runStatus('СБОЙ ОСТАНОВКИ');
-  system('Не удалось подтвердить остановку C-ядра: '+err.message);
+
+  system('Не удалось подтвердить остановку ядра: '+err.message);
   return false;
  }finally{
   state.stopping=false;
@@ -833,11 +822,11 @@ async function stopDialogue(){
   $('start').disabled=state.running||state.starting;
  }
 }
-function engineError(err){system('Ошибка ядра C: '+String(err?.message||err).replace(/ChatGPT/gi,'LLM'));$('start').disabled=false;state.running=false;state.paused=true;stopTimer();cancelCurrent('ОШИБКА');runStatus('ОШИБКА');renderCards();}
+function engineError(err){system('Ошибка ядра: '+String(err?.message||err).replace(/ChatGPT/gi,'LLM'));$('start').disabled=false;state.running=false;state.paused=true;stopTimer();cancelCurrent('ОШИБКА');renderCards();}
 async function begin(){
  if(state.running||state.stopping||state.starting)return;
- if(!(state.provider==='deepseek'?state.deepseekConnected:state.connected)){runStatus('НУЖЕН ВХОД');system('Подключись к выбранному провайдеру в панели подключения.');return;}
- if(!$('model').value){runStatus('НЕТ МОДЕЛИ');system('Выбери модель.');return;}
+ if(!(state.provider==='deepseek'?state.deepseekConnected:state.connected)){system('Подключись к выбранному провайдеру в панели подключения.');return;}
+ if(!$('model').value){system('Выбери модель.');return;}
  speech.unlock();resetLocal();state.history=[];state.journal=[];state.archivedLines=[];$('feed').replaceChildren();updateScienceUI();
  const epoch=state.epoch;
  state.starting=true;$('start').disabled=true;
@@ -856,7 +845,7 @@ async function begin(){
  }
 }
 // A single short-lived planning slot: no growing arrays, no turn-by-turn model judge.
-// Native C still owns all speaker claims; a director can propose only a normal rotation.
+// The engine still owns all speaker claims; a director can propose only a normal rotation.
 function cancelDirector(){
  const job=state.directorRequest;
  if(job){job.controller.abort();api('/api/cancel',{request_id:job.requestId}).catch(()=>{});}
@@ -926,7 +915,7 @@ function requestDirector(currentTurn=null){
   .catch(err=>{if(err.name!=='AbortError'&&state.directorRequest===job&&
     state.epoch===epoch&&topic===$('topic').value&&$('directorEnabled').checked&&
     state.running&&!state.stopping&&!state.paused&&!state.activeDonation&&!state.donationQueue.length)
-    $('directorStatus').textContent='ИИ-режиссёр недоступен — работает C-ядро';})
+    $('directorStatus').textContent='ИИ-режиссёр недоступен — работает ядро';})
   .finally(()=>{if(state.directorRequest===job)state.directorRequest=null;});
 }
 async function applyDirectorRoute(epoch){
@@ -1051,7 +1040,7 @@ function liveFloorBid(speaker,text){
 async function claimNext(){
  if(!state.running||state.paused||state.current||state.claimPending?.epoch===state.epoch)return;
  // One-ahead handoff: a committed WAV reply has STARTED playing, so the
- // native core may claim one new model turn while it finishes audibly.
+ // the engine may claim one new model turn while it finishes audibly.
  if(!state.pipelineReady&&(speech.playing||speech.queue.length||speech.nodes.size)){
   // A transient system notice or a recovering turn must not lose the next claim.
   stopTimer();state.timer=setTimeout(claimNext,250);return;
@@ -1094,17 +1083,13 @@ async function claimNext(){
  }catch(e){if(epoch===state.epoch&&!String(e.message).includes('HTTP 409'))engineError(e)}
  finally{if(state.claimPending===claim)state.claimPending=null}
 }
-async function interruptWith(agent,reason){
+async function interruptByListener(agent){
  // A listener decision made before a donation arrived must NOT cut off its speaker.
- if(reason==='ai'&&(state.activeDonation||state.donationQueue.length))return;
- if(!state.running||state.paused||state.current?.agent===agent)return;
- // Manual acoustic barge-in is meaningful after generated text is committed
- // but while its speech is still audible. Do not "interrupt" silence.
- if(!state.current && reason!=='ai' && !speech.playing && !speech.queue.length)return;
- if(!state.current && reason==='ai')return;
+ if(state.activeDonation||state.donationQueue.length)return;
+ if(!state.running||state.paused||state.current?.agent===agent||!state.current)return;
  const ticket=state.core?.ticket,epoch=state.epoch;
  try{
-  const s=await coreEvent('interrupt',{agent,ticket,auto:reason==='ai'});
+  const s=await coreEvent('interrupt',{agent,ticket,auto:true});
   if(epoch!==state.epoch||state.stopping||!s.accepted)return;
   // Preserve a bounded excerpt of the interrupted speech. The original
   // turn never reached COMPLETE; without this the next LLM has no reason
@@ -1119,9 +1104,9 @@ async function interruptWith(agent,reason){
     state.history=state.history.slice(-16);
    }
   }
-  state.epoch++;stopTimer();cancelCurrent('ПРЕРВАНО • '+(reason==='ai'?'по решению слушателя':'вручную'));
+  state.epoch++;stopTimer();cancelCurrent('ПРЕРВАНО • по решению слушателя');
   applyCore(s);
-  system('⚡ '+(reason==='ai'?'Агент решил вмешаться: ':'Ручное перебивание: ')+defs[agent].name);
+  system('⚡ Агент решил вмешаться: '+defs[agent].name);
   claimNext();
  }catch(e){if(!String(e.message).includes('HTTP 409'))console.warn('Перебивание:',e.message)}
 }
@@ -1283,8 +1268,8 @@ function queueWholeSpeech(c){
  return Promise.race([started,speech.idle()]);
 }
 function maybeConsultListeners(c){
- // For native WAV/PCM, the first audible phrase is known when playback starts.
- // Preview at most 220 characters while the C ticket remains claimable.
+ // For WAV/PCM, the first audible phrase is known when playback starts.
+ // Preview at most 220 characters while the engine ticket remains claimable.
  const sample=c.heardText||(c.pipeline&&c.audioStarted?c.audibleText.slice(0,220):'');
  if(state.activeDonation||state.donationQueue.length||!$('auto').checked||
     $('showMode').value!=='live'||c.intentSent||
@@ -1303,7 +1288,7 @@ function maybeConsultListeners(c){
                  history:state.history.slice(-12),speaker:defs[c.agent].name,partial:sample.slice(-700)};
   fetch('/api/intent',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:controller.signal})
    .then(async r=>{const j=await r.json();if(!r.ok)throw Error(j.error||'Ошибка анализа');return j;})
-   .then(j=>{if(state.current===c&&!state.activeDonation&&!state.donationQueue.length&&state.running&&!state.paused&&j.decision==='interrupt')interruptWith(agent,'ai');})
+   .then(j=>{if(state.current===c&&!state.activeDonation&&!state.donationQueue.length&&state.running&&!state.paused&&j.decision==='interrupt')interruptByListener(agent);})
    .catch(e=>{if(e.name!=='AbortError'&&state.current===c)console.warn('Решение слушателя:',e.message)})
    .finally(()=>{c.listeners.delete(agent);c.listenerRequests=c.listenerRequests.filter(x=>x!==entry);if(state.current===c)renderCards()});
  }
@@ -1334,7 +1319,7 @@ async function issueTurn(agent,ticket){
     c.item.meta.textContent='ПОДГОТОВКА WAV…';
     await queueWholeSpeech(c);
     if(state.current!==c||epoch!==state.epoch)return;
-    // Audio and native controller are separate clocks. We release the native
+    // Audio and engine controller are separate clocks. We release the engine
     // ticket *after playback begins*, not after it ends; the one-ahead bound
     // is enforced by state.current holding the next model generation.
     // v0.18 LIVE needs an active ticket throughout TTS for genuine interrupts.
@@ -1357,7 +1342,7 @@ async function issueTurn(agent,ticket){
   // While the previous phrase is audible, plan the next scene asynchronously.
   // This hides most director latency under TTS without blocking the C clock.
   if(!c.donation&&!isMarker(c.text))requestDirector(c);
-  // Keep the C ticket and the speaker's turn until ALL their audio has ended.
+  // Keep the engine ticket and the speaker's turn until ALL their audio has ended.
   c.phase='speaking';
   if(speech.playing||speech.queue.length||speech.nodes.size){
    item.meta.textContent='ОЗВУЧИВАНИЕ · ожидаем завершения речи';renderCards();
@@ -1503,7 +1488,7 @@ async function activateNextDonation(){
     state.core.next_agent:0;
   const routed=await coreEvent('priority_donation',{agent:target});
   if(epoch!==state.epoch||state.stopping)return;
-  if(!routed.accepted)throw Error('C-ядро не подтвердило передачу слова');
+  if(!routed.accepted)throw Error('Ядро не подтвердило передачу слова');
   state.donationQueue.shift();
   if(donation.topicReview?.decision==='topic'){
    // Let this topic receive an audible reply before the next queued donation.
@@ -1637,40 +1622,7 @@ $('pause').onclick=async()=>{
  try{const s=await coreEvent(state.core?.status==='PAUSED'?'resume':'pause');if(epoch!==state.epoch||state.stopping)return;applyCore(s);if(s.status==='RUNNING')claimNext();}
  catch(e){engineError(e)}
 };
-// Optional browser speech-to-text (push-to-talk) for the human host.
-// Browser/OS may process audio remotely; no always-on microphone is activated.
-const micButton=$('mic');
-if(!SpeechInput){micButton.disabled=true;micButton.title='Распознавание речи недоступно в этом браузере';}
-else micButton.onclick=()=>{
- if(micRecognition){try{micRecognition.stop()}catch(_){}return;}
- if(!state.running||state.core?.status==='PAUSED'){
-  system('Микрофон доступен только во время разговора, вне ручной паузы.');return;
- }
- const rec=new SpeechInput();micRecognition=rec;
- rec.lang='ru-RU';rec.continuous=false;rec.interimResults=true;
- let spoken='';
- rec.onstart=()=>{
-  // Acoustic echo prevention: don't feed TRIAD speech back into the mic.
-  speech.stop();micButton.textContent='■ ЗАКОНЧИТЬ ФРАЗУ';
- };
- rec.onresult=e=>{
-  let interim='';
-  for(let i=e.resultIndex;i<e.results.length;i++){
-   const part=e.results[i][0]?.transcript||'';
-   if(e.results[i].isFinal)spoken+=part+' ';
-   else interim+=part;
-  }
-  $('interject').value=(spoken+interim).slice(0,600);
- };
- rec.onerror=e=>{if(e.error!=='no-speech'&&e.error!=='aborted')system('Микрофон: '+e.error);};
- rec.onend=()=>{
-  micRecognition=null;micButton.textContent='🎙 ГОВОРИТЬ';
-  if(spoken.trim()&&state.running&&state.core?.status!=='PAUSED'){
-   $('interject').value=spoken.trim().slice(0,600);humanMessage();
-  }
- };
- try{rec.start()}catch(err){micRecognition=null;micButton.textContent='🎙 ГОВОРИТЬ';system('Микрофон: '+err.message);}
-};
+
 $('reloadmodels').onclick=fetchModels;
 $('model').onchange=savePrefs;
 const fitTopicField=()=>{
@@ -1685,7 +1637,7 @@ $('showMode').onchange=()=>{state.journal=[];state.social.memory=[[],[],[]];canc
 $('auto').onchange=savePrefs;
 $('directorEnabled').onchange=()=>{
  if(!$('directorEnabled').checked){
-   cancelDirector();$('directorStatus').textContent='ИИ-режиссёр выключен · C-ядро маршрутизирует диалог';
+   cancelDirector();$('directorStatus').textContent='ИИ-режиссёр выключен · ядро маршрутизирует диалог';
  }else{$('directorStatus').textContent='ИИ-режиссёр включён · анализ каждые 4 реплики';}
  savePrefs();
 };
@@ -1715,13 +1667,13 @@ $('export').onclick=()=>{
  }
  const blob=new Blob([logs.join('\n\n')],{type:'text/plain;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='TRIAD-v0.2.0-'+new Date().toISOString().slice(0,10)+'.txt';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1500);
 };
-window.addEventListener('beforeunload',()=>{cancelDirector();if(micRecognition){try{micRecognition.abort()}catch(_){}}speech.stop();if(state.current){state.current.controller.abort();cancelListeners(state.current);}});
+window.addEventListener('beforeunload',()=>{cancelDirector();speech.stop();if(state.current){state.current.controller.abort();cancelListeners(state.current);}});
 restorePrefs();fitTopicField();updateScienceUI();renderCards();$('feed').innerHTML='<div class="empty">ОЖИДАНИЕ СИГНАЛА\nПОДКЛЮЧИ CHATGPT И ЗАПУСТИ ЭФИР</div>';
 if(haveSpeech){populateVoices();window.speechSynthesis.onvoiceschanged=populateVoices;}
 refreshStatus();
-fetch('/api/engine').then(r=>{if(!r.ok)throw Error('Ядро C недоступно');return r.json()})
+fetch('/api/engine').then(r=>{if(!r.ok)throw Error('Ядро недоступно');return r.json()})
  .then(s=>{if(!state.current)applyCore(s)})
- .catch(e=>{system('Критическая ошибка: '+e.message);runStatus('НЕТ ЯДРА C')});
+ .catch(e=>{system('Критическая ошибка: '+e.message)});
 
 
 const addons=[
@@ -1940,7 +1892,7 @@ syncVoicePanel();
 // Qwen3 custom voices live in one shared folder for both Pro (1.7B) and Lite (0.6B).
 function refreshQwen3VoiceSelects(){
  if($('ttsBackend').value!=='qwen3-tts')return;
- defs.forEach((d,i)=>{const sel=$('cards').children[i]?.querySelector('.voice-controls select');if(sel)optionsForVoices(sel,i)});
+ defs.forEach((d,i)=>{const sel=agentCards()[i]?.querySelector('.voice-controls select');if(sel)optionsForVoices(sel,i)});
 }
 function renderQwen3Voices(){
  const list=$('qwen3VoiceList');if(!list)return;
