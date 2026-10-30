@@ -42,6 +42,7 @@ class ConversationCoreTests(unittest.TestCase):
         self.assertIn("ограничен тремя репликами пары", expected)
 
         data["social_focus"] = {"kind": "rejoin", "pair": [0, 1], "listener": 2}
+        data["agent"] = 2
         expected = social_focus_instructions(data, 2, data["agents"], "live")
         meta = CodexAppServer()._session_snapshot(data)
         self.assertEqual(meta["social_instruction"], expected)
