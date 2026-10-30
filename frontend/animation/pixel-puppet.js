@@ -206,6 +206,10 @@
   }
   function boot() {
     if (booted || !engine || engine.W !== 48 || engine.H !== 48) return;
+    if (document.head && !$('pixelPuppetV5Styles')) {
+      const link = document.createElement('link'); link.id = 'pixelPuppetV5Styles';
+      link.rel = 'stylesheet'; link.href = '/pixel-puppet-v5.css'; document.head.append(link);
+    }
     root = $('liveAvatars');
     const tiles = root ? [...root.querySelectorAll('.live-tile')] : [];
     if (tiles.length !== 3 || tiles.some(t => !t.querySelector('.hud-portrait'))) return;
