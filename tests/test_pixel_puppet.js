@@ -167,6 +167,14 @@ test('all three live tiles share Norman green for tabletop nameplates and wavefo
   assert.ok(hudCss.includes('.wave-lane i{') && hudCss.includes('background:var(--agent-glow)'));
 });
 
+test('live broadcast heading is compact, single-line, right-aligned and has a live indicator', () => {
+  assert.match(indexHtml, /<h2><span class="live-air-indicator" aria-hidden="true"><\\/span>АГЕНТЫ В ЭФИРЕ<\\/h2>/);
+  assert.match(hudCss, /\\.live-visual-head\\{[^}]*justify-content:flex-end/);
+  assert.match(hudCss, /\\.live-visual-head h2\\{[^}]*font-size:10px[^}]*white-space:nowrap/);
+  assert.match(hudCss, /\\.live-air-indicator\\{/);
+  assert.match(hudCss, /@keyframes live-air-pulse/);
+});
+
 test('agent names are mounted on three tabletop plaques and status labels are removed', () => {
   assert.equal((indexHtml.match(/class="table-nameplate"/g) || []).length, 3);
   assert.match(indexHtml, /class="table-nameplate" data-agent-index="0"><span class="tile-name">Норман/);
