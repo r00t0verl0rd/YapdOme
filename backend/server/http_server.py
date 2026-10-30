@@ -605,11 +605,9 @@ class Handler(BaseHTTPRequestHandler):
                     "Ведущий-человек (задаёт тему, его слово приоритетно) сказал: " + text})
         # Every participant must answer a concrete latest utterance, not deliver
         # an independent prepared monologue. Topic outranks goals.
-        last_speaker, last_text, last_index = "ведущий", "", -1
+        last_index = -1
         for item in reversed(history):
             if isinstance(item, dict) and item.get("text") and not item.get("untrusted"):
-                last_speaker = str(item.get("name", "Участник"))[:35]
-                last_text = str(item.get("text", ""))[:600]
                 last_index = speaker_index(item)
                 break
         names_json = json.dumps(peers, ensure_ascii=False)
