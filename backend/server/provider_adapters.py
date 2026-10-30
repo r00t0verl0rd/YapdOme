@@ -126,6 +126,10 @@ HTTP_ADAPTERS = {
 
 
 def get_http_adapter(provider):
+    # Auxiliary one-shot tasks (director/topic review) historically use the
+    # ChatGPT HTTP credential even while the main turn provider is Codex.
+    if provider == "codex":
+        return HTTP_ADAPTERS["chatgpt"]
     adapter = HTTP_ADAPTERS.get(provider)
     if adapter is None:
         raise BridgeError("Неизвестный HTTP-провайдер: " + str(provider))
