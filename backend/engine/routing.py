@@ -263,15 +263,14 @@ def default_target(last_turn, current):
     """
     best = -1
     best_turn = 0
-    count = len(last_turn)
-    for k in range(1, count):
-        i = (current + k) % count
+    for k in range(1, 4):
+        i = (current + k) % 3
         if i == current:
             continue
         if best < 0 or last_turn[i] < best_turn:
             best = i
             best_turn = last_turn[i]
-    return best if best >= 0 else (current + 1) % count
+    return best if best >= 0 else (current + 1) % 3
 
 
 def route_from_text(names, last_turn, text, current, allow_current):

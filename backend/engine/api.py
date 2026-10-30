@@ -68,8 +68,8 @@ class Engine:
     # -------------------------------------------------------------------- API
 
     def names(self, names):
-        if not isinstance(names, list) or len(names) not in (3, 5):
-            raise ValueError("Требуются три или пять имён агентов")
+        if not isinstance(names, list) or len(names) != 3:
+            raise ValueError("Требуются три имени агентов")
         if not all(isinstance(n, str) and "\0" not in n and n.strip()
                    and len(n) <= 30 and len(n.encode("utf-8")) <= 120
                    for n in names):
@@ -87,7 +87,7 @@ class Engine:
     def event(self, action, agent=-1, ticket=0, max_turns=0, text=""):
         if action not in E.ACTIONS:
             raise ValueError("Неизвестное действие ядра")
-        if type(agent) is not int or agent < -1 or agent >= len(self._engine.names):
+        if type(agent) is not int or agent < -1 or agent > 2:
             raise ValueError("Неверный номер агента")
         if type(ticket) is not int or ticket < 0 or ticket > 0xFFFFFFFF:
             raise ValueError("Некорректный идентификатор хода")
@@ -105,9 +105,9 @@ class Engine:
             return as_json(snapshot, self._engine.route_reason)
 
     def complete_to(self, agent, ticket, text, target_agent=-1):
-        if type(agent) is not int or not 0 <= agent < len(self._engine.names):
+        if type(agent) is not int or not 0 <= agent <= 2:
             raise ValueError("Неверный номер агента")
-        if type(target_agent) is not int or not -1 <= target_agent < len(self._engine.names) or target_agent == agent:
+        if type(target_agent) is not int or not -1 <= target_agent <= 2 or target_agent == agent:
             raise ValueError("Неверный адресат")
         if type(ticket) is not int or not 0 <= ticket <= 0xFFFFFFFF:
             raise ValueError("Неверный ticket")
