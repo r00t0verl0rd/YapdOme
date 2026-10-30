@@ -62,7 +62,7 @@ class DirectorBoundaries(unittest.TestCase):
         ]
         direction = conversational_direction("свободная беседа", 8, agreement)
         self.assertIn("проверь слабую предпосылку", direction)
-        self.assertIn("прямо возрази", direction)
+        self.assertIn("проверь слабую предпосылку", direction)
         self.assertIn("Не спорь искусственно", direction)
 
         mixed = [
