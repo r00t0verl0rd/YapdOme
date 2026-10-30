@@ -117,7 +117,7 @@ test('mounts exactly 3×2304 DOM LEDs, no fallback SVGs, default 12fps and diff-
   for (const select of h.cards.querySelectorAll('.entity-avatar-select')) assert.equal(select.children.length, 3);
   for (const select of h.cards.querySelectorAll('.pixel-mood')) assert.equal(select.children.length, 11);
   assert.equal(h.api.getStatus().fps, 12);
-  assert.deepEqual(h.api.getStatus().agents.map(a => a.avatarId), ['norman','glitch','jessie']);
+  assert.equal(h.api.getStatus().agents.map(a => a.avatarId).join(','), 'norman,glitch,jessie');
   const avatarSelects = h.cards.querySelectorAll('.entity-avatar-select');
   avatarSelects[0].value = 'jessie'; avatarSelects[0].dispatch('change');
   assert.equal(h.api.getStatus().agents[0].avatarId, 'jessie');
