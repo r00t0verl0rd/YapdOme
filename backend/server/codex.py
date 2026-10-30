@@ -5,6 +5,7 @@ import subprocess
 import threading
 
 from .conversation import discussion_frame, social_focus_instructions
+from .conversation_policy import build_turn_policy
 
 
 class CodexError(RuntimeError):
@@ -220,8 +221,20 @@ class CodexAppServer:
         if type(agent_index) is not int or agent_index not in range(3):
             agent_index = agents.index(name) if name in agents else -1
         plan = data.get("director_plan")
+        language = str(data.get("language") or "ru")
+        conversation_history = data.get("conversation_history")
+        if not isinstance(conversation_history, list):
+            conversation_history = data.get("history") if isinstance(data.get("history"), list) else []
+        turn_policy = build_turn_policy(
+            agent_index, name, agents, topic, data.get("turns", 0), conversation_history, mode,
+            social_focus=data.get("social_focus"),
+            planned=plan is not None,
+            language=language,
+            donation=isinstance(data.get("donation_context"), dict),
+        )
         return {
             "topic": topic,
+            "turn_policy": turn_policy,
             "topic_instruction": discussion_frame(topic, goal, mode),
             "goal": goal,
             "mode": mode,
@@ -341,12 +354,9 @@ class CodexAppServer:
                     parts.append("НОВОЕ СООБЩЕНИЕ ВЕДУЩЕГО (доверенный ввод): " + self._json(text))
                 fresh_ids.append(event_id)
 
-        social_instruction = meta["social_instruction"]
-        old_social_instruction = previous["social_instruction"] if previous else ""
-        if social_instruction:
-            # Same canonical text as the HTTP adapter; it is per-turn state.
-            parts.append(social_instruction)
-        elif old_social_instruction:
+        if meta["turn_policy"]:
+            parts.append(meta["turn_policy"])
+        elif previous and previous["social_instruction"]:
             parts.append("Временный диалоговый фокус завершён; снова доступен весь состав.")
 
         plan = meta["plan"]
