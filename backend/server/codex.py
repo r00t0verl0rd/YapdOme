@@ -4,6 +4,8 @@ import shutil
 import subprocess
 import threading
 
+from .conversation import discussion_frame, social_focus_instructions
+
 
 class CodexError(RuntimeError):
     pass
@@ -212,17 +214,22 @@ class CodexAppServer:
             agents.append(name)
         profiles = self._profile_map(data.get("cast_profiles"), name, data.get("description"))
         goal = str(data.get("shared_goal") or "").strip()[:900]
-        social = data.get("social_focus")
+        mode = str(data.get("show_mode") or "live")
+        topic = str(data.get("topic") or "").strip()[:700]
+        agent_index = data.get("agent")
+        if type(agent_index) is not int or agent_index not in range(3):
+            agent_index = agents.index(name) if name in agents else -1
         plan = data.get("director_plan")
         return {
-            "topic": str(data.get("topic") or "").strip()[:700],
+            "topic": topic,
+            "topic_instruction": discussion_frame(topic, goal, mode),
             "goal": goal,
-            "mode": str(data.get("show_mode") or "live"),
+            "mode": mode,
             "scene_mode": bool(data.get("scene_mode")),
             "voice_note": str(data.get("voice_style_note") or "")[:500],
             "agents": agents,
             "profiles": profiles,
-            "social": self._json(social) if isinstance(social, dict) else "",
+            "social_instruction": social_focus_instructions(data, agent_index, agents, mode),
             "plan": self._json(plan) if isinstance(plan, dict) else ""
         }
 
@@ -283,8 +290,8 @@ class CodexAppServer:
         )
         return (
             shared + science + live + scene + (" " + meta["voice_note"] if meta["voice_note"] else "") +
-            "\nТЕМА ЭТОГО ЭФИРА: " + self._json(topic) +
-            "\nОБЩАЯ ЦЕЛЬ (только внутри темы): " + self._json(goal) +
+            "\nТЕМА ЭТОГО ЭФИРА И ОБЩАЯ ЦЕЛЬ (единая политика Conversation Core):\n" +
+            meta["topic_instruction"] +
             "\nАГЕНТЫ И ИХ ПОСТОЯННЫЕ ПРОФИЛИ:\n" + profiles +
             "\nИстория после этого сообщения — единственная общая история эфира."
         )
@@ -298,10 +305,9 @@ class CodexAppServer:
             if meta["topic"] != previous["topic"]:
                 new_topic = meta["topic"] or "свободная беседа"
                 parts.append("ВЕДУЩИЙ ИЗМЕНИЛ ТЕМУ. Новая тема заменяет прежнюю: " +
-                             self._json(new_topic) + ". Не возвращайся к старой без явной связи.")
-            if meta["goal"] != previous["goal"]:
-                parts.append("ВЕДУЩИЙ ИЗМЕНИЛ ОБЩУЮ ЦЕЛЬ (она не заменяет тему): " +
-                             self._json(meta["goal"] or "поддерживать интересную беседу") + ".")
+                             self._json(new_topic) + ". " + meta["topic_instruction"])
+            elif meta["goal"] != previous["goal"] or meta["mode"] != previous["mode"]:
+                parts.append("ОБНОВЛЁН КОНТЕКСТ ТЕМЫ ИЛИ ЦЕЛИ:\\n" + meta["topic_instruction"])
             if meta["mode"] != previous["mode"]:
                 parts.append("РЕЖИМ ЭФИРА ИЗМЕНЁН: " + meta["mode"] + ".")
             if meta["scene_mode"] != previous["scene_mode"]:
@@ -335,48 +341,13 @@ class CodexAppServer:
                     parts.append("НОВОЕ СООБЩЕНИЕ ВЕДУЩЕГО (доверенный ввод): " + self._json(text))
                 fresh_ids.append(event_id)
 
-        focus = meta["social"]
-        old_focus = previous["social"] if previous else ""
-        if focus != old_focus:
-            if focus:
-                try:
-                    f = json.loads(focus)
-                    pair = f.get("pair", [])
-                    listener = f.get("listener")
-                    kind = f.get("kind")
-                    names = meta["agents"]
-                    if isinstance(pair, list) and len(pair) == 2 and all(type(i) is int and 0 <= i < len(names) for i in pair):
-                        listen_name = names[listener] if type(listener) is int and 0 <= listener < len(names) else ""
-                        pair_names = names[pair[0]] + " и " + names[pair[1]]
-                        if kind == "duo":
-                            parts.append(
-                                "КОРОТКИЙ ВРЕМЕННЫЙ ФОКУС: сейчас идёт обмен между " + pair_names +
-                                (("; " + listen_name + " пока слушает.") if listen_name else "") +
-                                " Парный обмен ограничен тремя репликами пары. Отвечай на текущий аргумент, "
-                                "не задавай новый вопрос в конце каждого хода и не затягивай цепочку уточнений. "
-                                "Не повторяй уже разобранное. По завершении обязательно передай слово слушавшему."
-                            )
-                        elif kind == "invite":
-                            parts.append(
-                                "ЗАВЕРШИ ПАРНЫЙ ОБМЕН: " + pair_names + " уже поговорили; " +
-                                listen_name + " слушал. Одной короткой репликой пригласи его вступить "
-                                "и не начинай новый круг вопросов к прежнему собеседнику. "
-                                "Заверши маркером [[TO:" + listen_name + "]]."
-                            )
-                        elif kind == "rejoin":
-                            parts.append(
-                                "ТЕПЕРЬ ВСТУПАЕТ СЛУШАВШИЙ: ты слушал " + pair_names +
-                                ". Выскажи одну самостоятельную мысль, а не пересказ; после твоего хода "
-                                "временный парный фокус снимается и снова участвуют все трое."
-                            )
-                        else:
-                            parts.append("ВРЕМЕННЫЙ ФОКУС: диалог преимущественно между " +
-                                         pair_names +
-                                         (("; " + listen_name + " пока слушает.") if listen_name else ""))
-                except (ValueError, TypeError, KeyError):
-                    pass
-            elif old_focus:
-                parts.append("Временный диалоговый фокус завершён; снова доступен весь состав.")
+        social_instruction = meta["social_instruction"]
+        old_social_instruction = previous["social_instruction"] if previous else ""
+        if social_instruction:
+            # Same canonical text as the HTTP adapter; it is per-turn state.
+            parts.append(social_instruction)
+        elif old_social_instruction:
+            parts.append("Временный диалоговый фокус завершён; снова доступен весь состав.")
 
         plan = meta["plan"]
         old_plan = previous["plan"] if previous else ""
