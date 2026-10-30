@@ -17,7 +17,8 @@ test('real engine: 48×48 literal LEDs 0..3, three distinct robots and expressio
       const pixels = engine.draw(id, pose, {t:0, talk:0, blink:0});
       assert.ok(pixels instanceof Uint8Array);
       assert.equal(pixels.length, 2304);
-      assert.ok(pixels.every(v => Number.isInteger(v) && v >= 0 && v <= 3));
+      assert.ok(pixels.every(v => Number.isInteger(v) && v >= 0 && v <= 7));
+      assert.ok(new Set(pixels).size >= 5, `${id}: layered material palette`);
       expressions.add(Buffer.from(pixels).toString('base64'));
     }
     assert.ok(expressions.size >= 8, `${id}: distinct expressions`);
@@ -68,8 +69,10 @@ function setup({stored = null, reduced = false, storageThrows = false} = {}) {
   const cards = new Element(); cards.className = 'right-column';
   for (let i = 0; i < 3; i++) {
     const card = new Element('article'); card.className = 'card';
+    const head = new Element(); head.className = 'cardhead';
+    const number = new Element(); number.className = 'number'; head.append(number);
     const slot = new Element(); slot.className = 'emotion-slot';
-    card.append(slot); cards.append(card);
+    card.append(head, slot); cards.append(card);
   }
   const elements = {cards, liveAvatars:root};
   const document = new Element('document'); document.readyState = 'complete'; document.hidden = false;
@@ -110,8 +113,20 @@ test('mounts exactly 3×2304 DOM LEDs, no fallback SVGs, default 12fps and diff-
   assert.equal(h.root.querySelectorAll('svg').length, 0);
   assert.equal(h.root.querySelectorAll('.pixel-controls').length, 0);
   assert.equal(h.cards.querySelectorAll('.pixel-mood').length, 3);
+  assert.equal(h.cards.querySelectorAll('.entity-avatar-select').length, 3);
+  for (const select of h.cards.querySelectorAll('.entity-avatar-select')) assert.equal(select.children.length, 3);
   for (const select of h.cards.querySelectorAll('.pixel-mood')) assert.equal(select.children.length, 11);
   assert.equal(h.api.getStatus().fps, 12);
+  assert.deepEqual(h.api.getStatus().agents.map(a => a.avatarId), ['norman','glitch','jessie']);
+  const avatarSelects = h.cards.querySelectorAll('.entity-avatar-select');
+  avatarSelects[0].value = 'jessie'; avatarSelects[0].dispatch('change');
+  assert.equal(h.api.getStatus().agents[0].avatarId, 'jessie');
+  assert.equal(h.root.querySelectorAll('.pixel-grid')[0].dataset.avatar, 'jessie');
+  assert.equal(h.root.querySelectorAll('.live-tile')[0].dataset.avatar, 'jessie');
+  assert.equal(h.cards.querySelectorAll('.entity-avatar-select')[0].value, 'jessie');
+  assert.equal(h.writes.at(-1)[1].avatars[0], 'jessie');
+  const restored = setup({stored:JSON.stringify(h.writes.at(-1)[1])});
+  assert.equal(restored.api.getStatus().agents[0].avatarId, 'jessie');
   assert.equal(h.cards.querySelectorAll('.pixel-fps').length, 3);
   for (const select of h.cards.querySelectorAll('.pixel-fps')) assert.equal(select.value, '12');
   assert.equal(h.document.getElementById('pixelPuppetEnabled'), null);
