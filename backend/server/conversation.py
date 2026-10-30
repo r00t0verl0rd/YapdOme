@@ -391,7 +391,7 @@ def conversational_direction(topic, turns, history, pace="normal", planned=False
         hint = "Повторяющийся мотив исчерпан"
         if motifs:
             hint += " (" + ", ".join(motifs) + ")"
-        hints.append(hint + ": не возвращайся к нему даже в отрицательной форме; развивай другую мысль.")
+        hints.append(hint + ": не возвращайся к нему и не заменяй синонимами; развивай другой аспект темы.")
     return " ".join(hints)
 
 def turn_protocol(agent_name, peers, pace="normal", science=False):
