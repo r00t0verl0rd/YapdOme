@@ -29,7 +29,6 @@ def build_turn_policy(agent, agent_name, peers, topic, turns, history, mode="liv
     else:
         parts = [
             character_style(mode, topic),
-            live_requested_voice(topic) if mode == "live" else "",
             *dynamic[:2],
             turn_protocol(agent_name, peers, pace, mode == "science"),
             *dynamic[2:5],

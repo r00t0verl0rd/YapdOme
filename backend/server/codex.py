@@ -360,14 +360,14 @@ class CodexAppServer:
         # Re-send the complete editable cast on EVERY turn. A long-lived Codex
         # thread may compact its context; a one-time profile paragraph is not
         # a reliable way to preserve three distinct voices indefinitely.
-        roster = "\\n".join(
+        roster = "\n".join(
             "- " + name + ": " + (description or "собственная отличимая манера речи")
             for name, description in meta["profiles"].items()
         )
         if roster:
             parts.append(
                 "ПОСТОЯННЫЕ ПРОФИЛИ ПЕРСОНАЖЕЙ — ОБЯЗАТЕЛЬНЫЙ СОСТАВ КАЖДОГО ХОДА "
-                "(повторены намеренно, не усредняй характеры):\\n" + roster
+                "(повторены намеренно, не усредняй характеры):\n" + roster
             )
         if meta["turn_policy"]:
             parts.append(meta["turn_policy"])

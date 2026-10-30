@@ -93,7 +93,7 @@ def character_profile_instruction(agent_name, description):
 
 def live_requested_voice(topic):
     """Apply an explicit host-requested register; never reduce it to a catchphrase."""
-    if re.search(r"(?<![\\w])(?:мат\\w*|матер\\w*|гопник\\w*|гопницк\\w*|зумер\\w*|зуммер\\w*)(?![\\w])",
+    if re.search(r"мат|матер|гопник|гопницк|зумер|зуммер",
                  str(topic).casefold()):
         return (
             "СТИЛЬ ВЕДУЩЕГО: нужна живая уличная разговорная манера, дерзость и русский мат. "
