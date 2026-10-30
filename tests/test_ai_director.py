@@ -4,7 +4,8 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from backend.controls.director import open_topic, validate_plan, decode_plan, director_context
+from backend.controls.director import (open_topic, validate_plan, decode_plan,
+                                       director_context, DIRECTOR_INSTRUCTIONS)
 from backend.engine import Engine
 
 NAMES=["Лимур", "Кизаро", "Овелито"]
@@ -15,6 +16,11 @@ class DirectorParsing(unittest.TestCase):
         for topic in ("", "Поговорите о ", "поговорите", "свободная беседа"):
             self.assertTrue(open_topic(topic), topic)
         self.assertFalse(open_topic("Поговорите о природе"))
+
+    def test_live_director_seeks_surprising_beats_without_forced_jokes(self):
+        self.assertIn("по-настоящему живым и увлекательным", DIRECTOR_INSTRUCTIONS)
+        self.assertIn("Юмор приветствуется, но не обязателен", DIRECTOR_INSTRUCTIONS)
+        self.assertIn("неожиданная связь, контрпример, парадокс", DIRECTOR_INSTRUCTIONS)
 
     def test_no_model_instructions_enter_c_router(self):
         valid={"speaker":2,"beat":"Закрой старую шутку и спроси о неожиданной новой идее.",
