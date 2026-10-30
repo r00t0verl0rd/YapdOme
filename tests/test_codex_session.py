@@ -130,6 +130,8 @@ class CodexSessionTests(unittest.TestCase):
         self.assertIn("передай слово слушавшему", prompt)
 
         data["social_focus"] = {"kind": "rejoin", "pair": [0, 1], "listener": 2}
+        data["agent"] = 2
+        data["agent_name"] = "Джесси"
         self.run_turn(client, data)
         prompt = [params["input"][0]["text"] for method, params in calls
                   if method == "turn/start"][-1]
