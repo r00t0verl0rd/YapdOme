@@ -657,6 +657,8 @@ function forceRenderCards(){agentCards().forEach(card=>card.remove());renderCard
 
 function renderCards(){
  const cards=agentCards();
+ const tiles=[...document.querySelectorAll('#liveAvatars .live-tile')];
+ defs.forEach((def,i)=>{const tile=tiles[i],label=tile?.querySelector('.tile-name');if(label)label.textContent=def.name;if(tile)tile.setAttribute('aria-label','Агент '+(i+1)+': '+def.name)});
  if(cards.length===defs.length){
   defs.forEach((def,i)=>{
     const c=cards[i],active=state.current?.agent===i,speaking=speech.audibleAgent===i;
@@ -1076,7 +1078,7 @@ function socialRouteHint(){
  if(state.turns<4||state.turns-social.lastEnd<4)return null;
  const speakers=[];
  for(const line of state.history.slice().reverse()){
-  if(Number.isInteger(line.agent)&&line.agent>=0&&line.agent<defs.length&&!speakers.includes(line.agent))
+  if(Number.isInteger(line.agent)&&line.agent>=0&&line.agent<5&&!speakers.includes(line.agent))
     speakers.push(line.agent);
   if(speakers.length===2)break;
  }
