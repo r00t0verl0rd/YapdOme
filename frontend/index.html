@@ -50,8 +50,11 @@
             <p id="authnote" class="authnote">Локальная open-source интеграция. Использование лимитов ChatGPT требует подходящего тарифа Plus/Pro и отдельного разрешения. На Free OpenAI может отклонить это разрешение; обход тарифа не поддерживается.</p>
           </div>
           <div id="codexAuth" hidden>
-            <div class="connect-actions"><button id="codexLogin" class="primary">Войти через Codex</button></div>
-            <p id="codexNote" class="authnote">Вход выполняется через локальный Codex CLI; YapdOme не получает и не хранит токены.</p>
+            <div class="connect-actions">
+              <button id="codexLogin" class="primary">Войти через Codex</button>
+              <button id="codexLogout" class="quiet-action" type="button" hidden>Выйти из Codex</button>
+            </div>
+            <p id="codexNote" class="authnote">Вход выполняется через локальный Codex. Для смены аккаунта выйди из текущего сеанса; авторизация Codex общая с CLI и IDE-расширением на этом устройстве.</p>
           </div>
           <div id="deepseekAuth" hidden>
             <label class="field-caption" for="deepseekKey">API-КЛЮЧ DEEPSEEK</label>
