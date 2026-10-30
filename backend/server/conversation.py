@@ -9,6 +9,108 @@ import re
 from ..controls.director import open_topic
 
 
+import threading
+from collections import OrderedDict
+
+LANGUAGE_PACKS = {
+    "ru": {"output_instruction": "Отвечай по-русски."},
+}
+DEFAULT_LANGUAGE = "ru"
+
+
+def normalize_language(value):
+    locale = str(value or DEFAULT_LANGUAGE).strip().lower().replace("_", "-").split("-", 1)[0]
+    return locale if locale in LANGUAGE_PACKS else DEFAULT_LANGUAGE
+
+
+def language_instruction(value):
+    return LANGUAGE_PACKS[normalize_language(value)]["output_instruction"]
+
+
+class ConversationStore:
+    """Bounded server-side conversation log; requests append unseen events only."""
+
+    def __init__(self, max_sessions=16, max_events=64):
+        self.lock = threading.RLock()
+        self.max_sessions = max_sessions
+        self.max_events = max_events
+        self.sessions = OrderedDict()
+
+    def reset(self, session_id, topic="", language=DEFAULT_LANGUAGE):
+        with self.lock:
+            self.sessions[session_id] = {
+                "topic": str(topic or "")[:700],
+                "language": normalize_language(language),
+                "events": [],
+                "seen": set(),
+            }
+            self.sessions.move_to_end(session_id)
+            self._trim_sessions()
+
+    def _trim_sessions(self):
+        while len(self.sessions) > self.max_sessions:
+            self.sessions.popitem(last=False)
+
+    def add_events(self, session_id, events, topic="", language=DEFAULT_LANGUAGE):
+        if not isinstance(session_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{12,80}", session_id):
+            raise ValueError("Некорректный id диалога")
+        if not isinstance(events, list):
+            raise ValueError("События диалога должны быть списком")
+        with self.lock:
+            session = self.sessions.get(session_id)
+            if session is None:
+                self.reset(session_id, topic, language)
+                session = self.sessions[session_id]
+            self.sessions.move_to_end(session_id)
+            current_topic = str(topic or "")[:700]
+            if session["topic"] != current_topic:
+                session["events"].clear()
+                session["seen"].clear()
+                session["topic"] = current_topic
+            session["language"] = normalize_language(language)
+            for event in events:
+                if not isinstance(event, dict):
+                    continue
+                event_id = event.get("event_id")
+                text = str(event.get("text") or "").strip()
+                if not isinstance(event_id, str) or not event_id or not text:
+                    continue
+                event_id = event_id[:80]
+                if event_id in session["seen"]:
+                    continue
+                item = {
+                    "event_id": event_id,
+                    "agent": event.get("agent", -1),
+                    "name": str(event.get("name") or "Участник")[:42],
+                    "text": text[:1200],
+                }
+                for key in ("untrusted", "priority", "interrupted", "expiresAfter"):
+                    if key in event:
+                        item[key] = event[key]
+                session["events"].append(item)
+                session["seen"].add(event_id)
+            if len(session["events"]) > self.max_events:
+                session["events"] = session["events"][-self.max_events:]
+                session["seen"] = {item["event_id"] for item in session["events"]}
+            return [dict(item) for item in session["events"]]
+
+    def history(self, session_id, limit=16):
+        with self.lock:
+            session = self.sessions.get(session_id)
+            if not session:
+                return []
+            self.sessions.move_to_end(session_id)
+            amount = max(1, min(32, int(limit)))
+            return [dict(item) for item in session["events"][-amount:]]
+
+    def language(self, session_id):
+        with self.lock:
+            session = self.sessions.get(session_id) or {}
+            return session.get("language", DEFAULT_LANGUAGE)
+
+
+
+
 def discussion_frame(topic, mission, mode="live"):
     """Build the host's topic/scene instruction; persona guidance is separate.
 
