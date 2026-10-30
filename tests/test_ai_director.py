@@ -17,6 +17,11 @@ class DirectorParsing(unittest.TestCase):
             self.assertTrue(open_topic(topic), topic)
         self.assertFalse(open_topic("Поговорите о природе"))
 
+    def test_live_director_keeps_real_disagreements_alive(self):
+        self.assertIn("не гаси его", DIRECTOR_INSTRUCTIONS)
+        self.assertIn("ответить на возражение", DIRECTOR_INSTRUCTIONS)
+        self.assertIn("сильное несогласие", DIRECTOR_INSTRUCTIONS)
+
     def test_live_director_seeks_surprising_beats_without_forced_jokes(self):
         self.assertIn("по-настоящему живым и увлекательным", DIRECTOR_INSTRUCTIONS)
         self.assertIn("Юмор приветствуется, но не обязателен", DIRECTOR_INSTRUCTIONS)
