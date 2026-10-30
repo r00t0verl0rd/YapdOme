@@ -5,6 +5,8 @@
 """
 import json
 import re
+import threading
+from collections import OrderedDict
 
 from ..controls.director import open_topic
 
@@ -97,9 +99,6 @@ def live_requested_voice(topic):
                 "персонажей должны отличаться. Не оскорбляй уязвимые группы. ")
     return ""
 
-
-import threading
-from collections import OrderedDict
 
 LANGUAGE_PACKS = {
     "ru": {"output_instruction": "Отвечай по-русски."},
