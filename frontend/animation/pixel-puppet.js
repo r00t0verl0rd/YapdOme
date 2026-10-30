@@ -5,6 +5,11 @@
   const STORAGE_KEY = 'YapdOme.pixel-puppet.v1';
   const ids = ['norman', 'glitch', 'jessie'];
   const avatarIds = ['norman', 'glitch', 'jessie', 'volt', 'luna'];
+  const huePalettes = [
+    {hue:155, saturation:'91.3%', lightness:'59.41%'},
+    {hue:186, saturation:'100%', lightness:'58.04%'},
+    {hue:44, saturation:'100%', lightness:'60.59%'}
+  ];
   const labels = {neutral:'Спокойствие', joy:'Радость', laugh:'Смех', angry:'Злость', surprise:'Удивление', skeptic:'Скепсис', sad:'Грусть', smug:'Ухмылка', focus:'Фокус', confused:'Недоумение'};
   const hasMood = v => typeof v === 'string' && Object.hasOwn(labels, v);
   const validMood = v => v === 'auto' || hasMood(v);
@@ -127,10 +132,10 @@
       const blinkPhase = (now + a.index * 700) % 4300;
       const blink = !reduced.matches && blinkPhase < 160 ? Math.sin(Math.PI * blinkPhase / 160) : 0;
       const hueValue = ctx.cast?.[a.index]?.hue;
-      const hue = typeof hueValue === 'number' && Number.isFinite(hueValue) ? clamp(Math.round(hueValue), 0, 360) : 0;
+      const hue = typeof hueValue === 'number' && Number.isFinite(hueValue) ? clamp(Math.round(hueValue), 0, 360) : huePalettes[a.index].hue;
       if (a.hue !== hue) {
         a.hue = hue;
-        a.grid.style.setProperty('--avatar-hue', `${hue}deg`);
+        a.grid.style.setProperty('--avatar-hue', String(hue));
       }
       const skin = avatarIds.includes(ctx.cast?.[a.index]?.avatarId) ? ctx.cast[a.index].avatarId : a.id;
       const pixels = engine.draw(skin, pose, {t:reduced.matches ? 0 : now / 1000, talk:a.level, blink});
@@ -165,7 +170,7 @@
         typeof value !== 'number' || !Number.isFinite(value)) return false;
     const hue = clamp(Math.round(value), 0, 360);
     agents[index].hue = hue;
-    agents[index].grid.style.setProperty('--avatar-hue', `${hue}deg`);
+    agents[index].grid.style.setProperty('--avatar-hue', String(hue));
     return true;
   }
   function sync() {
@@ -205,6 +210,13 @@
       const portrait = tile.querySelector('.hud-portrait');
       portrait.classList.add('pixel-portrait');
       const grid = document.createElement('div'); grid.className = 'pixel-grid'; grid.setAttribute('role', 'img');
+      const palette = huePalettes[index];
+      const savedHue = context().cast?.[index]?.hue;
+      const initialHue = typeof savedHue === 'number' && Number.isFinite(savedHue)
+        ? clamp(Math.round(savedHue), 0, 360) : palette.hue;
+      grid.style.setProperty('--avatar-hue', String(initialHue));
+      grid.style.setProperty('--avatar-saturation', palette.saturation);
+      grid.style.setProperty('--avatar-lightness', palette.lightness);
       const fragment = document.createDocumentFragment(), leds = [];
       for (let i = 0; i < 48 * 48; i++) {
         const led = document.createElement('i'); led.className = 'pixel-led'; led.dataset.v = '0';
@@ -240,7 +252,7 @@
         save(); sync();
       });
       fpsLabel.append(fpsSelect); controls.append(fpsLabel);
-      agents.push({id:ids[index], index, grid, leds, controls, hue:null, last:new Uint8Array(2304),
+      agents.push({id:ids[index], index, grid, leds, controls, hue:initialHue, last:new Uint8Array(2304),
         pose:{...engine.EMOTIONS.neutral}, velocity:Object.fromEntries(engine.keys.map(k => [k, 0])), event:null, level:0});
     });
 

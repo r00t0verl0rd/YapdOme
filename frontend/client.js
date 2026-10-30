@@ -10,11 +10,12 @@ function requestID(){
 }
 // Editable sample cast, not hard-coded debate positions. Existing saved characters win.
 const defs = [
-  {name:'Норман',color:'#48eafb',avatarId:'norman',hue:0,description:'Любит рассказывать истории из жизни, слегка хвастается и часто сам попадает в нелепое положение. Отшучивается, если его поддели; способен искренне признать ошибку.',voiceURI:''},
-  {name:'Глитч',color:'#ffb45e',avatarId:'glitch',hue:0,description:'Быстрый на язык, замечает нелепости и любит добродушно подкалывать друзей. Иногда спорит из азарта, но умеет неожиданно поддержать собеседника.',voiceURI:''},
-  {name:'Джесси',color:'#ed68f8',avatarId:'jessie',hue:0,description:'Остроумная, наблюдательная, прямолинейная. Не любит напускную серьёзность, задаёт неудобные вопросы и иногда выдаёт неожиданный поворот без длинных объяснений.',voiceURI:''}
+  {name:'Норман',color:'#48eafb',avatarId:'norman',hue:155,description:'Любит рассказывать истории из жизни, слегка хвастается и часто сам попадает в нелепое положение. Отшучивается, если его поддели; способен искренне признать ошибку.',voiceURI:''},
+  {name:'Глитч',color:'#ffb45e',avatarId:'glitch',hue:186,description:'Быстрый на язык, замечает нелепости и любит добродушно подкалывать друзей. Иногда спорит из азарта, но умеет неожиданно поддержать собеседника.',voiceURI:''},
+  {name:'Джесси',color:'#ed68f8',avatarId:'jessie',hue:44,description:'Остроумная, наблюдательная, прямолинейная. Не любит напускную серьёзность, задаёт неудобные вопросы и иногда выдаёт неожиданный поворот без длинных объяснений.',voiceURI:''}
 ];
 // Cosmetic character skins. This catalogue is independent from the three dialogue agents.
+const AVATAR_BASE_HUES=[155,186,44];
 const AVATAR_SKINS=[
  {id:'norman',label:'Норман'}, {id:'glitch',label:'Глитч'}, {id:'jessie',label:'Джесси'},
  {id:'volt',label:'Вольт'}, {id:'luna',label:'Луна'}
@@ -742,7 +743,7 @@ function populateVoices(){
  defs.forEach((d,i)=>{const sel=agentCards()[i]?.querySelector('.voice-controls select');if(sel)optionsForVoices(sel,i)});
 }
 const PREF_KEY='triad09';
-function savePrefs(){try{localStorage.setItem(PREF_KEY,JSON.stringify({agents:defs.map(d=>({name:d.name,description:d.description,voiceURI:d.voiceURI,avatarId:d.avatarId,hue:d.hue,kokoroVoice:d.kokoroVoice,kokoroRuVoice:d.kokoroRuVoice,piperVoice:d.piperVoice,sileroVoice:d.sileroVoice,openaudioVoice:d.openaudioVoice,qwen3Voice:d.qwen3Voice })),topic:$('topic').value,sharedGoal:$('sharedGoal').value,showMode:$('showMode').value,voiceEnabled:$('voiceEnabled').checked,ttsBackend:$('ttsBackend').value,rate:$('rate').value,directorEnabled:$('directorEnabled').checked,model:$('model').value,qwen3Size:qwen3Size,kokoroModel:kokoroModel}))}catch(_){}}
+function savePrefs(){try{localStorage.setItem(PREF_KEY,JSON.stringify({avatarHueVersion:2,agents:defs.map(d=>({name:d.name,description:d.description,voiceURI:d.voiceURI,avatarId:d.avatarId,hue:d.hue,kokoroVoice:d.kokoroVoice,kokoroRuVoice:d.kokoroRuVoice,piperVoice:d.piperVoice,sileroVoice:d.sileroVoice,openaudioVoice:d.openaudioVoice,qwen3Voice:d.qwen3Voice })),topic:$('topic').value,sharedGoal:$('sharedGoal').value,showMode:$('showMode').value,voiceEnabled:$('voiceEnabled').checked,ttsBackend:$('ttsBackend').value,rate:$('rate').value,directorEnabled:$('directorEnabled').checked,model:$('model').value,qwen3Size:qwen3Size,kokoroModel:kokoroModel}))}catch(_){}}
 function restorePrefs(){
  try{
   const modern=localStorage.getItem(PREF_KEY),p=JSON.parse(modern||localStorage.getItem('triad08')||localStorage.getItem('triad07')||'{}');
@@ -762,7 +763,11 @@ function restorePrefs(){
        (a.role+(typeof a.goal==='string'&&a.goal.trim()?' '+a.goal:'')).slice(0,900);
      if(typeof a.voiceURI==='string')d.voiceURI=a.voiceURI;
      if(AVATAR_SKINS.some(skin=>skin.id===a.avatarId))d.avatarId=a.avatarId;
-     if(typeof a.hue==='number'&&Number.isFinite(a.hue)&&a.hue>=0&&a.hue<=360)d.hue=Math.round(a.hue);
+     if(typeof a.hue==='number'&&Number.isFinite(a.hue)&&a.hue>=0&&a.hue<=360){
+       const savedHue=Math.round(a.hue);
+       // Before v2 the slider stored a rotation offset from the original character color.
+       d.hue=p.avatarHueVersion===2?savedHue:(AVATAR_BASE_HUES[i]+savedHue)%360;
+     }
      if(kokoroSpeakers.includes(a.kokoroVoice))d.kokoroVoice=a.kokoroVoice;
      if(kokoroRuSpeakers.some(([id])=>id===a.kokoroRuVoice))d.kokoroRuVoice=a.kokoroRuVoice;
      if(piperSpeakers.some(([id])=>id===a.piperVoice))d.piperVoice=a.piperVoice;

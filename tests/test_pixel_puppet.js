@@ -6,6 +6,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const engine = require('../frontend/animation/pixel-puppet-engine.js');
 const adapter = fs.readFileSync(path.join(__dirname, '../frontend/animation/pixel-puppet.js'), 'utf8');
+const pixelCss = fs.readFileSync(path.join(__dirname, '../frontend/animation/pixel-puppet.css'), 'utf8');
 
 test('real engine: 48×48 literal LEDs 0..3, five cosmetic skins and expressions', () => {
   assert.equal(engine.W, 48); assert.equal(engine.H, 48);
@@ -137,21 +138,27 @@ test('three dialogue agents can select cosmetic skins without creating extra age
   assert.deepEqual(h.draws.slice(-3).map(d => d.id), ['volt', 'luna', 'glitch']);
 });
 
-test('each of the three portraits gets an independent CSS hue value', () => {
+test('each of the three portraits gets an independent absolute CSS hue value', () => {
   const h = setup();
   const grids = h.root.querySelectorAll('.pixel-grid');
   assert.equal(grids.length, 3);
-  assert.deepEqual(grids.map(grid => grid.style.getPropertyValue('--avatar-hue')), ['0deg', '0deg', '0deg']);
+  assert.deepEqual(grids.map(grid => grid.style.getPropertyValue('--avatar-hue')), ['155', '186', '44']);
   assert.equal(h.api.setHue(1, 214), true);
-  assert.equal(grids[1].style.getPropertyValue('--avatar-hue'), '214deg');
-  assert.equal(grids[0].style.getPropertyValue('--avatar-hue'), '0deg');
-  assert.equal(grids[2].style.getPropertyValue('--avatar-hue'), '0deg');
+  assert.equal(grids[1].style.getPropertyValue('--avatar-hue'), '214');
+  assert.equal(grids[0].style.getPropertyValue('--avatar-hue'), '155');
+  assert.equal(grids[2].style.getPropertyValue('--avatar-hue'), '44');
   assert.equal(h.api.setHue(1, 999), true);
-  assert.equal(grids[1].style.getPropertyValue('--avatar-hue'), '360deg');
+  assert.equal(grids[1].style.getPropertyValue('--avatar-hue'), '360');
   assert.equal(h.api.setHue(3, 80), false);
   vm.runInContext('defs[0].hue=72', h.ctx);
   h.api.sync();
-  assert.equal(grids[0].style.getPropertyValue('--avatar-hue'), '72deg');
+  assert.equal(grids[0].style.getPropertyValue('--avatar-hue'), '72');
+});
+
+test('CSS hue angle is absolute and matches the rainbow scale', () => {
+  assert.match(pixelCss, /color:\s*hsl\(var\(--avatar-hue/);
+  assert.doesNotMatch(pixelCss, /hue-rotate/);
+  assert.match(pixelCss, /#ff3b3b 0%/);
 });
 
 test('actual audible owner only; RMS buffer reused; true silence and STOP immediately close all mouths', () => {
