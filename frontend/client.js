@@ -1479,6 +1479,10 @@ async function realTurn(c){
   // IDs are marked only after a complete successful turn. Retrying an interrupted
   // request is safe because ConversationStore deduplicates events by event_id.
   for(const event of pendingEvents)state.sentConversationEvents.add(event.event_id);
+  const retainedIds=new Set(state.history.map(event=>event.event_id).filter(Boolean));
+  state.sentConversationEvents=new Set(
+   [...state.sentConversationEvents].filter(id=>retainedIds.has(id))
+  );
  }finally{try{await reader.cancel()}catch(_){}}
 }
 function hostTopicChange(text){
