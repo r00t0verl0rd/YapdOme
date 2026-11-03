@@ -1830,6 +1830,7 @@ async function refreshDonationAlertsStatus(){
    const diagnosticNumber=value=>Number(value||0).toLocaleString('ru-RU');
    $('donationalertsWsMessages').textContent=diagnosticNumber(data.ws_messages_received);
    $('donationalertsPublications').textContent=diagnosticNumber(data.channel_publications_received);
+   $('donationalertsPresence').textContent=diagnosticNumber(data.presence_events_ignored);
    $('donationalertsParsed').textContent=diagnosticNumber(data.donations_parsed);
    $('donationalertsRejected').textContent=diagnosticNumber(data.donations_rejected);
    $('donationalertsLastMessage').textContent='Последнее сообщение WS: '+(data.last_ws_message_at||'ещё не было');
