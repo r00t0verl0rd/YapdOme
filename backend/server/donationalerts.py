@@ -245,7 +245,8 @@ class DonationAlerts:
         self.path = Path(config_path)
         self.lock = threading.RLock()
         self.event_condition = threading.Condition(self.lock)
-        self.event_sequence = 0
+        # Millisecond epoch keeps SSE cursors valid across server restarts.
+        self.event_sequence = int(time.time() * 1000)
         self.stop_event = threading.Event()
         self.thread = None
         self.socket = None
