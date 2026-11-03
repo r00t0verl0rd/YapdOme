@@ -1377,9 +1377,19 @@ async function endTurn(c,success,msg){
   if(c.donation&&state.activeDonation===c.donation){
     const generated=stripDirectives(c.generatedText);
     if(generated&&!isMarker(c.generatedText)){
-      c.donation.responses.push(generated.slice(0,300));
-      c.donation.remaining--;
-      c.donation.acknowledged=true;
+      if(!c.donation.topicChanged){
+        const served=Array.isArray(c.donation.servedAgents)?c.donation.servedAgents:(c.donation.servedAgents=[]);
+        if(!served.includes(c.agent)){
+          served.push(c.agent);
+          c.donation.responses.push(generated.slice(0,300));
+          c.donation.acknowledged=true;
+        }
+        c.donation.remaining=Math.max(0,DONATION_REPLIES-served.length);
+      }else{
+        c.donation.responses.push(generated.slice(0,300));
+        c.donation.remaining--;
+        c.donation.acknowledged=true;
+      }
       if(c.donation.remaining<=0){
         const used=c.donation.responses.length;
         c.donation.item.meta.textContent=
@@ -1390,18 +1400,19 @@ async function endTurn(c,success,msg){
         donationFinished=true;
       }else{
         c.donation.item.meta.textContent='ОБСУЖДАЮТ · осталось '+c.donation.remaining+' реплик';
-        c.donation.nextSpeaker=(c.agent+1)%3;
+        const served=Array.isArray(c.donation.servedAgents)?c.donation.servedAgents:[];
+        const next=[0,1,2].find(index=>!served.includes(index));
+        if(next!==undefined)c.donation.nextSpeaker=next;
       }
     }else{
-      // Repeated marker-only replies must not lock the whole show forever.
+      // A PASS is not a donor reply. Never discard a donation after only one
+      // successful agent: continue with the next agent who has not answered.
       c.donation.emptyReplies=(c.donation.emptyReplies||0)+1;
-      if(c.donation.emptyReplies>=2){
-        c.donation.item.meta.textContent='⚠ МОДЕЛЬ НЕ ДАЛА СОДЕРЖАТЕЛЬНОГО ОТВЕТА';
-        state.activeDonation=null;
-      }else{
-        c.donation.nextSpeaker=(c.agent+1)%3;
-        c.donation.item.meta.textContent='ПУСТОЙ ОТВЕТ · пробуем другого персонажа';
-      }
+      const served=Array.isArray(c.donation.servedAgents)?c.donation.servedAgents:[];
+      c.donation.servedAgents=served;
+      const next=[0,1,2].find(index=>!served.includes(index));
+      if(next!==undefined)c.donation.nextSpeaker=next;
+      c.donation.item.meta.textContent='ПУСТОЙ ОТВЕТ · '+served.length+'/'+DONATION_REPLIES+' · повторяем без потери доната';
     }
     updateDonationBadge();
   }
@@ -1626,7 +1637,26 @@ async function humanMessage(){
 
 // Donations remain in FIFO; viewer topics need a separate AI verdict at 100+.
 const DONATION_REPLIES=3;
+function explicitDonationTopic(text){
+ const value=String(text||'').trim().replace(/[.!?…]+$/u,'').trim();
+ const patterns=[
+  /^(?:поговорите|поговорим|обсудите|обсудим|давайте поговорим|давайте обсудим)\\s+(?:о|об|про)\\s+([\\s\\S]{3,580})$/iu,
+  /^(?:предлагаю обсудить|тема(?: эфира)?\\s*[:—-])\\s*([\\s\\S]{3,580})$/iu
+ ];
+ for(const pattern of patterns){
+  const match=pattern.exec(value);
+  if(!match)continue;
+  const topic=match[1].trim().replace(/[.!?…]+$/u,'').trim();
+  // Explicit topic syntax is deterministic; reject attempts to turn the topic
+  // field into application/system instructions.
+  if(topic.length<3||/(?:игнорируй|раскрой|секрет(?:ы|ов)?|системн\\w* инструкц|api[- ]?ключ|токен|парол|смени\\s+рол|останови\\s+приложен)/iu.test(topic))return null;
+  return topic.slice(0,600);
+ }
+ return null;
+}
 async function reviewDonationTopic(donation){
+ const explicitTopic=explicitDonationTopic(donation.text);
+ if(explicitTopic)return {decision:'topic',topic:explicitTopic};
  const controller=new AbortController(),request_id=requestID();
  const timeout=setTimeout(()=>controller.abort(),15000);
  try{
@@ -1728,7 +1758,7 @@ function enqueueDonationRecord({donor='Аноним',amount=0,text='',currency='
   'DONATIONALERTS · ПОЛУЧЕН · '+(value>=100?'проверим новую тему через ИИ':'3 реплики'):
   'ПРИНЯТ · ждём окончания текущей реплики · '+(value>=100?'проверим новую тему через ИИ':'3 реплики')+' · локальный тест';
  const donation={id:requestID(),donor,text,amount:value,currency,source,remaining:total,total,item,
-                 responses:[],acknowledged:false,nextSpeaker:0};
+                 responses:[],servedAgents:[],acknowledged:false,nextSpeaker:0};
  state.donationQueue.push(donation);updateDonationBadge();
  if(state.running&&!state.current&&!state.activeDonation&&!state.paused&&!state.donationRouting)
    scheduleNext();
@@ -1753,7 +1783,7 @@ function donationMessage(){
  item.body.textContent=value.toFixed(2)+' · '+text;
  item.meta.textContent='ПРИНЯТ · ждём окончания текущей реплики · '+(value>=100?'проверим новую тему через ИИ':'3 реплики')+' · локальный тест';
  const donation={id:requestID(),donor,text,amount:value,currency:'',source:'local',
-                 remaining:total,total,item,responses:[],acknowledged:false,nextSpeaker:0};
+                 remaining:total,total,item,responses:[],servedAgents:[],acknowledged:false,nextSpeaker:0};
  state.donationQueue.push(donation);updateDonationBadge();
  $('donationText').value='';
  // Do not cancel, mute or restart the current speaker. The normal turn
