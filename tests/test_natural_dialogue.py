@@ -122,6 +122,7 @@ class NaturalDialogueTests(unittest.TestCase):
         self.assertTrue(profile_requests_profanity(profile))
         self.assertFalse(profile_requests_profanity("Не матерится, избегает мата."))
         self.assertFalse(profile_requests_profanity("Саркастичный, быстрый и резкий."))
+        self.assertFalse(profile_requests_profanity("Преподаватель математики, любит алгебру."))
 
         instruction = character_profile_instruction("Глитч", profile)
         self.assertIn("ПРОФИЛЬ ПРЯМО ТРЕБУЕТ РУССКИЙ МАТ", instruction)
