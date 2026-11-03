@@ -37,6 +37,34 @@ class DonationAlertsPayloadTests(unittest.TestCase):
         }}}}
         self.assertIsNone(extract_donation(message, "$alerts:donation_42"))
 
+    def test_extracts_legacy_centrifugo_result_envelope(self):
+        channel = "$alerts:donation_42"
+        message = {
+            "result": {
+                "type": 1,
+                "channel": channel,
+                "data": {
+                    "seq": 17,
+                    "data": {
+                        "id": 456,
+                        "name": "donation",
+                        "username": "LegacyViewer",
+                        "message_type": "text",
+                        "message": "Сообщение из старого формата",
+                        "amount": 75,
+                        "currency": "RUB",
+                        "amount_in_user_currency": 75,
+                    },
+                },
+            },
+        }
+        self.assertEqual(
+            extract_donation(message, channel),
+            {"id": "456", "donor": "LegacyViewer", "amount": 75.0,
+             "currency": "RUB", "text": "Сообщение из старого формата",
+             "created_at": ""},
+        )
+
     def test_parser_exposes_safe_rejection_reason(self):
         channel = "$alerts:donation_42"
         message = {"push": {"channel": channel, "pub": {"data": {
