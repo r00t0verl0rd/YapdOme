@@ -52,11 +52,12 @@ class ConversationCoreTests(unittest.TestCase):
         self.assertIn("не выдумывай реальные воспоминания", initial.lower())
         self.assertIn("запомни этот базовый контекст на весь эфир", initial.lower())
         self.assertIn("Отвечай по-русски", meta["turn_policy"])
+        self.assertIn("ИНДИВИДУАЛЬНЫЙ ГОЛОС", meta["turn_policy"])
         self.assertNotIn("ЖИВОЙ СТУДИЙНЫЙ РАЗГОВОР", meta["turn_policy"])
         self.assertNotIn("ФОРМАТ СВОБОДНОЙ БЕСЕДЫ", meta["turn_policy"])
-        self.assertNotIn("не выдумывай реальные воспоминания", meta["turn_policy"])
+        self.assertNotIn("не выдавай выдуманные", meta["turn_policy"])
         self.assertNotIn("ИНДИВИДУАЛЬНЫЙ ПРОФИЛЬ", meta["turn_policy"])
-        self.assertLess(len(meta["turn_policy"]), 150)
+        self.assertLess(len(meta["turn_policy"]), 350)
 
         # Later turns receive only changed/new events plus compact dynamic hints.
         server.session_meta = meta
@@ -103,10 +104,12 @@ class ConversationCoreTests(unittest.TestCase):
             server._session_snapshot(second),
         )
         self.assertIn("СЕЙЧАС ГОВОРИТ: Глитч", prompt)
-        self.assertIn("Используй именно его постоянный характер", prompt)
-        for profile in profiles:
-            self.assertNotIn(profile["description"], prompt)
-        self.assertNotIn("русский мат в большинстве реплик", prompt)
+        self.assertIn("ИНДИВИДУАЛЬНЫЙ ПРОФИЛЬ ТЕКУЩЕГО ГОВОРЯЩЕГО", prompt)
+        self.assertIn(profiles[1]["description"], prompt)
+        self.assertIn("ПРОФИЛЬ ПРЯМО ТРЕБУЕТ РУССКИЙ МАТ", prompt)
+        self.assertIn("В большинстве обычных неформальных реплик", prompt)
+        self.assertNotIn(profiles[0]["description"], prompt)
+        self.assertNotIn(profiles[2]["description"], prompt)
 
     def test_codex_rehydrates_full_context_once_after_confirmed_compaction(self):
         server = CodexAppServer()
