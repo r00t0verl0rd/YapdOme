@@ -1742,7 +1742,7 @@ function donationMessage(){
  }
  const cents=Math.round(amount*100),value=cents/100;
  const donor=($('donor').value.trim()||'Аноним').slice(0,32)
-   .replace(/[\\u202a-\\u202e\\u2066-\\u2069<>]/g,'');
+   .replace(/[\u202a-\u202e\u2066-\u2069<>]/g,'');
  const text=$('donationText').value.trim().slice(0,600)||
    'Спасибо за поддержку! Передаю привет всем участникам.';
  if(state.donationQueue.length>=256){
