@@ -111,6 +111,37 @@ class ConversationCoreTests(unittest.TestCase):
         self.assertNotIn(profiles[0]["description"], prompt)
         self.assertNotIn(profiles[2]["description"], prompt)
 
+    def test_codex_closes_temporary_donation_branch_and_restores_main_topic(self):
+        server = CodexAppServer()
+        data = {
+            "agent_name": "Глитч", "agent": 1,
+            "agents": ["Норман", "Глитч", "Джесси"], "cast_profiles": [],
+            "topic": "Будущее человечества", "shared_goal": "Живой разговор",
+            "show_mode": "live", "language": "ru", "turns": 12,
+            "history": [], "conversation_history": [],
+            "post_donation_name": "Гогомол",
+            "post_donation_topic_changed": False,
+        }
+        meta = server._session_snapshot(data)
+        server.session_meta = meta
+        prompt, _ = server._build_turn_prompt(
+            {"agent_name": "Глитч", "history": []}, meta
+        )
+        self.assertIn("ДОНАТНЫЙ ЭПИЗОД ЗАВЕРШЁН", prompt)
+        self.assertIn("временной боковой веткой", prompt)
+        self.assertIn("Не продолжай GTA, игры", prompt)
+        self.assertIn('"Будущее человечества"', prompt)
+        self.assertIn("Подхвати последнюю мысль обычного разговора", prompt)
+
+        promoted = {**data, "topic": "GTA 6", "post_donation_topic_changed": True}
+        promoted_meta = server._session_snapshot(promoted)
+        server.session_meta = meta
+        prompt, _ = server._build_turn_prompt(
+            {"agent_name": "Глитч", "history": []}, promoted_meta
+        )
+        self.assertIn("предложение зрителя было принято как новая основная тема", prompt)
+        self.assertIn('"GTA 6"', prompt)
+
     def test_codex_rehydrates_full_context_once_after_confirmed_compaction(self):
         server = CodexAppServer()
         profiles = [
