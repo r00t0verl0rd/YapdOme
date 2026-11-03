@@ -52,6 +52,23 @@ test('0 and 99.99 enter the three-reply scene without an AI review',async()=>{
   assert.equal(h.donation.remaining,3);assert.equal(h.fields.topic.value,'Старая тема');
  }
 });
+test('an 80 RUB GTA suggestion stays temporary and ends after three agent replies',async()=>{
+ const h=harness({amount:80});
+ h.donation.text='Что вы думаете о выходе GTA 6?';
+ await h.context.activateNextDonation();
+ assert.equal(h.calls.length,0,'under-100 donations must not ask to change the main topic');
+ assert.equal(h.fields.topic.value,'Старая тема');
+ assert.equal(h.donation.remaining,3);
+ for(const agent of [1,2,0]){
+  const turn={agent,ticket:agent+40,text:'Ответ о GTA 6.',generatedText:'Ответ о GTA 6.',
+   donation:h.donation,item:{el:{classList:{remove(){}},remove(){}},meta:{textContent:''}}};
+  h.state.current=turn;await h.context.endTurn(turn,true,'Готово');
+ }
+ assert.equal(h.fields.topic.value,'Старая тема','the main show topic must not become GTA 6');
+ assert.deepEqual(h.donation.servedAgents,[1,2,0]);
+ assert.equal(h.donation.responses.length,3);
+ assert.equal(h.state.activeDonation,null);
+});
 test('a clear high-value topic request changes the main topic without relying on a model verdict',async()=>{
  const h=harness({amount:150});h.donation.text='Поговорите о будущем автомобилестроения';
  await h.context.activateNextDonation();
