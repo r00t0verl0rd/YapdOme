@@ -62,6 +62,9 @@ def _parse_donation_publication(message, channel):
     if push.get("channel") != channel:
         return None, "сообщение пришло не из канала донатов"
     publication = push.get("pub") or push.get("publication")
+    if publication is None:
+        # Legacy Centrifugo v2 wraps the publication directly in result.
+        publication = push
     if not isinstance(publication, dict):
         return None, "в публикации отсутствует объект pub/publication"
     data = publication.get("data")
