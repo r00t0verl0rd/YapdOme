@@ -703,6 +703,7 @@ class Handler(BaseHTTPRequestHandler):
                     "director_plan": proposed,
                     "donation_context": donation,
                     "post_donation_name": data.get("post_donation_name"),
+                    "post_donation_topic_changed": data.get("post_donation_topic_changed") is True,
                     "history": history,
                     "conversation_history": history
                 }
