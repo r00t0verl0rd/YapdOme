@@ -65,7 +65,7 @@ test('an 80 RUB GTA suggestion stays temporary and ends after three agent replie
   h.state.current=turn;await h.context.endTurn(turn,true,'Готово');
  }
  assert.equal(h.fields.topic.value,'Старая тема','the main show topic must not become GTA 6');
- assert.deepEqual(h.donation.servedAgents,[1,2,0]);
+ assert.deepEqual(Array.from(h.donation.servedAgents),[1,2,0]);
  assert.equal(h.donation.responses.length,3);
  assert.equal(h.state.activeDonation,null);
 });
@@ -108,7 +108,7 @@ test('100+ approved topic donations change the main topic but still require thre
   assert.equal(h.donation.remaining,Math.max(0,2-[1,2,0].indexOf(agent)));
   assert.equal(h.state.activeDonation,agent===0?null:h.donation);
  }
- assert.deepEqual(h.donation.servedAgents,[1,2,0]);
+ assert.deepEqual(Array.from(h.donation.servedAgents),[1,2,0]);
  assert.equal(h.donation.responses.length,3);
  assert.match(h.donation.item.meta.textContent,/3 реплики/);
 });
