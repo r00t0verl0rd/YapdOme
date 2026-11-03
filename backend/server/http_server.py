@@ -228,7 +228,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def donationalerts_event_stream(self):
         """Push DonationAlerts events to the browser without periodic HTTP polling."""
-        raw_cursor = self.headers.get("Last-Event-ID", "0")
+        query = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+        raw_cursor = self.headers.get("Last-Event-ID") or (query.get("lastEventId") or ["0"])[0]
         try:
             cursor = max(0, int(raw_cursor or 0))
         except ValueError:
