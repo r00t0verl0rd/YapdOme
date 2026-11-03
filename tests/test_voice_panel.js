@@ -100,7 +100,7 @@ test('background status polling is throttled and hidden tabs do not fetch',()=>{
  assert.match(code,/setInterval\(refreshDonationAlertsStatus,15000\)/);
  assert.match(code,/if\(document\.hidden\|\|donationStatusInFlight\)return/);
  assert.match(code,/addon\.statusRequest/);
- assert.match(code,/addon\.state\.installation\?\.running\?1500:15000/);
+ assert.match(code,/addon\.state\.installation\?\.running\|\|addon\.state\.status==='starting'\?1500:15000/);
  assert.match(code,/if\(!document\.hidden&&\(selected===addon\.key/);
  assert.match(code,/document\.addEventListener\('visibilitychange'/);
  assert.doesNotMatch(code,/setInterval\(refreshDonationAlertsStatus,5000\)/);
