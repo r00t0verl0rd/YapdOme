@@ -124,7 +124,7 @@ YapdOme can receive new DonationAlerts donations on the local computer. The inte
 3. Request the scopes `oauth-user-show` and `oauth-donation-subscribe`.
 4. In YapdOme open the DonationAlerts settings, enter the application's Client ID and Client Secret, press **Подключить DonationAlerts**, and approve access in the browser.
 
-Client credentials and OAuth tokens are stored in `~/.triad-dialogue/donationalerts.json` with owner-only file permissions. They are not sent to the browser or written to the repository. The local Python process maintains the Centrifugo WebSocket connection and forwards new donation events into the existing FIFO donation queue.
+Client credentials and OAuth tokens are stored in `~/.triad-dialogue/donationalerts.json` with owner-only file permissions. They are not sent to the browser or written to the repository. The local Python process maintains the Centrifugo WebSocket connection and forwards new donation events into the existing FIFO donation queue. The DonationAlerts panel also shows live diagnostics: incoming WebSocket message count after subscription, matching channel publications, parsed donations, rejected publications, timestamps, and the last parser rejection reason. Diagnostics store counters and short structural reasons only; raw WebSocket payloads, donation messages, and credentials are not logged or retained.
 
 To disconnect and erase the locally stored DonationAlerts credentials and tokens, use **Отключить** in YapdOme. The existing manual local-donation test remains available independently.
 
