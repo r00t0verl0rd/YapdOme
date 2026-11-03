@@ -1,6 +1,10 @@
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
-from backend.server.donationalerts import extract_donation
+from backend.server.donationalerts import (
+    DonationAlerts, _parse_donation_publication, extract_donation,
+)
 
 
 class DonationAlertsPayloadTests(unittest.TestCase):
@@ -32,6 +36,30 @@ class DonationAlertsPayloadTests(unittest.TestCase):
             "amount": 1, "currency": "RUB",
         }}}}
         self.assertIsNone(extract_donation(message, "$alerts:donation_42"))
+
+    def test_parser_exposes_safe_rejection_reason(self):
+        channel = "$alerts:donation_42"
+        message = {"push": {"channel": channel, "pub": {"data": {
+            "id": 123, "name": "donation",
+        }}}}
+        donation, reason = _parse_donation_publication(message, channel)
+        self.assertIsNone(donation)
+        self.assertEqual(reason, "amount отсутствует или не является числом")
+
+    def test_runtime_diagnostic_counters_are_exposed(self):
+        with TemporaryDirectory() as folder:
+            client = DonationAlerts(config_path=Path(folder) / "donationalerts.json")
+            client._record_ws_message()
+            client._record_ws_message(channel_publication=True)
+            client._record_publication_result(None, "нет amount")
+            client._record_publication_result({"id": "123"}, "")
+            status = client.status()
+            client.close()
+        self.assertEqual(status["ws_messages_received"], 2)
+        self.assertEqual(status["channel_publications_received"], 1)
+        self.assertEqual(status["donations_parsed"], 1)
+        self.assertEqual(status["donations_rejected"], 1)
+        self.assertEqual(status["last_rejection_reason"], "нет amount")
 
     def test_rejects_non_donation_or_invalid_amount(self):
         channel = "$alerts:donation_42"
