@@ -95,3 +95,14 @@ test('all local TTS retain their status, paths, install and worker controls',()=
  assert.match(html,/Путь к модели не требуется/);
  assert.doesNotMatch(code,/updateTTSUI\s*\(/,'removed Qwen updater cannot break selection');
 });
+
+test('background status polling is throttled and hidden tabs do not fetch',()=>{
+ assert.match(code,/setInterval\(refreshDonationAlertsStatus,15000\)/);
+ assert.match(code,/if\(document\.hidden\|\|donationStatusInFlight\)return/);
+ assert.match(code,/addon\.statusRequest/);
+ assert.match(code,/addon\.state\.installation\?\.running\?1500:15000/);
+ assert.match(code,/if\(!document\.hidden&&\(selected===addon\.key/);
+ assert.match(code,/document\.addEventListener\('visibilitychange'/);
+ assert.doesNotMatch(code,/setInterval\(refreshDonationAlertsStatus,5000\)/);
+ assert.doesNotMatch(code,/addon\.state\.installation\?\.running\?1200:6000/);
+});
