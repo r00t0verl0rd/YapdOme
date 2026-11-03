@@ -65,7 +65,15 @@ def _shape_summary(value, label="data", depth=0):
         if name and all(ch.isalnum() or ch in "_-" for ch in name):
             safe_keys.append(name)
     parts = [label + " keys=[" + ",".join(safe_keys) + "]"]
-    if depth < 2:
+    scalar_types = []
+    for key in keys[:24]:
+        child = value.get(key)
+        if child is None or isinstance(child, (str, int, float, bool)):
+            scalar_types.append(_safe_text(key, 24) + ":" +
+                                ("null" if child is None else type(child).__name__))
+    if scalar_types:
+        parts.append(label + " scalar_types=[" + ",".join(scalar_types) + "]")
+    if depth < 3:
         for key in keys[:12]:
             child = value.get(key)
             child_label = _safe_text(key, 24)
@@ -107,8 +115,9 @@ def _parse_donation_publication(message, channel):
     # channel plus required donation fields are the reliable discriminator.
     raw_id = data.get("id")
     if raw_id is None or str(raw_id).strip() == "":
-        shape = "; ".join(_shape_summary(data))
-        return None, "в донате отсутствует id; " + shape
+        # Show only envelope keys and scalar types; never log payload values.
+        shape = "; ".join(_shape_summary(push, "push"))
+        return None, "в публикации не найден id; " + shape
     try:
         amount = float(data.get("amount"))
     except (TypeError, ValueError):
