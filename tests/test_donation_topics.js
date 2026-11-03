@@ -16,7 +16,7 @@ function harness({amount=100,verdict={decision:'topic',topic:'Жизнь на М
   coreEvent:async(kind)=>{routes.push(kind);return {accepted:true,status:'RUNNING',kind:'normal',next_agent:1};},
   applyCore:s=>{state.core=s;},updateDonationBadge:()=>{},cancelDirector:()=>{},scheduleNext:()=>scheduled.push(true),claimNext:()=>scheduled.push('claim'),
   fitTopicField:()=>{},savePrefs:()=>{},resetSocialFocus:()=>{},updateScienceUI:()=>{},system:()=>{},
-  stopTimer:()=>{},isMarker:()=>false,stripDirectives:s=>s,
+  stopTimer:()=>{},isMarker:s=>String(s||'').trim()==='[[PASS]]',stripDirectives:s=>s,
   defs:[{name:'Альфа'},{name:'Бета'},{name:'Гамма'}],requestDirector:()=>{},engineError:e=>{throw e;}};
  vm.createContext(context);
  vm.runInContext(code.slice(code.indexOf('const DONATION_REPLIES='),code.indexOf('function donationMessage(')),context);
@@ -66,7 +66,7 @@ test('two empty model replies do not discard a low-value donation after one agen
  h.state.current=makeTurn(2,'[[PASS]]');await h.context.endTurn(h.state.current,true,'Готово');
  assert.equal(h.state.activeDonation,h.donation);
  assert.equal(h.donation.remaining,2);
- assert.equal(h.donation.nextSpeaker,2);
+ assert.equal(h.donation.nextSpeaker,1);
 });
 test('100 changes the persistent topic after approval and waits for an audible reply before the next donor',async()=>{
  const h=harness();await h.context.activateNextDonation();
