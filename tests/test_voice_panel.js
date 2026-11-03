@@ -34,7 +34,7 @@ function harness(){
  ];
  const activation=[],warmups=[],save=[],cardRenders=[];
  const context={
-  $:id=>nodes[id],defs,kokoroModel:'ru',
+  $:id=>nodes[id],defs,kokoroModel:'ru',qwen3VoicesLoaded:false,loadQwen3Voices:()=>{},
   addons:addons.map(x=>({...x})),
   engineHints:{piper:'Piper',silero:'Silero',kokoro:'Kokoro','qwen3-tts':'Qwen3','openaudio-s1-mini':'OpenAudio',browser:'macOS'},
   activateVoiceEngine:key=>activation.push(key),
