@@ -155,7 +155,7 @@ test('queued low-value donations each receive exactly three distinct agent repli
 });
 test('GTA donation stays queued until the third reply finishes audibly',async()=>{
  const h=harness({amount:5});loadQueueStatus(h);
- const first=h.donation;first.text='здарова';first.responses=['1','2'];first.remaining=1;
+ const first=h.donation;first.text='здарова';first.responses=['1','2'];first.servedAgents=[1,2];first.remaining=1;
  const gta={id:'gta-donation',amount:5,text:'а что насчёт гта 6?',donor:'Зритель',total:3,remaining:3,
   responses:[],acknowledged:false,item:{meta:{textContent:''}}};
  h.state.activeDonation=first;h.state.donationQueue=[gta];
