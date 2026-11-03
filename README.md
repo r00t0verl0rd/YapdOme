@@ -113,3 +113,19 @@ node --test $(rg --files tests -g '*.js' -g '!test_dashboard_layout.js')
 Проверка раскладки требует Playwright, Chromium и запущенного сервера:
 `node tests/test_dashboard_layout.js http://127.0.0.1:13180`.
 Тесты OpenAudio используют локальные фикстуры и не скачивают веса.
+
+
+## DonationAlerts
+
+YapdOme can receive new DonationAlerts donations on the local computer. The integration uses the official OAuth authorization-code flow and DonationAlerts Centrifugo channel; no public webhook or remote server is required.
+
+1. Register an OAuth application at [DonationAlerts applications](https://www.donationalerts.com/application/clients).
+2. Set its redirect URI to the exact address displayed in YapdOme (by default `http://127.0.0.1:13180/donationalerts/callback`). If `TRIAD_PORT` is customized, use the port shown by the application.
+3. Request the scopes `oauth-user-show` and `oauth-donation-subscribe`.
+4. In YapdOme open the DonationAlerts settings, enter the application's Client ID and Client Secret, press **Подключить DonationAlerts**, and approve access in the browser.
+
+Client credentials and OAuth tokens are stored in `~/.triad-dialogue/donationalerts.json` with owner-only file permissions. They are not sent to the browser or written to the repository. The local Python process maintains the Centrifugo WebSocket connection and forwards new donation events into the existing FIFO donation queue.
+
+To disconnect and erase the locally stored DonationAlerts credentials and tokens, use **Отключить** in YapdOme. The existing manual local-donation test remains available independently.
+
+Official reference: [DonationAlerts API documentation](https://www.donationalerts.com/apidoc).

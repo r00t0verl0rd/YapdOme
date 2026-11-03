@@ -25,6 +25,7 @@ from .llm import BridgeError, json_request, sse_events
 from .provider_adapters import get_http_adapter
 from .codex import CODEX, CodexError
 from .conversation_policy import build_turn_policy
+from .donationalerts import DonationAlerts, DonationAlertsError
 from .conversation import (
     ConversationStore, discussion_frame, social_focus_instructions, live_requested_voice,
     live_topic_guide, character_style, scene_mode, science_phase, science_protocol,
@@ -84,6 +85,7 @@ def register_call(request_id):
 
 STATE = None
 ENGINE = None
+DONATIONALERTS = None
 CONVERSATION_CORE = ConversationStore()
 
 class Server(ThreadingHTTPServer):
@@ -170,6 +172,8 @@ class Handler(BaseHTTPRequestHandler):
         if not self.guard():
             return
         path = urllib.parse.urlparse(self.path)
+        if path.path == "/donationalerts/callback":
+            return self.donationalerts_callback(path.query)
         if path.path == "/auth/callback":
             return self.auth_callback(path.query)
         if path.path in ("/", "/index.html", "/client.js", "/style.css", "/hud-reference.css", "/hud-reference.js",
@@ -191,6 +195,10 @@ class Handler(BaseHTTPRequestHandler):
             status = STATE.status()
             status.update(CODEX.status())
             return self.send_json(200, status)
+        if path.path == "/api/donationalerts/status":
+            return self.send_json(200, DONATIONALERTS.status())
+        if path.path == "/api/donationalerts/events":
+            return self.send_json(200, {"events": DONATIONALERTS.pop_events()})
         if path.path == "/api/engine":
             return self.send_json(200, ENGINE.event("tick"))
         if path.path.startswith("/api/voice/") and path.path.endswith("/status"):
@@ -216,6 +224,18 @@ class Handler(BaseHTTPRequestHandler):
                 return self.error(502, str(exc))
         return self.error(404, "Нет такого адреса")
 
+    def donationalerts_callback(self, rawquery):
+        try:
+            DONATIONALERTS.finish_oauth(urllib.parse.parse_qs(rawquery))
+            target = "/?donationalerts=connected"
+        except (DonationAlertsError, ValueError, OSError) as exc:
+            DONATIONALERTS.set_error(str(exc))
+            target = "/?donationalerts=error"
+        self.send_response(303)
+        self.send_header("Location", target)
+        self.headers_common("text/plain; charset=utf-8", 0)
+        self.end_headers()
+
     def auth_callback(self, rawquery):
         try:
             STATE.finish_auth(urllib.parse.parse_qs(rawquery))
@@ -234,6 +254,15 @@ class Handler(BaseHTTPRequestHandler):
         path = urllib.parse.urlparse(self.path).path
         try:
             data = self.data(8_100_000 if path == "/api/voice/openaudio-s1-mini/reference" else 100_000)
+            if path == "/api/donationalerts/connect":
+                try:
+                    result = DONATIONALERTS.connect(data.get("client_id", ""), data.get("client_secret", ""))
+                    return self.send_json(200, result)
+                except DonationAlertsError as exc:
+                    return self.error(400, str(exc))
+            if path == "/api/donationalerts/disconnect":
+                DONATIONALERTS.disconnect()
+                return self.send_json(200, {"disconnected": True})
             if path == "/api/qwen3/voices":
                 try:
                     return self.send_json(200, {"voice": QWEN3_VOICES.create(data)})
@@ -856,9 +885,10 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
-    global STATE, ENGINE
+    global STATE, ENGINE, DONATIONALERTS
     ENGINE = Engine()  # Fail closed: без тихого переключения на JS-планирование
     STATE = State()
+    DONATIONALERTS = DonationAlerts(HOST, PORT)
     # Add-on models load only when selected in the browser, not simultaneously.
     try:
         with Server((HOST, PORT), Handler) as server:
@@ -868,6 +898,8 @@ def main():
         print(f"Не могу запустить сервер на {HOST}:{PORT}: {exc}. Закрой старую версию TRIAD.", flush=True)
         raise SystemExit(1)
     finally:
+        if DONATIONALERTS is not None:
+            DONATIONALERTS.close()
         for addon in ADDONS.values():
             addon.stop()
         ENGINE.close()

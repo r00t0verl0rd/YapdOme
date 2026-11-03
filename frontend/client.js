@@ -1704,34 +1704,122 @@ async function activateNextDonation(){
     scheduleNext();
  }
 }
+const seenDonationAlertIds=new Set();
+function enqueueDonationRecord({donor='Аноним',amount=0,text='',currency='',source='local',externalId=''}={}){
+ if(externalId){
+  const key=String(externalId);
+  if(seenDonationAlertIds.has(key))return false;
+  seenDonationAlertIds.add(key);
+  if(seenDonationAlertIds.size>2000)seenDonationAlertIds.delete(seenDonationAlertIds.values().next().value);
+ }
+ if(state.donationQueue.length>=256){
+  system('Очередь донатов заполнена (256). Новый донат записан, но не поставлен в очередь.');return false;
+ }
+ const value=Math.round(Number(amount)*100)/100;
+ if(!Number.isFinite(value)||value<0||value>1000000)return false;
+ donor=String(donor||'Аноним').slice(0,32).replace(/[\u202a-\u202e\u2066-\u2069<>]/g,'');
+ text=String(text||'Спасибо за поддержку! Передаю привет всем участникам.').slice(0,600);
+ currency=String(currency||'').slice(0,8).replace(/[^A-Z]/gi,'');
+ const total=DONATION_REPLIES;
+ const item=feedItem('⚡ ДОНАТ · '+donor,null,'donation');
+ item.body.textContent=value.toFixed(2)+(currency?' '+currency:'')+' · '+text;
+ const fromAlerts=source==='donationalerts';
+ item.meta.textContent=fromAlerts?
+  'DONATIONALERTS · ПОЛУЧЕН · '+(value>=100?'проверим новую тему через ИИ':'3 реплики'):
+  'ПРИНЯТ · ждём окончания текущей реплики · '+(value>=100?'проверим новую тему через ИИ':'3 реплики')+' · локальный тест';
+ const donation={id:requestID(),donor,text,amount:value,currency,source,remaining:total,total,item,
+                 responses:[],acknowledged:false,nextSpeaker:0};
+ state.donationQueue.push(donation);updateDonationBadge();
+ if(state.running&&!state.current&&!state.activeDonation&&!state.paused&&!state.donationRouting)
+   scheduleNext();
+ return true;
+}
 function donationMessage(){
  if(!state.running||state.stopping){system('Донат можно добавить во время эфира.');return;}
  const input=$('donationAmount'),raw=input.value.trim().replace(',','.'),amount=Number(raw);
  if(raw===''||!Number.isFinite(amount)||amount<0||amount>1000000){
    system('Неверная сумма доната: укажи число от 0 до 1 000 000.');return;
  }
- const cents=Math.round(amount*100),value=cents/100;
- const donor=($('donor').value.trim()||'Аноним').slice(0,32)
-   .replace(/[\u202a-\u202e\u2066-\u2069<>]/g,'');
- const text=$('donationText').value.trim().slice(0,600)||
-   'Спасибо за поддержку! Передаю привет всем участникам.';
- if(state.donationQueue.length>=256){
-   system('Очередь донатов заполнена (256). Отправка не принята — попробуй позже.');return;
- }
- const total=DONATION_REPLIES;
- const item=feedItem('⚡ ДОНАТ · '+donor,null,'donation');
- item.body.textContent=value.toFixed(2)+' · '+text;
- item.meta.textContent='ПРИНЯТ · ждём окончания текущей реплики · '+(value>=100?'проверим новую тему через ИИ':'3 реплики')+' · локальный тест';
- const donation={id:requestID(),donor,text,amount:value,remaining:total,total,item,
-                 responses:[],acknowledged:false,nextSpeaker:0};
- state.donationQueue.push(donation);updateDonationBadge();
-
+ const donor=$('donor').value.trim()||'Аноним';
+ const text=$('donationText').value.trim()||'Спасибо за поддержку! Передаю привет всем участникам.';
+ enqueueDonationRecord({donor,amount,text,source:'local'});
  $('donationText').value='';
- // Do not cancel, mute or restart the current speaker. The normal turn
- // completion unlocks this FIFO. If already idle, claimNext performs routing.
- if(!state.current&&!state.activeDonation&&!state.paused&&!state.donationRouting)
-   scheduleNext();
 }
+// DonationAlerts is polled locally; its WebSocket listener itself lives in Python.
+let donationAlertsPollBusy=false;
+async function pollDonationAlertsEvents(){
+ if(donationAlertsPollBusy)return;
+ donationAlertsPollBusy=true;
+ try{
+  const response=await fetch('/api/donationalerts/events',{cache:'no-store'});
+  if(!response.ok)throw Error('HTTP '+response.status);
+  const data=await response.json();
+  for(const event of (Array.isArray(data.events)?data.events:[])){
+   enqueueDonationRecord({donor:event.donor,amount:event.amount,text:event.text,
+    currency:event.currency,source:'donationalerts',externalId:event.id});
+  }
+ }catch(_){
+  // The local server may be starting or stopping; status polling will show the error.
+ }finally{donationAlertsPollBusy=false;}
+}
+async function refreshDonationAlertsStatus(){
+ try{
+  const response=await fetch('/api/donationalerts/status',{cache:'no-store'});
+  if(!response.ok)throw Error('HTTP '+response.status);
+  const data=await response.json();
+  const status=$('donationalertsStatus'),button=$('donationalertsConnect'),disconnect=$('donationalertsDisconnect');
+  if(data.client_id&&!$('donationalertsClientId').value)$('donationalertsClientId').value=data.client_id;
+  if(data.redirect_uri)$('donationalertsRedirectUri').textContent=data.redirect_uri;
+  status.textContent=data.connected?'● DONATIONALERTS · ПОДКЛЮЧЁН'+(data.username?' · '+data.username:''):
+   data.authorized?'◌ DONATIONALERTS · АВТОРИЗОВАН · ПОДКЛЮЧЕНИЕ…':
+   data.client_id?'○ DONATIONALERTS · НЕ ПОДКЛЮЧЁН · НАЖМИ «ПОДКЛЮЧИТЬ»':
+   '○ DONATIONALERTS · НЕ НАСТРОЕН';
+  status.classList.toggle('is-connected',!!data.connected);
+  disconnect.hidden=!data.authorized&&!data.client_id;
+  if(data.last_error)$('donationalertsNote').textContent='DonationAlerts: '+data.last_error;
+  else if(data.connected)$('donationalertsNote').textContent='Новые донаты автоматически попадают в очередь YapdOme.';
+  button.textContent=data.connected?'DonationAlerts подключён':'Подключить DonationAlerts';
+ }catch(err){
+  $('donationalertsStatus').textContent='DonationAlerts · локальный сервер недоступен';
+ }
+}
+$('donationalertsConnect').onclick=async()=>{
+ const button=$('donationalertsConnect'),popup=window.open('about:blank','_blank');
+ button.disabled=true;
+ try{
+  const response=await fetch('/api/donationalerts/connect',{method:'POST',
+   headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({client_id:$('donationalertsClientId').value.trim(),
+                        client_secret:$('donationalertsClientSecret').value})});
+  const data=await response.json();
+  if(!response.ok)throw Error(data.error||'Не удалось начать авторизацию');
+  $('donationalertsClientSecret').value='';
+  $('donationalertsRedirectUri').textContent=data.redirect_uri;
+  $('donationalertsNote').textContent='Открой DonationAlerts и разреши подключение YapdOme.';
+  if(popup)popup.location.replace(data.url);
+  else window.location.assign(data.url);
+ }catch(err){
+  if(popup)popup.close();
+  $('donationalertsNote').textContent=err.message;
+  $('donationalertsSettings').open=true;
+ }finally{button.disabled=false;refreshDonationAlertsStatus();}
+};
+$('donationalertsDisconnect').onclick=async()=>{
+ const button=$('donationalertsDisconnect');button.disabled=true;
+ try{
+  const response=await fetch('/api/donationalerts/disconnect',{method:'POST',
+   headers:{'Content-Type':'application/json'},body:'{}'});
+  const data=await response.json();
+  if(!response.ok)throw Error(data.error||'Не удалось отключить DonationAlerts');
+  $('donationalertsClientId').value='';$('donationalertsClientSecret').value='';
+  $('donationalertsNote').textContent='DonationAlerts отключён. Локальные токены удалены.';
+  refreshDonationAlertsStatus();
+ }catch(err){$('donationalertsNote').textContent=err.message;}
+ finally{button.disabled=false;}
+};
+pollDonationAlertsEvents();refreshDonationAlertsStatus();
+setInterval(pollDonationAlertsEvents,1200);
+setInterval(refreshDonationAlertsStatus,5000);
 // If OpenAI doesn't produce any new text for 18s, leave this speaker and
 // let C schedule another one. A successful reply resets the failure counter.
 setInterval(async()=>{

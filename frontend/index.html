@@ -109,6 +109,23 @@
     <section class="panel inputpanel donations" aria-label="Донат зрителя">
       <div class="panel-overline"><span class="signal-dot pink"></span> ЗРИТЕЛИ / ОЧЕРЕДЬ ДОНАТОВ <span class="panel-index">03</span></div>
 
+      <div class="donationalerts-connect">
+        <div class="donationalerts-topline">
+          <span id="donationalertsStatus" class="donationalerts-status">DonationAlerts · проверка подключения…</span>
+          <button id="donationalertsConnect" class="primary" type="button">Подключить DonationAlerts</button>
+          <button id="donationalertsDisconnect" type="button" hidden>Отключить</button>
+        </div>
+        <details id="donationalertsSettings" class="donationalerts-settings">
+          <summary>Настроить приложение DonationAlerts</summary>
+          <p class="field-tip">Создай OAuth-приложение в DonationAlerts и укажи этот адрес как Redirect URI. Запрашиваются только права просмотра профиля и получения новых донатов.</p>
+          <label>Client ID<input id="donationalertsClientId" type="text" maxlength="80" autocomplete="off" placeholder="ID приложения"></label>
+          <label>Client Secret<input id="donationalertsClientSecret" type="password" maxlength="512" autocomplete="new-password" placeholder="Секрет приложения"></label>
+          <div class="donationalerts-redirect"><span>Redirect URI</span><code id="donationalertsRedirectUri">http://127.0.0.1:13180/donationalerts/callback</code></div>
+          <p class="field-tip">Client Secret и токены сохраняются только на этом компьютере. Не публикуй их и не отправляй в чат.</p>
+        </details>
+        <p id="donationalertsNote" class="field-tip" aria-live="polite">Для Twitch-трансляции YapdOme получает донаты напрямую от DonationAlerts; захват экрана не требуется.</p>
+      </div>
+
       <div class="input-row donation-fields">
         <label class="donation-amount"><span>СУММА</span><input id="donationAmount" type="number" min="0" max="1000000" step="0.01" value="5" inputmode="decimal" aria-label="Сумма доната"></label>
         <label class="donation-name"><span>ИМЯ</span><input id="donor" type="text" maxlength="32" value="Зритель" aria-label="Имя отправителя доната" placeholder="Имя" class="donorname"></label>
