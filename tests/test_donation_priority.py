@@ -6,6 +6,7 @@ from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from backend.server.http_server import Handler
 from backend.controls.host import agent_identity
+from backend.server.conversation_policy import build_turn_policy
 from backend.controls.donations import donation_context, donation_scene_instructions
 from backend.server.llm import BridgeError
 from backend.engine import Engine
@@ -101,15 +102,14 @@ class DonationTests(unittest.TestCase):
         self.assertIn("donation_context",js)
         self.assertNotIn("'Спасибо, '+donation.donor",js)
 
-    def test_regular_stream_gives_persona_clear_priority(self):
-        from backend.controls.host import persona_priority_instructions
-        directive=persona_priority_instructions("Резкий скептик, говорит коротко")
-        self.assertIn("Ни один ориентир не является второстепенной справкой",directive)
-        self.assertIn("одинаково обязательны",directive)
-        self.assertIn("РАВНЫЙ ПРИОРИТЕТ С ТЕМОЙ",directive)
-        self.assertIn("требования безопасности",directive)
-        self.assertIn("используй их регулярно и естественно",directive)
-        self.assertIn("безликой вежливой манере ИИ",directive)
+    def test_regular_stream_injects_the_active_persona_profile(self):
+        directive=build_turn_policy(
+            1,"Глитч",["Норман","Глитч","Джесси"],"Будущее человечества",
+            4,[],persona_description="Резкий скептик, короткий сарказм и русский мат."
+        )
+        self.assertIn("ИНДИВИДУАЛЬНЫЙ ПРОФИЛЬ ТЕКУЩЕГО ГОВОРЯЩЕГО",directive)
+        self.assertIn("Резкий скептик",directive)
+        self.assertIn("ПРОФИЛЬ ПРЯМО ТРЕБУЕТ РУССКИЙ МАТ",directive)
 
     def test_donation_scene_progresses_not_repeats_thanks(self):
         donation={"name":"Клоп","amount":50,"text":"Здарова пацаны",
@@ -119,22 +119,22 @@ class DonationTests(unittest.TestCase):
         self.assertIn("ПЕРВАЯ РЕПЛИКА",first)
         self.assertIn("Не начинай с шаблонной благодарности",first)
         self.assertNotIn("УЖЕ добавляет начало",first)
-        self.assertIn("если это приветствие — явно поприветствуй в ответ",first)
-        self.assertIn("РАВНЫЙ ПРИОРИТЕТ С ТЕМОЙ",first)
-        self.assertIn("не отбрасывай ни один",first)
+        self.assertIn("сначала нормально поздоровайся в ответ",first)
+        self.assertIn("Каждый донат — отдельный мини-эпизод",first)
+        self.assertIn("Обычный донат не меняет основную тему ведущего",first)
         donation.update(first=False,remaining=2,covered=["Привет, рады видеть!"])
         second=donation_scene_instructions(donation,"Кизаро","Скептик",
                                            ["Лимур","Кизаро","Овелито"])
         self.assertIn("ВТОРАЯ РЕПЛИКА",second)
-        self.assertIn("естественно",second)
+        self.assertIn("реагируй на мысль предыдущего агента",second)
         self.assertIn("Клоп",second)
         self.assertIn("если это явно женское имя",second)
         self.assertIn("не называй её «брат»",second)
         self.assertIn("избегай гендерно окрашенных",second)
         self.assertIn("примерно 1–3 предложения",first)
-        self.assertIn("не пиши за них",first)
+        self.assertIn("Не пиши реплики за других агентов",first)
         self.assertIn("метку говорящего",first)
-        self.assertIn("РАВНЫЙ ПРИОРИТЕТ С ТЕМОЙ",second)
+        self.assertIn("не сливай сообщения разных зрителей",second)
         self.assertNotIn("ПЕРВЫЙ ОТВЕТ",second)
 
     def test_extra_donation_history_is_bounded(self):
