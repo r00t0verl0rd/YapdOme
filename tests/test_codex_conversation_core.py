@@ -49,7 +49,7 @@ class ConversationCoreTests(unittest.TestCase):
         initial = server._initial_brief(meta)
         self.assertIn("одна общая беседа трёх персонажей", initial)
         self.assertIn("[[TO:Имя]]", initial)
-        self.assertIn("не выдумывай реальные воспоминания", initial.lower())
+        self.assertIn("не выдавай выдуманные личные воспоминания", initial.lower())
         self.assertIn("запомни этот базовый контекст на весь эфир", initial.lower())
         self.assertIn("Отвечай по-русски", meta["turn_policy"])
         self.assertIn("ИНДИВИДУАЛЬНЫЙ ГОЛОС", meta["turn_policy"])
