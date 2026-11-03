@@ -1816,7 +1816,10 @@ function connectDonationAlertsStream(){
   // EventSource reconnects automatically and resumes from Last-Event-ID.
  };
 }
+let donationStatusInFlight=false;
 async function refreshDonationAlertsStatus(){
+ if(document.hidden||donationStatusInFlight)return;
+ donationStatusInFlight=true;
  try{
   const response=await fetch('/api/donationalerts/status',{cache:'no-store'});
   if(!response.ok)throw Error('HTTP '+response.status);
@@ -1844,7 +1847,7 @@ async function refreshDonationAlertsStatus(){
   button.textContent=data.connected?'DonationAlerts подключён':'Подключить DonationAlerts';
  }catch(err){
   $('donationalertsStatus').textContent='DonationAlerts · локальный сервер недоступен';
- }
+ }finally{donationStatusInFlight=false;}
 }
 $('donationalertsConnect').onclick=async()=>{
  const button=$('donationalertsConnect'),popup=window.open('about:blank','_blank');
@@ -1882,6 +1885,13 @@ $('donationalertsDisconnect').onclick=async()=>{
 };
 connectDonationAlertsStream();refreshDonationAlertsStatus();
 setInterval(refreshDonationAlertsStatus,15000);
+document.addEventListener('visibilitychange',()=>{
+ if(document.hidden)return;
+ refreshDonationAlertsStatus();
+ const selected=kokoroBackendKey();
+ const addon=addons.find(item=>item.key===selected);
+ if(addon)refreshAddon(addon);
+});
 document.addEventListener('visibilitychange',()=>{
  if(document.hidden)return;
  refreshDonationAlertsStatus();
@@ -2210,14 +2220,16 @@ async function refreshAddon(addon){
  if(document.hidden)return;
  if(addon.statusRequest)return addon.statusRequest;
  addon.statusRequest=(async()=>{
- try{
-  const r=await fetch('/api/voice/'+addon.key+'/status',{cache:'no-store'});
-  if(!r.ok)throw Error('HTTP '+r.status);
-  renderAddonStatus(addon,await r.json());
- }catch(err){
-  addon.state.ready=false;
-  $(addon.id+'Status').textContent='Ошибка проверки состояния: '+err.message;
- }
+  try{
+   const r=await fetch('/api/voice/'+addon.key+'/status',{cache:'no-store'});
+   if(!r.ok)throw Error('HTTP '+r.status);
+   renderAddonStatus(addon,await r.json());
+  }catch(err){
+   addon.state.ready=false;
+   $(addon.id+'Status').textContent='Ошибка проверки состояния: '+err.message;
+  }
+ })();
+ try{return await addon.statusRequest;}finally{addon.statusRequest=null;}
 }
 for(const addon of addons){
  const id=addon.id,route='/api/voice/'+addon.key;
@@ -2250,11 +2262,10 @@ for(const addon of addons){
    $(id+'Error').textContent=err.message;
   }finally{$(id+'Restart').disabled=false;}
  };
- let initial=true;
  async function poll(){
-  if(initial||$('ttsBackend').value===addon.key||addon.state.installation?.running||addon.state.status==='starting')await refreshAddon(addon);
-  initial=false;
-  setTimeout(poll,addon.state.installation?.running?1200:6000);
+  const selected=kokoroBackendKey();
+  if(!document.hidden&&(selected===addon.key||addon.state.installation?.running||addon.state.status==='starting'))await refreshAddon(addon);
+  setTimeout(poll,addon.state.installation?.running?1500:15000);
  }
  poll();
 }
