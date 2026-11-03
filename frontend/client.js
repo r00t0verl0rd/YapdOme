@@ -1740,10 +1740,26 @@ function donationMessage(){
  if(raw===''||!Number.isFinite(amount)||amount<0||amount>1000000){
    system('Неверная сумма доната: укажи число от 0 до 1 000 000.');return;
  }
- const donor=$('donor').value.trim()||'Аноним';
- const text=$('donationText').value.trim()||'Спасибо за поддержку! Передаю привет всем участникам.';
- enqueueDonationRecord({donor,amount,text,source:'local'});
+ const cents=Math.round(amount*100),value=cents/100;
+ const donor=($('donor').value.trim()||'Аноним').slice(0,32)
+   .replace(/[\\u202a-\\u202e\\u2066-\\u2069<>]/g,'');
+ const text=$('donationText').value.trim().slice(0,600)||
+   'Спасибо за поддержку! Передаю привет всем участникам.';
+ if(state.donationQueue.length>=256){
+   system('Очередь донатов заполнена (256). Отправка не принята — попробуй позже.');return;
+ }
+ const total=DONATION_REPLIES;
+ const item=feedItem('⚡ ДОНАТ · '+donor,null,'donation');
+ item.body.textContent=value.toFixed(2)+' · '+text;
+ item.meta.textContent='ПРИНЯТ · ждём окончания текущей реплики · '+(value>=100?'проверим новую тему через ИИ':'3 реплики')+' · локальный тест';
+ const donation={id:requestID(),donor,text,amount:value,currency:'',source:'local',
+                 remaining:total,total,item,responses:[],acknowledged:false,nextSpeaker:0};
+ state.donationQueue.push(donation);updateDonationBadge();
  $('donationText').value='';
+ // Do not cancel, mute or restart the current speaker. The normal turn
+ // completion unlocks this FIFO. If already idle, claimNext performs routing.
+ if(!state.current&&!state.activeDonation&&!state.paused&&!state.donationRouting)
+   scheduleNext();
 }
 // DonationAlerts is polled locally; its WebSocket listener itself lives in Python.
 let donationAlertsPollBusy=false;
