@@ -32,6 +32,7 @@ jobs:
           python -m unittest discover -s tests -p 'test_ai_director.py' -v
           python -m unittest discover -s tests -p 'test_director_boundaries.py' -v
           python -m unittest discover -s tests -p 'test_natural_dialogue.py' -v
+          python -m unittest discover -s tests -p 'test_donation_priority.py' -v
       - name: Engine controller and social routing tests
         run: |
           python -m unittest discover -s tests -p 'test_engine_controller.py' -v
