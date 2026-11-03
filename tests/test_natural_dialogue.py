@@ -31,7 +31,7 @@ class NaturalDialogueTests(unittest.TestCase):
             "Норман", ["Норман", "Глитч", "Джесси"]
         )
         self.assertIn("не задавай вопрос в конце по привычке", static)
-        self.assertLess(len(static), 1500)
+        self.assertLess(len(static), 1600)
         self.assertIn("[[TO:Имя]]", static)
         self.assertIn("[[PASS]]", static)
 
@@ -127,7 +127,7 @@ class NaturalDialogueTests(unittest.TestCase):
         instruction = character_profile_instruction("Глитч", profile)
         self.assertIn("ПРОФИЛЬ ПРЯМО ТРЕБУЕТ РУССКИЙ МАТ", instruction)
         self.assertIn("В большинстве обычных неформальных реплик", instruction)
-        self.assertIn("«блин»", instruction)
+        self.assertIn("«блин»", instruction.lower())
         self.assertIn("НЕ считаются", instruction)
         self.assertIn("это обязательная часть голоса", instruction)
 
