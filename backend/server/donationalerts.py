@@ -40,37 +40,43 @@ def _safe_text(value, limit):
                    "\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069")[:limit].strip()
 
 
-def extract_donation(message, channel):
-    """Преобразует публикацию Centrifugo в нейтральную запись доната."""
+def _parse_donation_publication(message, channel):
+    """Возвращает (донат, причина отказа); не сохраняет исходное сообщение."""
     if not isinstance(message, dict):
-        return None
+        return None, "входящее сообщение не является объектом"
     push = message.get("push") if isinstance(message.get("push"), dict) else message
     if push.get("channel") != channel:
-        return None
-    publication = push.get("pub") or push.get("publication") or {}
+        return None, "сообщение пришло не из канала донатов"
+    publication = push.get("pub") or push.get("publication")
     if not isinstance(publication, dict):
-        return None
-    data = publication.get("data") or push.get("data") or {}
+        return None, "в публикации отсутствует объект pub/publication"
+    data = publication.get("data")
+    if data is None:
+        data = push.get("data")
     if not isinstance(data, dict):
-        return None
-    nested = data.get("donation") or data.get("data")
-    if isinstance(nested, dict):
+        return None, "в публикации отсутствует объект data"
+    nested = data.get("donation")
+    if nested is None:
+        nested = data.get("data")
+    if nested is not None:
+        if not isinstance(nested, dict):
+            return None, "вложенное поле donation/data не является объектом"
         data = nested
     name = data.get("name")
     if name not in (None, "", "donation"):
-        return None
+        return None, "публикация относится не к типу donation"
     raw_id = data.get("id")
-    username = _safe_text(data.get("username") or data.get("donor") or "Аноним", 32)
-    text = _safe_text(data.get("message") or "", 600)
-    currency = _safe_text(data.get("currency") or "", 8).upper()
+    if raw_id is None or str(raw_id).strip() == "":
+        return None, "в донате отсутствует id"
     try:
         amount = float(data.get("amount"))
     except (TypeError, ValueError):
-        return None
+        return None, "amount отсутствует или не является числом"
     if not (0 <= amount <= 1_000_000):
-        return None
-    if raw_id is None:
-        return None
+        return None, "amount вне допустимого диапазона 0–1 000 000"
+    username = _safe_text(data.get("username") or data.get("donor") or "Аноним", 32)
+    text = _safe_text(data.get("message") or "", 600)
+    currency = _safe_text(data.get("currency") or "", 8).upper()
     return {
         "id": str(raw_id),
         "donor": username or "Аноним",
@@ -78,7 +84,13 @@ def extract_donation(message, channel):
         "currency": currency,
         "text": text or "Спасибо за поддержку!",
         "created_at": _safe_text(data.get("created_at") or "", 32),
-    }
+    }, ""
+
+
+def extract_donation(message, channel):
+    """Совместимый публичный интерфейс парсера: None или нормализованный донат."""
+    donation, _reason = _parse_donation_publication(message, channel)
+    return donation
 
 
 class _WebSocket:
@@ -224,6 +236,14 @@ class DonationAlerts:
         self.username = ""
         self.last_error = ""
         self.last_event_at = ""
+        # Счётчики относятся к входящему потоку после подтверждения подписки.
+        self.ws_messages_received = 0
+        self.channel_publications_received = 0
+        self.donations_parsed = 0
+        self.donations_rejected = 0
+        self.last_ws_message_at = ""
+        self.last_publication_at = ""
+        self.last_rejection_reason = ""
         self.events = deque(maxlen=200)
         self.seen_ids = deque(maxlen=2000)
         self.seen_set = set()
@@ -275,8 +295,35 @@ class DonationAlerts:
                 "last_error": self.last_error,
                 "last_event_at": self.last_event_at,
                 "queued_events": len(self.events),
+                "ws_messages_received": self.ws_messages_received,
+                "channel_publications_received": self.channel_publications_received,
+                "donations_parsed": self.donations_parsed,
+                "donations_rejected": self.donations_rejected,
+                "last_ws_message_at": self.last_ws_message_at,
+                "last_publication_at": self.last_publication_at,
+                "last_rejection_reason": self.last_rejection_reason,
                 "auth_pending": bool(self.pending_state and time.time() - self.pending_created < 600),
             }
+
+    def _record_ws_message(self, channel_publication=False):
+        """Фиксирует только счётчики и время — без тела WS-сообщения."""
+        now = time.strftime("%Y-%m-%d %H:%M:%S")
+        with self.lock:
+            self.ws_messages_received += 1
+            self.last_ws_message_at = now
+            if channel_publication:
+                self.channel_publications_received += 1
+                self.last_publication_at = now
+
+    def _record_publication_result(self, donation, reason=""):
+        with self.lock:
+            if donation is not None:
+                self.donations_parsed += 1
+            else:
+                self.donations_rejected += 1
+                self.last_rejection_reason = (
+                    _safe_text(reason, 140) or "неизвестная причина отклонения"
+                )
 
     def set_error(self, message):
         with self.lock:
@@ -523,8 +570,19 @@ class DonationAlerts:
                 except socket.timeout:
                     ws.ping()
                     continue
-                message = json.loads(raw)
-                donation = extract_donation(message, channel)
+                # Это сообщения уже после handshake и подписки на канал.
+                try:
+                    message = json.loads(raw)
+                except (TypeError, ValueError):
+                    self._record_ws_message()
+                    continue
+                push = message.get("push") if isinstance(message, dict) and isinstance(message.get("push"), dict) else message
+                is_channel_publication = isinstance(push, dict) and push.get("channel") == channel
+                self._record_ws_message(channel_publication=is_channel_publication)
+                if not is_channel_publication:
+                    continue
+                donation, reason = _parse_donation_publication(message, channel)
+                self._record_publication_result(donation, reason)
                 if donation:
                     self._push_event(donation)
         finally:
