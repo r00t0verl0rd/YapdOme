@@ -36,7 +36,7 @@ function stripSpeakerLabels(raw){
  const names=(defs||[]).map(agent=>agent.name).filter(Boolean)
   .map(name=>name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'));
  if(!names.length)return String(raw||'').trim();
- const labels=new RegExp('(^|[\s,;])(?:'+names.join('|')+')\s*[:：]\s*','giu');
+ const labels=new RegExp('(^|[\\s,;])(?:'+names.join('|')+')\\s*[:：]\\s*','giu');
  return String(raw||'').replace(labels,'$1').replace(/\s+/g,' ').trim();
 }
 function stripDirectives(raw){
