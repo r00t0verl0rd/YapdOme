@@ -89,12 +89,14 @@ class DonationAlertsPayloadTests(unittest.TestCase):
         self.assertEqual(status["donations_rejected"], 1)
         self.assertEqual(status["last_rejection_reason"], "нет amount")
 
-    def test_rejects_non_donation_or_invalid_amount(self):
+    def test_donation_channel_does_not_require_resource_name_but_rejects_invalid_amount(self):
         channel = "$alerts:donation_42"
+        # The private channel identifies the event type; real publications may
+        # omit the resource name entirely.
+        self.assertIsNotNone(extract_donation({"push": {"channel": channel,
+            "pub": {"data": {"id": 1, "amount": 5}}}}, channel))
         self.assertIsNone(extract_donation({"push": {"channel": channel,
-            "pub": {"data": {"id": 1, "name": "subscription", "amount": 5}}}}, channel))
-        self.assertIsNone(extract_donation({"push": {"channel": channel,
-            "pub": {"data": {"id": 1, "name": "donation", "amount": "invalid"}}}}, channel))
+            "pub": {"data": {"id": 1, "amount": "invalid"}}}}, channel))
 
 
 if __name__ == "__main__":
