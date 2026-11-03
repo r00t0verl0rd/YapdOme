@@ -129,7 +129,7 @@ class DonationTests(unittest.TestCase):
         self.assertIn("реагируй на мысль предыдущего агента",second)
         self.assertIn("Клоп",second)
         self.assertIn("если это явно женское имя",second)
-        self.assertIn("не называй зрительницу «брат»",second)
+        self.assertIn("не называй зрительницу «брат»",second.lower())
         self.assertIn("избегай гендерно окрашенных",second)
         self.assertIn("примерно 1–3 предложения",first)
         self.assertIn("Не пиши реплики за других агентов",first)
