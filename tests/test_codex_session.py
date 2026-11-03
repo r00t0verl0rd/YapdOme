@@ -115,7 +115,7 @@ class CodexSessionTests(unittest.TestCase):
         self.assertIn("Не задавай вопрос автоматически", first)
         self.assertIn("Добавляй свой ракурс", first)
         self.assertIn("не заканчивай каждый ход вопросом", first.lower())
-        self.assertIn("Юмор допустим, но не обязателен", first)
+        self.assertIn("Юмор, сленг и грубоватая лексика уместны", first)
         self.assertIn("Не копируй последнюю реплику", first)
         self.assertNotIn("В живом режиме ищи новые ракурсы", second,
                          "the permanent live brief must not be repeated per turn")
