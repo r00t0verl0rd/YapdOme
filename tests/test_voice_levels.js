@@ -71,18 +71,17 @@ test('inactive TTS stops polling while selected, installing and starting engines
  const polling=code.slice(start,code.indexOf('\nsyncVoicePanel();',start));
  const addons=['kokoro','kokoro-ru','piper','silero'].map(key=>({key,id:key,state:{status:'stopped'}}));
  const nodes={ttsBackend:{value:'browser'}},calls=[],timers=[];
- const context={addons,$:id=>nodes[id]||(nodes[id]={dataset:{}}),
+ const context={addons,kokoroModel:'ru',document:{hidden:false},$:id=>nodes[id]||(nodes[id]={dataset:{}}),
   refreshAddon:async addon=>calls.push(addon.key),setTimeout:fn=>timers.push(fn)};
  const tick=()=>new Promise(setImmediate);
  vm.runInNewContext(polling,context);
- await tick();assert.equal(calls.length,4);
- calls.length=0;
+ await tick();assert.equal(calls.length,0,'inactive engines are not fetched at startup');
  for(const fn of timers.splice(0))fn();
  await tick();assert.equal(calls.length,0);
  nodes.ttsBackend.value='kokoro';
  addons[1].state.installation={running:true};addons[2].state.status='starting';
  for(const fn of timers.splice(0))fn();
- await tick();assert.deepEqual(calls,['kokoro','kokoro-ru','piper']);
+ await tick();assert.deepEqual(calls,['kokoro-ru','piper']);
  calls.length=0;
  nodes.ttsBackend.value='browser';addons[1].state.installation.running=false;addons[2].state.status='stopped';
  for(const fn of timers.splice(0))fn();
