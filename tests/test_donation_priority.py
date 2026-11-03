@@ -57,7 +57,7 @@ class DonationTests(unittest.TestCase):
           "donation_context":{"name":"Даша","text":"А какую песню любите?",
                               "amount":50,"remaining":3,"first":True}
         }
-        with patch("backend.server.http_server.register_call",side_effect=RequestBoundary):
+        with patch("backend.server.http_server._llm_provider",return_value="codex"), patch("backend.server.http_server.register_call",side_effect=RequestBoundary):
             with self.assertRaises(RequestBoundary):
                 Handler.stream(object(),info)
 
@@ -114,7 +114,7 @@ class DonationTests(unittest.TestCase):
     def test_donation_scene_progresses_not_repeats_thanks(self):
         donation={"name":"Клоп","amount":50,"text":"Здарова пацаны",
                   "first":True,"remaining":1,"covered":[]}
-        first=donation_scene_instructions(donation,"Лимур","Добрый шутник",
+        first=donation_scene_instructions(donation,"Лимур",
                                            ["Лимур","Кизаро","Овелито"])
         self.assertIn("ПЕРВАЯ РЕПЛИКА",first)
         self.assertIn("Не начинай с шаблонной благодарности",first)
@@ -123,7 +123,7 @@ class DonationTests(unittest.TestCase):
         self.assertIn("Каждый донат — отдельный мини-эпизод",first)
         self.assertIn("Обычный донат не меняет основную тему ведущего",first)
         donation.update(first=False,remaining=2,covered=["Привет, рады видеть!"])
-        second=donation_scene_instructions(donation,"Кизаро","Скептик",
+        second=donation_scene_instructions(donation,"Кизаро",
                                            ["Лимур","Кизаро","Овелито"])
         self.assertIn("ВТОРАЯ РЕПЛИКА",second)
         self.assertIn("реагируй на мысль предыдущего агента",second)
