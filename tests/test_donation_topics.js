@@ -143,12 +143,12 @@ test('queued low-value donations each receive exactly three distinct agent repli
  assert.equal(h.state.activeDonation,second,'second donation starts only after first is complete');
  assert.equal(h.state.donationQueue.length,0,'FIFO head is removed exactly once');
  assert.deepEqual(h.routes,['complete','priority_donation']);
- for(const agent of [1,2,0]){
+ for(const agent of [1,0,2]){
   h.state.current=makeTurn(second,agent);
   await h.context.endTurn(h.state.current,true,'Готово');
  }
  assert.equal(second.responses.length,3);
- assert.deepEqual(second.servedAgents,[1,2,0]);
+ assert.deepEqual(second.servedAgents,[1,0,2]);
  assert.equal(second.remaining,0);
  assert.equal(h.state.activeDonation,null);
  assert.match(second.item.meta.textContent,/3 реплики/);
