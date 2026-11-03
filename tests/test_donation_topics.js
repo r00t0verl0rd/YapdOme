@@ -45,6 +45,29 @@ test('0 and 99.99 enter the three-reply scene without an AI review',async()=>{
   assert.equal(h.donation.remaining,3);assert.equal(h.fields.topic.value,'Старая тема');
  }
 });
+test('a clear high-value topic request changes the main topic without relying on a model verdict',async()=>{
+ const h=harness({amount:150});h.donation.text='Поговорите о будущем автомобилестроения';
+ await h.context.activateNextDonation();
+ assert.equal(h.calls.length,0);
+ assert.equal(h.fields.topic.value,'будущем автомобилестроения');
+ assert.equal(h.donation.topicChanged,true);
+ assert.equal(h.donation.remaining,1);
+});
+test('two empty model replies do not discard a low-value donation after one agent answered',async()=>{
+ const h=harness({amount:50});await h.context.activateNextDonation();
+ const makeTurn=(agent,generated)=>({agent,ticket:agent+10,text:generated,generatedText:generated,
+  donation:h.donation,item:{el:{classList:{remove(){}},remove(){}},meta:{textContent:''}}});
+ h.donation.servedAgents=[0];h.donation.responses=['Единственный ответ'];h.donation.remaining=2;
+ h.state.activeDonation=h.donation;h.donation.nextSpeaker=1;
+ h.state.current=makeTurn(1,'[[PASS]]');await h.context.endTurn(h.state.current,true,'Готово');
+ assert.equal(h.state.activeDonation,h.donation);
+ assert.equal(h.donation.remaining,2);
+ assert.equal(h.donation.nextSpeaker,2);
+ h.state.current=makeTurn(2,'[[PASS]]');await h.context.endTurn(h.state.current,true,'Готово');
+ assert.equal(h.state.activeDonation,h.donation);
+ assert.equal(h.donation.remaining,2);
+ assert.equal(h.donation.nextSpeaker,2);
+});
 test('100 changes the persistent topic after approval and waits for an audible reply before the next donor',async()=>{
  const h=harness();await h.context.activateNextDonation();
  assert.equal(h.calls.length,1);assert.equal(h.calls[0].amount,100);
