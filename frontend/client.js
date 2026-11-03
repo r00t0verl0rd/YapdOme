@@ -1641,8 +1641,8 @@ const DONATION_REPLIES=3;
 function explicitDonationTopic(text){
  const value=String(text||'').trim().replace(/[.!?…]+$/u,'').trim();
  const patterns=[
-  /^(?:поговорите|поговорим|обсудите|обсудим|давайте поговорим|давайте обсудим)\s+(?:о|об|про)\s+([\s\\S]{3,580})$/iu,
-  /^(?:предлагаю обсудить|тема(?: эфира)?\s*[:—-])\s*([\s\\S]{3,580})$/iu
+  /^(?:поговорите|поговорим|обсудите|обсудим|давайте поговорим|давайте обсудим)\s+(?:о|об|про)\s+([\s\S]{3,580})$/iu,
+  /^(?:предлагаю обсудить|тема(?: эфира)?\s*[:—-])\s*([\s\S]{3,580})$/iu
  ];
  for(const pattern of patterns){
   const match=pattern.exec(value);
