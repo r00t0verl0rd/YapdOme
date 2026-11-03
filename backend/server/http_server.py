@@ -242,14 +242,14 @@ class Handler(BaseHTTPRequestHandler):
             while True:
                 events = DONATIONALERTS.events_since(cursor, timeout=15)
                 if not events:
-                    self.wfile.write(b": keep-alive\\n\\n")
+                    self.wfile.write(b": keep-alive\n\n")
                     self.wfile.flush()
                     continue
                 for event_id, payload in events:
-                    frame = ("id: " + str(event_id) + "\\n" +
-                             "event: donation\\n" +
+                    frame = ("id: " + str(event_id) + "\n" +
+                             "event: donation\n" +
                              "data: " + json.dumps(payload, ensure_ascii=False,
-                                                   separators=(",", ":")) + "\\n\\n")
+                                                   separators=(",", ":")) + "\n\n")
                     self.wfile.write(frame.encode("utf-8"))
                     self.wfile.flush()
                     cursor = event_id
