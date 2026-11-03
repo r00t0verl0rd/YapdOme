@@ -9,7 +9,7 @@ from backend.server.llm import BridgeError
 from backend.controls.host import live_memory_context
 from backend.controls.donations import donation_scene_instructions
 from backend.server.conversation import (
-    agreement_streak, character_profile_instruction, recurring_motifs,
+    agreement_streak, character_profile_instruction, profile_requests_profanity, recurring_motifs,
 )
 
 
@@ -21,14 +21,17 @@ class NaturalDialogueTests(unittest.TestCase):
         self.assertIn("не описывай студию и жесты", brief)
         self.assertIn("метафоры не превращай", brief)
         self.assertIn("не повторяй исчерпанные мысли", brief)
-        self.assertLess(len(brief), 700)
+        self.assertIn("гипотетические бытовые примеры", brief)
+        self.assertIn("не заканчивай каждый ответ вопросом", brief)
+        self.assertLess(len(brief), 1000)
         self.assertNotIn("сценарист бесконечной сценки", brief)
 
     def test_static_live_policy_is_compact_and_dynamic_guidance_is_conditional(self):
         static = triad.character_style("live") + triad.turn_protocol(
             "Норман", ["Норман", "Глитч", "Джесси"]
         )
-        self.assertLess(len(static), 1100)
+        self.assertIn("не задавай вопрос в конце по привычке", static)
+        self.assertLess(len(static), 1500)
         self.assertIn("[[TO:Имя]]", static)
         self.assertIn("[[PASS]]", static)
 
@@ -113,6 +116,33 @@ class NaturalDialogueTests(unittest.TestCase):
         self.assertIn("ОБЯЗАТЕЛЕН НА КАЖДОМ ХОДУ", profile)
         self.assertIn("русский мат", profile)
         self.assertIn("не перенимай манеру других двух персонажей", profile)
+
+    def test_character_profile_profanity_is_an_explicit_per_turn_requirement(self):
+        profile = "Глитч язвительный и матерится, использует русский мат."
+        self.assertTrue(profile_requests_profanity(profile))
+        self.assertFalse(profile_requests_profanity("Не матерится, избегает мата."))
+        self.assertFalse(profile_requests_profanity("Саркастичный, быстрый и резкий."))
+
+        instruction = character_profile_instruction("Глитч", profile)
+        self.assertIn("ПРОФИЛЬ ПРЯМО ТРЕБУЕТ РУССКИЙ МАТ", instruction)
+        self.assertIn("В большинстве обычных неформальных реплик", instruction)
+        self.assertIn("«блин»", instruction)
+        self.assertIn("НЕ считаются", instruction)
+        self.assertIn("это обязательная часть голоса", instruction)
+
+    def test_donation_dialogue_allows_agent_to_agent_reactions_after_greeting(self):
+        donation = {"name": "Кеке", "text": "Здарова пацаны", "amount": 60,
+                    "first": True, "remaining": 3, "covered": []}
+        first = donation_scene_instructions(donation, "Норман", ["Норман", "Глитч", "Джесси"])
+        self.assertIn("сначала нормально поздоровайся в ответ", first)
+        self.assertIn("не превращай приветствие в натянутую метафору", first)
+        self.assertIn("не подменяй его разговором о теме эфира", first)
+        self.assertIn("Во второй и третьей", first)
+
+        donation.update(first=False, remaining=2, covered=["Привет, Кеке!"])
+        second = donation_scene_instructions(donation, "Глитч", ["Норман", "Глитч", "Джесси"])
+        self.assertIn("реагируй на мысль предыдущего агента", second)
+        self.assertIn("Не изображай, будто каждый агент заново отвечает", second)
 
     def test_recurring_joke_motifs_are_named_as_loop_avoidance(self):
         lines = [
