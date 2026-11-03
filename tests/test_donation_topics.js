@@ -33,6 +33,13 @@ test('a stalled engine control request aborts instead of locking the control que
  assert.equal(timers[0].delay,12000);timers[0].fn();
  await assert.rejects(pending,{name:'AbortError'});
 });
+test('internal web citation tokens are removed from spoken output',()=>{
+ const context={};vm.createContext(context);
+ vm.runInContext(code.slice(code.indexOf('function stripDirectives('),code.indexOf('const state = {')),context);
+ assert.equal(context.stripDirectives('Игра выйдет позже. citeturn0search0 И это всё.'),
+  'Игра выйдет позже. И это всё.');
+ assert.equal(context.stripDirectives('Факт 【turn0search0】 проверен.'),'Факт проверен.');
+});
 test('model output has agent-name speaker labels removed before display or speech',()=>{
  const context={defs:[{name:'Норман'},{name:'Глитч'},{name:'Джесси'}]};vm.createContext(context);
  vm.runInContext(code.slice(code.indexOf('function stripSpeakerLabels('),code.indexOf('function stripDirectives(')),context);
@@ -51,7 +58,8 @@ test('a clear high-value topic request changes the main topic without relying on
  assert.equal(h.calls.length,0);
  assert.equal(h.fields.topic.value,'будущем автомобилестроения');
  assert.equal(h.donation.topicChanged,true);
- assert.equal(h.donation.remaining,1);
+ assert.equal(h.donation.remaining,3);
+ assert.equal(h.donation.total,3);
 });
 test('two empty model replies do not discard a low-value donation after one agent answered',async()=>{
  const h=harness({amount:50});await h.context.activateNextDonation();
@@ -68,13 +76,24 @@ test('two empty model replies do not discard a low-value donation after one agen
  assert.equal(h.donation.remaining,2);
  assert.equal(h.donation.nextSpeaker,1);
 });
-test('100 changes the persistent topic after approval and waits for an audible reply before the next donor',async()=>{
+test('100+ approved topic donations change the main topic but still require three distinct replies',async()=>{
  const h=harness();await h.context.activateNextDonation();
  assert.equal(h.calls.length,1);assert.equal(h.calls[0].amount,100);
  assert.equal(h.fields.topic.value,'Жизнь на Марсе');assert.equal(h.state.journal.length,0);
  assert.equal(h.state.history.length,1);assert.match(h.state.history[0].text,/Жизнь на Марсе/);
  assert.equal(h.state.activeDonation,h.donation);assert.equal(h.donation.topicChanged,true);
+ assert.equal(h.donation.remaining,3);assert.equal(h.donation.total,3);
  assert.equal(h.state.donationRouting,false);
+ for(const agent of [1,2,0]){
+  const turn={agent,ticket:agent+30,text:'Ответ по новой теме.',generatedText:'Ответ по новой теме.',
+   donation:h.donation,item:{el:{classList:{remove(){}},remove(){}},meta:{textContent:''}}};
+  h.state.current=turn;await h.context.endTurn(turn,true,'Готово');
+  assert.equal(h.donation.remaining,Math.max(0,2-[1,2,0].indexOf(agent)));
+  assert.equal(h.state.activeDonation,agent===0?null:h.donation);
+ }
+ assert.deepEqual(h.donation.servedAgents,[1,2,0]);
+ assert.equal(h.donation.responses.length,3);
+ assert.match(h.donation.item.meta.textContent,/3 реплики/);
 });
 test('rejected, malformed and unavailable reviews fall back to three replies without changing topic',async()=>{
  for(const options of [{verdict:{decision:'chat'}},{verdict:{decision:'topic',topic:''}},{failure:true}]){
