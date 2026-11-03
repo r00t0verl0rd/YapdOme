@@ -124,6 +124,18 @@
           <p class="field-tip">Client Secret и токены сохраняются только на этом компьютере. Не публикуй их и не отправляй в чат.</p>
         </details>
         <p id="donationalertsNote" class="field-tip" aria-live="polite">Для Twitch-трансляции YapdOme получает донаты напрямую от DonationAlerts; захват экрана не требуется.</p>
+        <details class="donationalerts-diagnostics" open>
+          <summary>Диагностика входящего потока</summary>
+          <div class="donationalerts-diagnostic-grid">
+            <div><span>WS-сообщений</span><strong id="donationalertsWsMessages">0</strong></div>
+            <div><span>Публикаций канала</span><strong id="donationalertsPublications">0</strong></div>
+            <div><span>Распознано донатов</span><strong id="donationalertsParsed">0</strong></div>
+            <div><span>Отклонено публикаций</span><strong id="donationalertsRejected">0</strong></div>
+          </div>
+          <p id="donationalertsLastMessage" class="donationalerts-diagnostic-note">Последнее сообщение WS: ещё не было</p>
+          <p id="donationalertsLastPublication" class="donationalerts-diagnostic-note">Последняя публикация канала: ещё не было</p>
+          <p id="donationalertsLastRejection" class="donationalerts-diagnostic-reason">Последняя причина отклонения: —</p>
+        </details>
       </div>
 
       <div class="input-row donation-fields">
