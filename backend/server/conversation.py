@@ -72,17 +72,19 @@ def social_focus_instructions(data, agent, peers, mode):
 
 
 def profile_requests_profanity(description):
-    """Detect an affirmative request for real profanity in this character voice."""
+    """Detect an affirmative request for real profanity without matching mathematics."""
     value = str(description or "").casefold().replace("ё", "е")
+    word = r"(?:мат(?:ом|а|у|е|ы)?|матер\\w*|ненорматив\\w*)" 
     negative = (
-        r"\bне\s+(?:матер\w*|руг\w*ся)|"
-        r"\bне\s+(?:использу\w*|употребля\w*|говор\w*|руга\w*)[^.!?]{0,24}\bмат\w*|"
-        r"\bбез\s+(?:русск\w+\s+)?мат\w*|"
-        r"\bизбега\w*\s+(?:русск\w+\s+)?мат\w*"
+        r"\\bне\\s+(?:матер\\w*|руга\\w*ся)|"
+        r"\\bне\\s+(?:использу\\w*|употребля\\w*|говор\\w*|руга\\w*)"
+        + r"[^.!?]{0,24}\\b" + word + r"\\b|"
+        + r"\\bбез\\s+(?:русск\\w+\\s+)?" + word + r"\\b|"
+        + r"\\bизбега\\w*\\s+(?:русск\\w+\\s+)?" + word + r"\\b"
     )
     if re.search(negative, value):
         return False
-    return bool(re.search(r"\bмат\w*|\bненорматив\w*|\bруга\w*ся\s+матом", value))
+    return bool(re.search(r"\\b" + word + r"\\b|\\bруга\\w*ся\\s+матом\\b", value))
 
 
 def character_profile_instruction(agent_name, description):
@@ -470,7 +472,7 @@ def turn_protocol(agent_name, peers, pace="normal", science=False):
         ("ФОРМАТ НАУЧНОГО ОБСУЖДЕНИЯ. " if science else "ФОРМАТ СВОБОДНОЙ БЕСЕДЫ. ")
         + "Только устная реплика: без markdown, кода, ссылок и списков. "
         + "Отвечай на конкретную мысль предыдущего говорящего: продолжи её, возрази, "
-        + "подколись, уточни или добавь неожиданный пример. Не превращай ход в отдельный доклад "
+        + "подколи собеседника, уточни или добавь неожиданный пример. Не превращай ход в отдельный доклад "
         + "и не задавай вопрос в конце по привычке. "
         + PACE_BRIEF.get(pace, PACE_BRIEF["normal"]) + " "
         + "Заверши ровно одним отдельным маркером: "
