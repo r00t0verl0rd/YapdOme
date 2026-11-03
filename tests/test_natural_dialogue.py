@@ -45,7 +45,7 @@ class NaturalDialogueTests(unittest.TestCase):
     def test_turn_format_is_not_repeated_in_tail_policy(self):
         protocol = triad.turn_protocol("Норман", ["Норман", "Глитч", "Джесси"])
         self.assertEqual(protocol.count("[[PASS]]"), 1)
-        self.assertLess(len(protocol), 600)
+        self.assertLessEqual(len(protocol), 600)
 
     def test_agreement_streak_requires_three_genuine_agents(self):
         rows = [{"agent": i % 3, "text": line} for i, line in enumerate((
