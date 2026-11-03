@@ -40,11 +40,25 @@ def _safe_text(value, limit):
                    "\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069")[:limit].strip()
 
 
+def _publication_envelope(message):
+    """Нормализует оболочку Centrifugo v2 (result) и v3+ (push)."""
+    if not isinstance(message, dict):
+        return None
+    push = message.get("push")
+    if isinstance(push, dict):
+        return push
+    # DonationAlerts всё ещё использует legacy envelope: result.channel/data.
+    result = message.get("result")
+    if isinstance(result, dict) and result.get("channel"):
+        return result
+    return message
+
+
 def _parse_donation_publication(message, channel):
     """Возвращает (донат, причина отказа); не сохраняет исходное сообщение."""
-    if not isinstance(message, dict):
+    push = _publication_envelope(message)
+    if not isinstance(push, dict):
         return None, "входящее сообщение не является объектом"
-    push = message.get("push") if isinstance(message.get("push"), dict) else message
     if push.get("channel") != channel:
         return None, "сообщение пришло не из канала донатов"
     publication = push.get("pub") or push.get("publication")
@@ -576,7 +590,7 @@ class DonationAlerts:
                 except (TypeError, ValueError):
                     self._record_ws_message()
                     continue
-                push = message.get("push") if isinstance(message, dict) and isinstance(message.get("push"), dict) else message
+                push = _publication_envelope(message)
                 is_channel_publication = isinstance(push, dict) and push.get("channel") == channel
                 self._record_ws_message(channel_publication=is_channel_publication)
                 if not is_channel_publication:
