@@ -1765,13 +1765,17 @@ function donationMessage(){
 let donationAlertsStream=null;
 function connectDonationAlertsStream(){
  if(donationAlertsStream)donationAlertsStream.close();
- const stream=new EventSource('/api/donationalerts/stream');
+ // Persist the cursor so a page reload does not replay already delivered donations.
+ let cursor='0';
+ try{cursor=localStorage.getItem('donationalertsLastEventId')||'0';}catch(_){/* storage may be disabled */}
+ const stream=new EventSource('/api/donationalerts/stream?lastEventId='+encodeURIComponent(cursor));
  donationAlertsStream=stream;
  stream.addEventListener('donation',event=>{
   try{
    const donation=JSON.parse(event.data);
    enqueueDonationRecord({donor:donation.donor,amount:donation.amount,text:donation.text,
     currency:donation.currency,source:'donationalerts',externalId:donation.id});
+   if(event.lastEventId){try{localStorage.setItem('donationalertsLastEventId',event.lastEventId);}catch(_){/* ignore */}}
   }catch(error){console.warn('Некорректное SSE-событие DonationAlerts:',error);}
  });
  stream.onerror=()=>{
