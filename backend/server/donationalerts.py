@@ -54,6 +54,27 @@ def _publication_envelope(message):
     return message
 
 
+def _is_presence_notification(push):
+    """Recognize Centrifugo join/leave notifications, not channel publications.
+
+    The legacy JSON envelope used by DonationAlerts carries these as
+    push.data.info with the connecting client's user/client identifiers.
+    They are normal subscription lifecycle events, not donations.
+    """
+    if not isinstance(push, dict) or push.get("pub") or push.get("publication"):
+        return False
+    data = push.get("data")
+    if not isinstance(data, dict) or set(data) != {"info"}:
+        return False
+    info = data.get("info")
+    return (
+        isinstance(info, dict)
+        and {"user", "client"}.issubset(info)
+        and isinstance(info.get("user"), str)
+        and isinstance(info.get("client"), str)
+    )
+
+
 def _shape_summary(value, label="data", depth=0):
     """Безопасная схема JSON: только имена ключей и типы, без значений."""
     if depth > 2 or not isinstance(value, dict):
@@ -292,6 +313,7 @@ class DonationAlerts:
         # Счётчики относятся к входящему потоку после подтверждения подписки.
         self.ws_messages_received = 0
         self.channel_publications_received = 0
+        self.presence_events_ignored = 0
         self.donations_parsed = 0
         self.donations_rejected = 0
         self.last_ws_message_at = ""
@@ -350,6 +372,7 @@ class DonationAlerts:
                 "queued_events": len(self.events),
                 "ws_messages_received": self.ws_messages_received,
                 "channel_publications_received": self.channel_publications_received,
+                "presence_events_ignored": self.presence_events_ignored,
                 "donations_parsed": self.donations_parsed,
                 "donations_rejected": self.donations_rejected,
                 "last_ws_message_at": self.last_ws_message_at,
@@ -358,13 +381,15 @@ class DonationAlerts:
                 "auth_pending": bool(self.pending_state and time.time() - self.pending_created < 600),
             }
 
-    def _record_ws_message(self, channel_publication=False):
-        """Фиксирует только счётчики и время — без тела WS-сообщения."""
+    def _record_ws_message(self, channel_publication=False, presence_event=False):
+        """Фиксирует тип входящего события без сохранения его тела."""
         now = time.strftime("%Y-%m-%d %H:%M:%S")
         with self.lock:
             self.ws_messages_received += 1
             self.last_ws_message_at = now
-            if channel_publication:
+            if presence_event:
+                self.presence_events_ignored += 1
+            elif channel_publication:
                 self.channel_publications_received += 1
                 self.last_publication_at = now
 
@@ -650,8 +675,14 @@ class DonationAlerts:
                     continue
                 push = _publication_envelope(message)
                 is_channel_publication = isinstance(push, dict) and push.get("channel") == channel
-                self._record_ws_message(channel_publication=is_channel_publication)
-                if not is_channel_publication:
+                is_presence_event = is_channel_publication and _is_presence_notification(push)
+                self._record_ws_message(
+                    channel_publication=is_channel_publication and not is_presence_event,
+                    presence_event=is_presence_event,
+                )
+                if not is_channel_publication or is_presence_event:
+                    # Centrifugo emits a join/leave notification when a client
+                    # enters the channel. It is not a donation and not a rejection.
                     continue
                 donation, reason = _parse_donation_publication(message, channel)
                 self._record_publication_result(donation, reason)
