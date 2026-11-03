@@ -125,7 +125,7 @@ class ConversationCoreTests(unittest.TestCase):
         meta = server._session_snapshot(data)
         server.session_meta = meta
         prompt, _ = server._build_turn_prompt(
-            {"agent_name": "Глитч", "history": []}, meta
+            {"agent_name": "Глитч", "history": [], "post_donation_name": "Гогомол", "post_donation_topic_changed": False}, meta
         )
         self.assertIn("ДОНАТНЫЙ ЭПИЗОД ЗАВЕРШЁН", prompt)
         self.assertIn("временной боковой веткой", prompt)
@@ -137,7 +137,7 @@ class ConversationCoreTests(unittest.TestCase):
         promoted_meta = server._session_snapshot(promoted)
         server.session_meta = meta
         prompt, _ = server._build_turn_prompt(
-            {"agent_name": "Глитч", "history": []}, promoted_meta
+            {"agent_name": "Глитч", "history": [], "post_donation_name": "Гогомол", "post_donation_topic_changed": True}, promoted_meta
         )
         self.assertIn("предложение зрителя было принято как новая основная тема", prompt)
         self.assertIn('"GTA 6"', prompt)
