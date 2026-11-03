@@ -62,7 +62,7 @@ class NaturalDialogueTests(unittest.TestCase):
     def test_live_stances_are_not_forced_or_pretended(self):
         brief = triad.character_style("live")
         self.assertIn("собственную позицию", brief)
-        self.assertIn("не соглашайся и не спорь автоматически", brief)
+        self.assertIn("не соглашайся и не спорь автоматически", brief.lower())
         self.assertIn("изменить мнение под сильным аргументом", brief)
 
     def test_bounded_social_memory_is_attributed_and_untrusted(self):
