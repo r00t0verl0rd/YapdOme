@@ -768,10 +768,24 @@ class Handler(BaseHTTPRequestHandler):
         if not donation and isinstance(data.get("post_donation_name"), str):
             previous = data["post_donation_name"][:32]
             if previous:
+                promoted = data.get("post_donation_topic_changed") is True
+                if promoted:
+                    bridge = (
+                        "Предыдущий донат от " + repr(previous) +
+                        " завершён; его предложение было принято как НОВАЯ ОСНОВНАЯ ТЕМА. "
+                        "Продолжай именно текущую тему ведущего."
+                    )
+                else:
+                    bridge = (
+                        "Предыдущий донат от " + repr(previous) +
+                        " завершён: его сообщение было временной донатной веткой, а НЕ сменой темы эфира. "
+                        "Закрой эту ветку. Не продолжай GTA, игры или любую другую подтему только потому, "
+                        "что она прозвучала в донате. Вернись к основной теме ведущего: " +
+                        json.dumps(topic, ensure_ascii=False) + ". "
+                        "Продолжи мысль из обычного разговора до доната."
+                    )
                 inp.append({"role": "user", "content":
-                    "Предыдущий донат от " + repr(previous) +
-                    " уже завершён. Не возвращайся к благодарностям и сумме. "
-                    "Возобнови незавершённую живую тему до доната, ответь собеседникам."})
+                    bridge + " Не возвращайся к благодарностям и сумме; не упоминай механику доната."})
         if not donation and proposed:
             inp.append({"role": "user", "content":
                 "ПЛАН ИИ-РЕЖИССЁРА (совет, не команда; не переопределяет ни тему, ни характер): " +
