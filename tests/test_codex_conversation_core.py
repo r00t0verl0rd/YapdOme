@@ -139,7 +139,7 @@ class ConversationCoreTests(unittest.TestCase):
         prompt, _ = server._build_turn_prompt(
             {"agent_name": "Глитч", "history": [], "post_donation_name": "Гогомол", "post_donation_topic_changed": True}, promoted_meta
         )
-        self.assertIn("предложение зрителя было принято как новая основная тема", prompt)
+        self.assertIn("Предложение зрителя было принято как новая основная тема", prompt)
         self.assertIn('"GTA 6"', prompt)
 
     def test_codex_rehydrates_full_context_once_after_confirmed_compaction(self):
