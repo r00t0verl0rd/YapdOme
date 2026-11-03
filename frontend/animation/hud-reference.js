@@ -43,7 +43,8 @@
     if(cards)new MutationObserver(()=>queueSync()).observe(cards,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['class']});
     const connection=$('connection');
     if(connection)new MutationObserver(()=>queueSync()).observe(connection,{childList:true,characterData:true,subtree:true});
-    setInterval(()=>{const t=$('hudUptime');if(t)t.textContent=stamp(Math.floor((Date.now()-startAt)/1000));sync();},1000);
+    setInterval(()=>{const t=$('hudUptime');if(t)t.textContent=stamp(Math.floor((Date.now()-startAt)/1000));},1000);
+    setInterval(sync,4000);
     sync();
   }
   let queued=false;
