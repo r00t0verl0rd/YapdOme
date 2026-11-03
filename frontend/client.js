@@ -1381,19 +1381,15 @@ async function endTurn(c,success,msg){
   if(c.donation&&state.activeDonation===c.donation){
     const generated=stripDirectives(c.generatedText);
     if(generated&&!isMarker(c.generatedText)){
-      if(!c.donation.topicChanged){
-        const served=Array.isArray(c.donation.servedAgents)?c.donation.servedAgents:(c.donation.servedAgents=[]);
-        if(!served.includes(c.agent)){
-          served.push(c.agent);
-          c.donation.responses.push(generated.slice(0,300));
-          c.donation.acknowledged=true;
-        }
-        c.donation.remaining=Math.max(0,DONATION_REPLIES-served.length);
-      }else{
+      const served=Array.isArray(c.donation.servedAgents)?c.donation.servedAgents:(c.donation.servedAgents=[]);
+      if(!served.includes(c.agent)){
+        served.push(c.agent);
         c.donation.responses.push(generated.slice(0,300));
-        c.donation.remaining--;
         c.donation.acknowledged=true;
       }
+      // A donation is complete only after three distinct agents have delivered
+      // substantive replies, whether it opened a temporary branch or changed the main topic.
+      c.donation.remaining=Math.max(0,DONATION_REPLIES-served.length);
       if(c.donation.remaining<=0){
         const used=c.donation.responses.length;
         c.donation.item.meta.textContent=
@@ -1718,7 +1714,8 @@ async function activateNextDonation(){
   state.donationQueue.shift();
   if(donation.topicReview?.decision==='topic'){
    // Let this topic receive an audible reply before the next queued donation.
-   donation.topicChanged=true;donation.remaining=1;donation.total=1;donation.nextSpeaker=target;
+   // Even an approved topic donation owns a full three-agent response cycle.
+   donation.topicChanged=true;donation.remaining=DONATION_REPLIES;donation.total=DONATION_REPLIES;donation.nextSpeaker=target;
    state.activeDonation=donation;
    applyCore(routed);applyDonationTopic(donation,donation.topicReview.topic);updateDonationBadge();
    return;
