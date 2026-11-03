@@ -127,7 +127,7 @@ class DonationTests(unittest.TestCase):
                                            ["Лимур","Кизаро","Овелито"])
         self.assertIn("ВТОРАЯ РЕПЛИКА",second)
         self.assertIn("реагируй на мысль предыдущего агента",second)
-        self.assertIn("Клоп",second)
+        self.assertNotIn("Клоп",second,"continuation should not repeat the donor name mechanically")
         self.assertIn("если это явно женское имя",second)
         self.assertIn("не называй зрительницу «брат»",second.lower())
         self.assertIn("избегай гендерно окрашенных",second)
