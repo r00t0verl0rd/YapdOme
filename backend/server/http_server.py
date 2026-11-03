@@ -197,6 +197,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json(200, status)
         if path.path == "/api/donationalerts/status":
             return self.send_json(200, DONATIONALERTS.status())
+        if path.path == "/api/donationalerts/stream":
+            return self.donationalerts_event_stream()
         if path.path == "/api/donationalerts/events":
             return self.send_json(200, {"events": DONATIONALERTS.pop_events()})
         if path.path == "/api/engine":
@@ -223,6 +225,36 @@ class Handler(BaseHTTPRequestHandler):
             except (BridgeError, urllib.error.URLError, TimeoutError) as exc:
                 return self.error(502, str(exc))
         return self.error(404, "Нет такого адреса")
+
+    def donationalerts_event_stream(self):
+        """Push DonationAlerts events to the browser without periodic HTTP polling."""
+        raw_cursor = self.headers.get("Last-Event-ID", "0")
+        try:
+            cursor = max(0, int(raw_cursor or 0))
+        except ValueError:
+            cursor = 0
+        self.send_response(200)
+        self.headers_common("text/event-stream; charset=utf-8")
+        self.send_header("Connection", "keep-alive")
+        self.send_header("X-Accel-Buffering", "no")
+        self.end_headers()
+        try:
+            while True:
+                events = DONATIONALERTS.events_since(cursor, timeout=15)
+                if not events:
+                    self.wfile.write(b": keep-alive\\n\\n")
+                    self.wfile.flush()
+                    continue
+                for event_id, payload in events:
+                    frame = ("id: " + str(event_id) + "\\n" +
+                             "event: donation\\n" +
+                             "data: " + json.dumps(payload, ensure_ascii=False,
+                                                   separators=(",", ":")) + "\\n\\n")
+                    self.wfile.write(frame.encode("utf-8"))
+                    self.wfile.flush()
+                    cursor = event_id
+        except (BrokenPipeError, ConnectionResetError, TimeoutError, OSError):
+            self.close_connection = True
 
     def donationalerts_callback(self, rawquery):
         try:
