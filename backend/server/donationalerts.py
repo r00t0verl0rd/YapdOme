@@ -54,6 +54,28 @@ def _publication_envelope(message):
     return message
 
 
+def _shape_summary(value, label="data", depth=0):
+    """Безопасная схема JSON: только имена ключей и типы, без значений."""
+    if depth > 2 or not isinstance(value, dict):
+        return []
+    keys = list(value.keys())[:24]
+    safe_keys = []
+    for key in keys:
+        name = _safe_text(key, 32)
+        if name and all(ch.isalnum() or ch in "_-" for ch in name):
+            safe_keys.append(name)
+    parts = [label + " keys=[" + ",".join(safe_keys) + "]"]
+    if depth < 2:
+        for key in keys[:12]:
+            child = value.get(key)
+            child_label = _safe_text(key, 24)
+            if isinstance(child, dict):
+                parts.extend(_shape_summary(child, label + "." + child_label, depth + 1))
+            elif isinstance(child, list) and child and isinstance(child[0], dict):
+                parts.extend(_shape_summary(child[0], label + "." + child_label + "[0]", depth + 1))
+    return parts
+
+
 def _parse_donation_publication(message, channel):
     """Возвращает (донат, причина отказа); не сохраняет исходное сообщение."""
     push = _publication_envelope(message)
@@ -85,7 +107,8 @@ def _parse_donation_publication(message, channel):
     # channel plus required donation fields are the reliable discriminator.
     raw_id = data.get("id")
     if raw_id is None or str(raw_id).strip() == "":
-        return None, "в донате отсутствует id"
+        shape = "; ".join(_shape_summary(data))
+        return None, "в донате отсутствует id; " + shape
     try:
         amount = float(data.get("amount"))
     except (TypeError, ValueError):
