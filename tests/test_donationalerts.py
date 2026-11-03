@@ -3,7 +3,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from backend.server.donationalerts import (
-    DonationAlerts, _parse_donation_publication, extract_donation,
+    DonationAlerts, _is_presence_notification, _parse_donation_publication, extract_donation,
 )
 
 
@@ -65,6 +65,23 @@ class DonationAlertsPayloadTests(unittest.TestCase):
              "created_at": ""},
         )
 
+    def test_ignores_centrifugo_join_leave_presence_push(self):
+        channel = "$alerts:donation_42"
+        # This is the initial channel-presence notification, not a donation.
+        message = {"push": {"type": 1, "channel": channel,
+                            "data": {"info": {"user": "42", "client": "connection-id"}}}}
+        push = message["push"]
+        self.assertTrue(_is_presence_notification(push))
+        self.assertIsNone(extract_donation(message, channel))
+
+    def test_presence_detector_does_not_hide_real_publications(self):
+        channel = "$alerts:donation_42"
+        message = {"push": {"type": 1, "channel": channel,
+            "pub": {"data": {"id": 99, "amount": 25,
+                             "info": {"user": "42", "client": "sender"}}}}}
+        self.assertFalse(_is_presence_notification(message["push"]))
+        self.assertEqual(extract_donation(message, channel)["id"], "99")
+
     def test_parser_exposes_safe_rejection_reason(self):
         channel = "$alerts:donation_42"
         message = {"push": {"channel": channel, "pub": {"data": {
@@ -85,9 +102,22 @@ class DonationAlertsPayloadTests(unittest.TestCase):
             client.close()
         self.assertEqual(status["ws_messages_received"], 2)
         self.assertEqual(status["channel_publications_received"], 1)
+        self.assertEqual(status["presence_events_ignored"], 0)
         self.assertEqual(status["donations_parsed"], 1)
         self.assertEqual(status["donations_rejected"], 1)
         self.assertEqual(status["last_rejection_reason"], "нет amount")
+
+    def test_presence_events_are_counted_separately_from_publications_and_rejections(self):
+        with TemporaryDirectory() as folder:
+            client = DonationAlerts(config_path=Path(folder) / "donationalerts.json")
+            client._record_ws_message(presence_event=True)
+            status = client.status()
+            client.close()
+        self.assertEqual(status["ws_messages_received"], 1)
+        self.assertEqual(status["channel_publications_received"], 0)
+        self.assertEqual(status["presence_events_ignored"], 1)
+        self.assertEqual(status["donations_rejected"], 0)
+        self.assertEqual(status["last_rejection_reason"], "")
 
     def test_donation_channel_does_not_require_resource_name_but_rejects_invalid_amount(self):
         channel = "$alerts:donation_42"
