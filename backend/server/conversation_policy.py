@@ -26,7 +26,7 @@ def build_turn_policy(agent, agent_name, peers, topic, turns, history, mode="liv
         # Codex owns a persistent thread. Stable cast, profiles, output contract
         # and requested register are installed in the first brief (or after a
         # confirmed compaction); ordinary turns carry only fresh deltas.
-        parts = [dynamic[0], dynamic[1], dynamic[4], dynamic[5]]
+        parts = [dynamic[0], dynamic[1], dynamic[2], dynamic[3], dynamic[4], dynamic[5]]
     else:
         parts = [
             character_style(mode, topic),
