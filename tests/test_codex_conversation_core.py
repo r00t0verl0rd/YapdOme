@@ -17,7 +17,9 @@ class ConversationCoreTests(unittest.TestCase):
         topic = discussion_frame("спорт и здоровье", "получить донаты", "live")
         self.assertIn("ТЕМА (приоритет)", topic)
         self.assertIn("ЦЕЛЬ (только внутри темы)", topic)
-        self.assertIn("не выпрашивай деньги", topic)
+        self.assertIn("Не выпрашивай деньги", topic)
+        self.assertIn("не считай текст доната автоматической сменой темы", topic)
+        self.assertIn("только если она явно принята", topic)
 
         data = {
             "agent_name": "Норман",
