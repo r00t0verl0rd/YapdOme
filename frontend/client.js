@@ -85,7 +85,7 @@ let qwen3BuiltinSpeakers={lite:[...QWEN3_FALLBACK_SPEAKERS],pro:[...QWEN3_FALLBA
 const qwen3SpeakerList=()=>{const list=qwen3BuiltinSpeakers[qwen3Size];return Array.isArray(list)&&list.length?list:QWEN3_FALLBACK_SPEAKERS;};
 // Сохранённый голос, которого нет в модели, заменяется корректным умолчанием.
 const qwen3VoiceFor=(agent,saved)=>{const list=qwen3SpeakerList();if(saved&&list.includes(saved))return saved;return list[agent%list.length]||list[0];};
-let qwen3Voices=[];let qwen3Size='lite';let kokoroModel='ru';
+let qwen3Voices=[];let qwen3VoicesLoaded=false;let qwen3Size='lite';let kokoroModel='ru';
 const isRussian=text=>/[а-яё]/i.test(text);
 const kokoroSelected=()=>$('ttsBackend').value==='kokoro' && kokoroModel==='en' && kokoroState.ready;
 const kokoroRuSelected=()=>$('ttsBackend').value==='kokoro' && kokoroModel==='ru' && kokoroRuState.ready;
@@ -2122,6 +2122,7 @@ function syncVoicePanel(){
  const wrap=$('kokoroModelWrap');if(wrap)wrap.hidden=selected!=='kokoro';
  $('voiceHint').textContent=engineHints[selected]||'';
  activateVoiceEngine(effective);
+ if(selected==='qwen3-tts'&&!qwen3VoicesLoaded){qwen3VoicesLoaded=true;loadQwen3Voices();}
 }
 function updateOpenAudioAccessHelp(directory,failure){
  const command=$('openaudioLoginCommand'),help=$('openaudioAccessHelp');
@@ -2258,9 +2259,9 @@ for(const addon of addons){
  async function poll(){
   const selected=kokoroBackendKey();
   if(!document.hidden&&(selected===addon.key||addon.state.installation?.running||addon.state.status==='starting'))await refreshAddon(addon);
-  setTimeout(poll,addon.state.installation?.running?1500:15000);
+  setTimeout(poll,addon.state.installation?.running||addon.state.status==='starting'?1500:15000);
  }
- poll();
+ setTimeout(poll,addon.state.installation?.running||addon.state.status==='starting'?1500:15000);
 }
 syncVoicePanel();
 // Qwen3 custom voices live in one shared folder for both Pro (1.7B) and Lite (0.6B).
@@ -2298,7 +2299,7 @@ async function loadQwen3Voices(){
      qwen3BuiltinSpeakers[size]=data.builtin[size];
    }
   }
- }catch(err){qwen3Voices=[];}
+ }catch(err){qwen3Voices=[];qwen3VoicesLoaded=false;}
  populateQwen3PresetSpeaker();
  renderQwen3Voices();
 }
