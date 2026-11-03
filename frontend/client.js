@@ -1410,7 +1410,8 @@ async function endTurn(c,success,msg){
       c.donation.emptyReplies=(c.donation.emptyReplies||0)+1;
       const served=Array.isArray(c.donation.servedAgents)?c.donation.servedAgents:[];
       c.donation.servedAgents=served;
-      const next=[0,1,2].find(index=>!served.includes(index));
+      const missing=[0,1,2].filter(index=>!served.includes(index));
+      const next=missing.find(index=>index!==c.agent)??missing[0];
       if(next!==undefined)c.donation.nextSpeaker=next;
       c.donation.item.meta.textContent='ПУСТОЙ ОТВЕТ · '+served.length+'/'+DONATION_REPLIES+' · повторяем без потери доната';
     }
