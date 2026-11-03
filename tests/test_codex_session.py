@@ -113,7 +113,8 @@ class CodexSessionTests(unittest.TestCase):
         first, second = [params["input"][0]["text"] for params in turns]
         self.assertIn("В живом режиме говори друг с другом", first)
         self.assertIn("Не задавай вопрос автоматически", first)
-        self.assertIn("конкретные контрпримеры", first)
+        self.assertIn("Добавляй свой ракурс", first)
+        self.assertIn("не заканчивай каждый ход вопросом", first.lower())
         self.assertIn("Юмор допустим, но не обязателен", first)
         self.assertIn("Не копируй последнюю реплику", first)
         self.assertNotIn("В живом режиме ищи новые ракурсы", second,
