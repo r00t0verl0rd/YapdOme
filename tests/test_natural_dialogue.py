@@ -63,7 +63,7 @@ class NaturalDialogueTests(unittest.TestCase):
         brief = triad.character_style("live")
         self.assertIn("собственную позицию", brief)
         self.assertIn("не соглашайся и не спорь автоматически", brief.lower())
-        self.assertIn("изменить мнение под сильным аргументом", brief)
+        self.assertIn("меняй её под сильным доводом", brief.lower())
 
     def test_bounded_social_memory_is_attributed_and_untrusted(self):
         peers = ["Норман", "Глитч", "Джесси"]
@@ -115,7 +115,7 @@ class NaturalDialogueTests(unittest.TestCase):
         )
         self.assertIn("ОБЯЗАТЕЛЕН НА КАЖДОМ ХОДУ", profile)
         self.assertIn("русский мат", profile)
-        self.assertIn("не перенимай манеру других двух персонажей", profile)
+        self.assertIn("не перенимай манеру других двух персонажей", profile.lower())
 
     def test_character_profile_profanity_is_an_explicit_per_turn_requirement(self):
         profile = "Глитч язвительный и матерится, использует русский мат."
