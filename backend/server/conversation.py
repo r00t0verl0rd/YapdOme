@@ -74,17 +74,17 @@ def social_focus_instructions(data, agent, peers, mode):
 def profile_requests_profanity(description):
     """Detect an affirmative request for real profanity without matching mathematics."""
     value = str(description or "").casefold().replace("ё", "е")
-    word = r"(?:мат(?:ом|а|у|е|ы)?|матер\\w*|ненорматив\\w*)" 
+    word = r"(?:мат(?:ом|а|у|е|ы)?|матер\w*|ненорматив\w*)"
     negative = (
-        r"\\bне\\s+(?:матер\\w*|руга\\w*ся)|"
-        r"\\bне\\s+(?:использу\\w*|употребля\\w*|говор\\w*|руга\\w*)"
-        + r"[^.!?]{0,24}\\b" + word + r"\\b|"
-        + r"\\bбез\\s+(?:русск\\w+\\s+)?" + word + r"\\b|"
-        + r"\\bизбега\\w*\\s+(?:русск\\w+\\s+)?" + word + r"\\b"
+        r"\bне\s+(?:матер\w*|руга\w*ся)|"
+        r"\bне\s+(?:использу\w*|употребля\w*|говор\w*|руга\w*)"
+        + r"[^.!?]{0,24}\b" + word + r"\b|"
+        + r"\bбез\s+(?:русск\w+\s+)?" + word + r"\b|"
+        + r"\bизбега\w*\s+(?:русск\w+\s+)?" + word + r"\b"
     )
     if re.search(negative, value):
         return False
-    return bool(re.search(r"\\b" + word + r"\\b|\\bруга\\w*ся\\s+матом\\b", value))
+    return bool(re.search(r"\b" + word + r"\b|\bруга\w*ся\s+матом\b", value))
 
 
 def character_profile_instruction(agent_name, description):
