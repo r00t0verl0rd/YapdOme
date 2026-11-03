@@ -125,6 +125,34 @@ function loadQueueStatus(h){
 }
 const flush=async()=>{for(let i=0;i<6;i++)await Promise.resolve();};
 
+test('queued low-value donations each receive exactly three distinct agent replies in FIFO order',async()=>{
+ const h=harness({amount:50});
+ const first=h.donation;
+ first.servedAgents=[0,1];first.responses=['Ответ Альфы','Ответ Беты'];first.remaining=1;
+ h.state.activeDonation=first;
+ const second={id:'donation-0000002',amount:70,text:'Привет, агенты',donor:'Следующий зритель',
+  remaining:3,total:3,responses:[],servedAgents:[],acknowledged:false,nextSpeaker:0,
+  item:{meta:{textContent:''}}};
+ h.state.donationQueue=[second];
+ const makeTurn=(donation,agent)=>({agent,ticket:agent+20,text:'Ответ по существу.',
+  generatedText:'Ответ по существу.',donation,
+  item:{el:{classList:{remove(){}},remove(){}},meta:{textContent:''}}});
+ h.state.current=makeTurn(first,2);
+ await h.context.endTurn(h.state.current,true,'Готово');
+ await flush();
+ assert.equal(h.state.activeDonation,second,'second donation starts only after first is complete');
+ assert.equal(h.state.donationQueue.length,0,'FIFO head is removed exactly once');
+ assert.deepEqual(h.routes,['complete','priority_donation']);
+ for(const agent of [1,2,0]){
+  h.state.current=makeTurn(second,agent);
+  await h.context.endTurn(h.state.current,true,'Готово');
+ }
+ assert.equal(second.responses.length,3);
+ assert.deepEqual(second.servedAgents,[1,2,0]);
+ assert.equal(second.remaining,0);
+ assert.equal(h.state.activeDonation,null);
+ assert.match(second.item.meta.textContent,/3 реплики/);
+});
 test('GTA donation stays queued until the third reply finishes audibly',async()=>{
  const h=harness({amount:5});loadQueueStatus(h);
  const first=h.donation;first.text='здарова';first.responses=['1','2'];first.remaining=1;
