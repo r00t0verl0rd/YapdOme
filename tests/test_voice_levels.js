@@ -71,7 +71,7 @@ test('inactive TTS stops polling while selected, installing and starting engines
  const polling=code.slice(start,code.indexOf('\nsyncVoicePanel();',start));
  const addons=['kokoro','kokoro-ru','piper','silero'].map(key=>({key,id:key,state:{status:'stopped'}}));
  const nodes={ttsBackend:{value:'browser'}},calls=[],timers=[];
- const context={addons,kokoroModel:'ru',document:{hidden:false},$:id=>nodes[id]||(nodes[id]={dataset:{}}),
+ const context={addons,kokoroModel:'ru',qwen3VoicesLoaded:false,loadQwen3Voices:()=>{},document:{hidden:false},$:id=>nodes[id]||(nodes[id]={dataset:{}}),
   refreshAddon:async addon=>calls.push(addon.key),setTimeout:fn=>timers.push(fn)};
  const tick=()=>new Promise(setImmediate);
  vm.runInNewContext(polling,context);
