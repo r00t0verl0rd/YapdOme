@@ -244,6 +244,8 @@ class DonationAlerts:
         self.redirect_uri = "http://" + host + ":" + str(port) + "/donationalerts/callback"
         self.path = Path(config_path)
         self.lock = threading.RLock()
+        self.event_condition = threading.Condition(self.lock)
+        self.event_sequence = 0
         self.stop_event = threading.Event()
         self.thread = None
         self.socket = None
@@ -532,10 +534,29 @@ class DonationAlerts:
         self._stop_listener()
 
     def pop_events(self):
+        """Legacy one-shot drain; kept for compatibility with older clients."""
         with self.lock:
-            result = list(self.events)
+            result = [{key: value for key, value in event.items() if key != "_stream_id"}
+                      for event in self.events]
             self.events.clear()
             return result
+
+    def events_since(self, last_event_id=0, timeout=15):
+        """Return buffered events newer than the SSE cursor, waiting for new data."""
+        try:
+            cursor = max(0, int(last_event_id or 0))
+        except (TypeError, ValueError):
+            cursor = 0
+        with self.event_condition:
+            matches = [event for event in self.events
+                       if event.get("_stream_id", 0) > cursor]
+            if not matches:
+                self.event_condition.wait(max(0, min(float(timeout), 30)))
+                matches = [event for event in self.events
+                           if event.get("_stream_id", 0) > cursor]
+            return [(event["_stream_id"],
+                     {key: value for key, value in event.items() if key != "_stream_id"})
+                    for event in matches]
 
     def _wait_response(self, ws, request_id, timeout=20):
         deadline = time.monotonic() + timeout
@@ -619,8 +640,12 @@ class DonationAlerts:
                 self.seen_set.discard(oldest)
             self.seen_ids.append(event_id)
             self.seen_set.add(event_id)
-            self.events.append(donation)
+            self.event_sequence += 1
+            event = dict(donation)
+            event["_stream_id"] = self.event_sequence
+            self.events.append(event)
             self.last_event_at = time.strftime("%Y-%m-%d %H:%M:%S")
+            self.event_condition.notify_all()
 
     def _listener_loop(self):
         while not self.stop_event.is_set():
