@@ -1393,7 +1393,7 @@ async function endTurn(c,success,msg){
       if(c.donation.remaining<=0){
         const used=c.donation.responses.length;
         c.donation.item.meta.textContent=
-          c.donation.topicChanged?'✓ ТЕМА ИЗМЕНЕНА · '+c.donation.topicReview.topic:
+          c.donation.topicChanged?'✓ ТЕМА ИЗМЕНЕНА · '+c.donation.topicReview.topic+' · 3 реплики получены':
           '✓ ОТВЕТ ПОЛУЧЕН · '+used+' '+(used===1?'реплика':used<5?'реплики':'реплик');
         state.lastDonationName=c.donation.donor;
         state.lastDonationTopicChanged=Boolean(c.donation.topicChanged);
@@ -1681,7 +1681,7 @@ function applyDonationTopic(donation,topic){
  state.history=[{event_id:requestID(),agent:-1,name:donation.donor,text:'Новая тема разговора от зрителя: '+topic}];
  state.journal=[];state.directorBudget=null;state.lastDonationName='';state.social.memory=[[],[],[]];
  updateScienceUI();
- donation.item.meta.textContent='✓ ТЕМА ИЗМЕНЕНА · '+topic;
+ donation.item.meta.textContent='ТЕМА ПРИНЯТА · '+topic+' · ОЖИДАЕМ 3 ОТВЕТА';
  system('Тема от зрителя '+donation.donor+': '+topic);
 }
 async function activateNextDonation(){
