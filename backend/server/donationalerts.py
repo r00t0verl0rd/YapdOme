@@ -79,9 +79,10 @@ def _parse_donation_publication(message, channel):
         if not isinstance(nested, dict):
             return None, "вложенное поле donation/data не является объектом"
         data = nested
-    name = data.get("name")
-    if name not in (None, "", "donation"):
-        return None, "публикация относится не к типу donation"
+    # This parser is called only for the private $alerts:donation_<user_id>
+    # channel. DonationAlerts documents this channel as donation-only; some
+    # live payload variants carry a different/missing resource name, so the
+    # channel plus required donation fields are the reliable discriminator.
     raw_id = data.get("id")
     if raw_id is None or str(raw_id).strip() == "":
         return None, "в донате отсутствует id"
