@@ -1892,13 +1892,6 @@ document.addEventListener('visibilitychange',()=>{
  const addon=addons.find(item=>item.key===selected);
  if(addon)refreshAddon(addon);
 });
-document.addEventListener('visibilitychange',()=>{
- if(document.hidden)return;
- refreshDonationAlertsStatus();
- const selected=kokoroBackendKey();
- const addon=addons.find(item=>item.key===selected);
- if(addon)refreshAddon(addon);
-});
 
 window.addEventListener('beforeunload',()=>{
  if(donationAlertsStream)donationAlertsStream.close();
