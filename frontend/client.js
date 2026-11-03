@@ -1761,22 +1761,22 @@ function donationMessage(){
  if(!state.current&&!state.activeDonation&&!state.paused&&!state.donationRouting)
    scheduleNext();
 }
-// DonationAlerts is polled locally; its WebSocket listener itself lives in Python.
-let donationAlertsPollBusy=false;
-async function pollDonationAlertsEvents(){
- if(donationAlertsPollBusy)return;
- donationAlertsPollBusy=true;
- try{
-  const response=await fetch('/api/donationalerts/events',{cache:'no-store'});
-  if(!response.ok)throw Error('HTTP '+response.status);
-  const data=await response.json();
-  for(const event of (Array.isArray(data.events)?data.events:[])){
-   enqueueDonationRecord({donor:event.donor,amount:event.amount,text:event.text,
-    currency:event.currency,source:'donationalerts',externalId:event.id});
-  }
- }catch(_){
-  // The local server may be starting or stopping; status polling will show the error.
- }finally{donationAlertsPollBusy=false;}
+// DonationAlerts is pushed from Python over SSE; the upstream WebSocket stays server-side.
+let donationAlertsStream=null;
+function connectDonationAlertsStream(){
+ if(donationAlertsStream)donationAlertsStream.close();
+ const stream=new EventSource('/api/donationalerts/stream');
+ donationAlertsStream=stream;
+ stream.addEventListener('donation',event=>{
+  try{
+   const donation=JSON.parse(event.data);
+   enqueueDonationRecord({donor:donation.donor,amount:donation.amount,text:donation.text,
+    currency:donation.currency,source:'donationalerts',externalId:donation.id});
+  }catch(error){console.warn('Некорректное SSE-событие DonationAlerts:',error);}
+ });
+ stream.onerror=()=>{
+  // EventSource reconnects automatically and resumes from Last-Event-ID.
+ };
 }
 async function refreshDonationAlertsStatus(){
  try{
@@ -1841,9 +1841,11 @@ $('donationalertsDisconnect').onclick=async()=>{
  }catch(err){$('donationalertsNote').textContent=err.message;}
  finally{button.disabled=false;}
 };
-pollDonationAlertsEvents();refreshDonationAlertsStatus();
-setInterval(pollDonationAlertsEvents,1200);
+connectDonationAlertsStream();refreshDonationAlertsStatus();
 setInterval(refreshDonationAlertsStatus,5000);
+window.addEventListener('beforeunload',()=>{
+ if(donationAlertsStream)donationAlertsStream.close();
+});
 // If OpenAI doesn't produce any new text for 18s, leave this speaker and
 // let C schedule another one. A successful reply resets the failure counter.
 setInterval(async()=>{
