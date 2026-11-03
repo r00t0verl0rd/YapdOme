@@ -53,7 +53,7 @@ def extract_donation(message, channel):
     data = publication.get("data") or push.get("data") or {}
     if not isinstance(data, dict):
         return None
-    nested = data.get("donation")
+    nested = data.get("donation") or data.get("data")
     if isinstance(nested, dict):
         data = nested
     name = data.get("name")
@@ -287,6 +287,7 @@ class DonationAlerts:
         client_secret = str(client_secret or "").strip()
         if not client_id or len(client_id) > 80 or not client_id.isdigit():
             raise DonationAlertsError("Client ID должен состоять из цифр приложения DonationAlerts")
+        self._stop_listener()
         with self.lock:
             old_id = self.config.get("client_id", "")
             if not client_secret and old_id != client_id:
@@ -294,7 +295,6 @@ class DonationAlerts:
             if client_secret and len(client_secret) > 512:
                 raise DonationAlertsError("Client Secret слишком длинный")
             if old_id != client_id:
-                self._stop_listener()
                 self.config = {}
             self.config["client_id"] = client_id
             if client_secret:

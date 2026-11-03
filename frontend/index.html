@@ -117,7 +117,7 @@
         </div>
         <details id="donationalertsSettings" class="donationalerts-settings">
           <summary>Настроить приложение DonationAlerts</summary>
-          <p class="field-tip">Создай OAuth-приложение в DonationAlerts и укажи этот адрес как Redirect URI. Запрашиваются только права просмотра профиля и получения новых донатов.</p>
+          <p class="field-tip">Создай OAuth-приложение в <a href="https://www.donationalerts.com/application/clients" target="_blank" rel="noopener noreferrer">DonationAlerts</a> и укажи этот адрес как Redirect URI. Запрашиваемые права: <code>oauth-user-show</code> и <code>oauth-donation-subscribe</code>.</p>
           <label>Client ID<input id="donationalertsClientId" type="text" maxlength="80" autocomplete="off" placeholder="ID приложения"></label>
           <label>Client Secret<input id="donationalertsClientSecret" type="password" maxlength="512" autocomplete="new-password" placeholder="Секрет приложения"></label>
           <div class="donationalerts-redirect"><span>Redirect URI</span><code id="donationalertsRedirectUri">http://127.0.0.1:13180/donationalerts/callback</code></div>
