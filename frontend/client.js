@@ -41,6 +41,9 @@ function stripSpeakerLabels(raw){
 }
 function stripDirectives(raw){
   const text=String(raw||'')
+    // Citation tokens are internal search metadata, never spoken dialogue.
+    .replace(/cite[^]*/gu,' ')
+    .replace(/【turn\d+(?:search|news|reddit|business|product|image|video|youtube)\d+】/giu,' ')
     .replace(/\[\[\s*(?:TO|RE|CLAIM)\s*[:=][^\]]*\]\]/gi,' ')
     .replace(/\[\s*(?:TO|RE|CLAIM)\s*[:=][^\]]*\]/gi,' ')
     .replace(/\[\[\s*(?:PASS|WAIT_USER|CONT)\s*\]\]/gi,' ')
@@ -52,7 +55,7 @@ function stripDirectives(raw){
   // A turn made only of markers must never leave orphan punctuation to be spoken.
   return /^[.,;:!?…\-–—\s]*$/.test(text)?'':text;
 }
-const state = {archivedLines:[],connected:false,recoverable:false,provider:'chatgpt',deepseekConnected:false,codexConnected:false,running:false,paused:false,stopping:false,starting:false,epoch:0,turns:0,current:null,history:[],journal:[],conversationId:'',sentConversationEvents:new Set(),language:'ru',timer:null,claimPending:null,core:null,donationQueue:[],activeDonation:null,donationRouting:false,lastDonationName:'',lastAudibleAt:Date.now(),lastIdleNotice:0,
+const state = {archivedLines:[],connected:false,recoverable:false,provider:'chatgpt',deepseekConnected:false,codexConnected:false,running:false,paused:false,stopping:false,starting:false,epoch:0,turns:0,current:null,history:[],journal:[],conversationId:'',sentConversationEvents:new Set(),language:'ru',timer:null,claimPending:null,core:null,donationQueue:[],activeDonation:null,donationRouting:false,lastDonationName:'',lastDonationTopicChanged:false,lastAudibleAt:Date.now(),lastIdleNotice:0,
   directorPlan:null,directorRequest:null,directorRouted:false,lastClaimRetryNotice:0,
   pipelineReady:false,audibleTurn:null,
   social:{pair:null,returnContext:null,lastEnd:0,lastPair:"",memory:[[],[],[]]}};
@@ -1371,6 +1374,7 @@ async function endTurn(c,success,msg){
      if($('showMode').value==='science')rememberFinding(c.agent,defs[c.agent].name,spoken);
       else if(typeof rememberLiveTurn==='function')rememberLiveTurn(c.agent,spoken);
      state.lastDonationName=''; // Bridge only first regular turn after donation.
+     state.lastDonationTopicChanged=false;
    }
   }
   let donationFinished=false;
@@ -1396,6 +1400,7 @@ async function endTurn(c,success,msg){
           c.donation.topicChanged?'✓ ТЕМА ИЗМЕНЕНА · '+c.donation.topicReview.topic:
           '✓ ОТВЕТ ПОЛУЧЕН · '+used+' '+(used===1?'реплика':used<5?'реплики':'реплик');
         state.lastDonationName=c.donation.donor;
+        state.lastDonationTopicChanged=Boolean(c.donation.topicChanged);
         state.activeDonation=null;
         donationFinished=true;
       }else{
@@ -1563,7 +1568,8 @@ async function realTurn(c){
   donation_context:c.donation&&!c.donation.topicChanged?{name:c.donation.donor,amount:c.donation.amount,
       text:c.donation.text,first:!c.donation.acknowledged,remaining:c.donation.remaining,
       covered:c.donation.responses}:null,
-  post_donation_name:!c.donation?state.lastDonationName:''})});
+  post_donation_name:!c.donation?state.lastDonationName:'',
+  post_donation_topic_changed:!c.donation?state.lastDonationTopicChanged:false})});
  if(!response.ok){const d=await response.json().catch(()=>({}));throw Error(d.error||'HTTP '+response.status)}
  if(!response.body)throw Error('Браузер не поддерживает потоковый вывод');
  const reader=response.body.getReader(),dec=new TextDecoder();let buf='',completed=false;
