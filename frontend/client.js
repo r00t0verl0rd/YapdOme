@@ -1888,7 +1888,7 @@ setInterval(refreshDonationAlertsStatus,15000);
 document.addEventListener('visibilitychange',()=>{
  if(document.hidden)return;
  refreshDonationAlertsStatus();
- const selected=kokoroBackendKey();
+ const selected=$('ttsBackend').value==='kokoro'?(kokoroModel==='ru'?'kokoro-ru':'kokoro'):$('ttsBackend').value;
  const addon=addons.find(item=>item.key===selected);
  if(addon)refreshAddon(addon);
 });
@@ -2257,7 +2257,7 @@ for(const addon of addons){
   }finally{$(id+'Restart').disabled=false;}
  };
  async function poll(){
-  const selected=kokoroBackendKey();
+  const selected=$('ttsBackend').value==='kokoro'?(kokoroModel==='ru'?'kokoro-ru':'kokoro'):$('ttsBackend').value;
   if(!document.hidden&&(selected===addon.key||addon.state.installation?.running||addon.state.status==='starting'))await refreshAddon(addon);
   setTimeout(poll,addon.state.installation?.running||addon.state.status==='starting'?1500:15000);
  }
