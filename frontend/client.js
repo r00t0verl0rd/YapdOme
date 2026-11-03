@@ -1881,7 +1881,15 @@ $('donationalertsDisconnect').onclick=async()=>{
  finally{button.disabled=false;}
 };
 connectDonationAlertsStream();refreshDonationAlertsStatus();
-setInterval(refreshDonationAlertsStatus,5000);
+setInterval(refreshDonationAlertsStatus,15000);
+document.addEventListener('visibilitychange',()=>{
+ if(document.hidden)return;
+ refreshDonationAlertsStatus();
+ const selected=kokoroBackendKey();
+ const addon=addons.find(item=>item.key===selected);
+ if(addon)refreshAddon(addon);
+});
+
 window.addEventListener('beforeunload',()=>{
  if(donationAlertsStream)donationAlertsStream.close();
 });
@@ -2199,6 +2207,9 @@ function warmPiperVoices(){
  warmPiperVoice(defs[0].piperVoice||piperSpeakers[0][0]);
 }
 async function refreshAddon(addon){
+ if(document.hidden)return;
+ if(addon.statusRequest)return addon.statusRequest;
+ addon.statusRequest=(async()=>{
  try{
   const r=await fetch('/api/voice/'+addon.key+'/status',{cache:'no-store'});
   if(!r.ok)throw Error('HTTP '+r.status);
@@ -2344,7 +2355,6 @@ $('qwen3VoiceType').onchange=syncQwen3VoiceForm;
 $('qwen3VoiceSave').onclick=saveQwen3Voice;
 $('qwen3VoiceCancel').onclick=()=>{$('qwen3VoiceForm').hidden=true;};
 populateQwen3PresetSpeaker();
-loadQwen3Voices();
 
 // Reference audio stays on this machine and is never sent to a hosted TTS API.
 $('openaudioReferenceSave').onclick=async()=>{
