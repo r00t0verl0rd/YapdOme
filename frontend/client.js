@@ -1792,6 +1792,14 @@ async function refreshDonationAlertsStatus(){
    '○ DONATIONALERTS · НЕ НАСТРОЕН';
   status.classList.toggle('is-connected',!!data.connected);
   disconnect.hidden=!data.authorized&&!data.client_id;
+   const diagnosticNumber=value=>Number(value||0).toLocaleString('ru-RU');
+   $('donationalertsWsMessages').textContent=diagnosticNumber(data.ws_messages_received);
+   $('donationalertsPublications').textContent=diagnosticNumber(data.channel_publications_received);
+   $('donationalertsParsed').textContent=diagnosticNumber(data.donations_parsed);
+   $('donationalertsRejected').textContent=diagnosticNumber(data.donations_rejected);
+   $('donationalertsLastMessage').textContent='Последнее сообщение WS: '+(data.last_ws_message_at||'ещё не было');
+   $('donationalertsLastPublication').textContent='Последняя публикация канала: '+(data.last_publication_at||'ещё не было');
+   $('donationalertsLastRejection').textContent='Последняя причина отклонения: '+(data.last_rejection_reason||'—');
   if(data.last_error)$('donationalertsNote').textContent='DonationAlerts: '+data.last_error;
   else if(data.connected)$('donationalertsNote').textContent='Новые донаты автоматически попадают в очередь YapdOme.';
   button.textContent=data.connected?'DonationAlerts подключён':'Подключить DonationAlerts';
