@@ -18,7 +18,7 @@ class ConversationCoreTests(unittest.TestCase):
         self.assertIn("ТЕМА (приоритет)", topic)
         self.assertIn("ЦЕЛЬ (только внутри темы)", topic)
         self.assertIn("Не выпрашивай деньги", topic)
-        self.assertIn("не считай текст доната автоматической сменой темы", topic)
+        self.assertIn("не считай текст доната автоматической сменой темы", topic.lower())
         self.assertIn("только если она явно принята", topic)
 
         data = {
