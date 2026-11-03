@@ -36,7 +36,7 @@ function stripSpeakerLabels(raw){
  const names=(defs||[]).map(agent=>agent.name).filter(Boolean)
   .map(name=>name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'));
  if(!names.length)return String(raw||'').trim();
- const labels=new RegExp('(^|[\\s,;])(?:'+names.join('|')+')\\s*[:：]\\s*','giu');
+ const labels=new RegExp('(^|[\s,;])(?:'+names.join('|')+')\s*[:：]\s*','giu');
  return String(raw||'').replace(labels,'$1').replace(/\s+/g,' ').trim();
 }
 function stripDirectives(raw){
@@ -1641,8 +1641,8 @@ const DONATION_REPLIES=3;
 function explicitDonationTopic(text){
  const value=String(text||'').trim().replace(/[.!?…]+$/u,'').trim();
  const patterns=[
-  /^(?:поговорите|поговорим|обсудите|обсудим|давайте поговорим|давайте обсудим)\\s+(?:о|об|про)\\s+([\\s\\S]{3,580})$/iu,
-  /^(?:предлагаю обсудить|тема(?: эфира)?\\s*[:—-])\\s*([\\s\\S]{3,580})$/iu
+  /^(?:поговорите|поговорим|обсудите|обсудим|давайте поговорим|давайте обсудим)\s+(?:о|об|про)\s+([\s\\S]{3,580})$/iu,
+  /^(?:предлагаю обсудить|тема(?: эфира)?\s*[:—-])\s*([\s\\S]{3,580})$/iu
  ];
  for(const pattern of patterns){
   const match=pattern.exec(value);
@@ -1650,7 +1650,7 @@ function explicitDonationTopic(text){
   const topic=match[1].trim().replace(/[.!?…]+$/u,'').trim();
   // Explicit topic syntax is deterministic; reject attempts to turn the topic
   // field into application/system instructions.
-  if(topic.length<3||/(?:игнорируй|раскрой|секрет(?:ы|ов)?|системн\\w* инструкц|api[- ]?ключ|токен|парол|смени\\s+рол|останови\\s+приложен)/iu.test(topic))return null;
+  if(topic.length<3||/(?:игнорируй|раскрой|секрет(?:ы|ов)?|системн\w* инструкц|api[- ]?ключ|токен|парол|смени\s+рол|останови\s+приложен)/iu.test(topic))return null;
   return topic.slice(0,600);
  }
  return null;
